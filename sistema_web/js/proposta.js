@@ -101,20 +101,20 @@ function renderizarProposta(p) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>
-        <div style="font-weight: 700; color: var(--text-primary); font-size: 13.5px;">${escapeHtml(it.description)}</div>
-        <div style="font-size: 11px; margin-top: 3px;">
+        <div class="prop-item-title-wrap">
+          <span class="prop-item-name">${escapeHtml(it.description)}</span>
           ${getCategoryBadgeHtml(it.category)}
         </div>
       </td>
       <td class="tabular-nums" style="text-align: center;">
-        <span class="table-unit-tag" style="font-weight: 700; font-size: 12px;">
+        <span class="table-unit-tag" style="font-weight: 700; font-size: 11px;">
           ${Number(it.quantity).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} ${escapeHtml(it.unit || '')}
         </span>
       </td>
-      <td class="tabular-nums" style="text-align: right; color: var(--text-secondary); font-size: 13px;">
+      <td class="tabular-nums" style="text-align: right; color: var(--text-secondary); font-size: 12px;">
         ${modoExibicaoGlobal ? '<span style="color: var(--text-dim);">-</span>' : Calculator.formatBRL(unitVenda)}
       </td>
-      <td class="tabular-nums" style="text-align: right; font-weight: 700; color: var(--text-primary); font-size: 13.5px;">
+      <td class="tabular-nums" style="text-align: right; font-weight: 700; color: var(--text-primary); font-size: 12.5px;">
         ${modoExibicaoGlobal ? '<span style="color: var(--status-aprovado); font-weight: 700;">Incluso</span>' : Calculator.formatBRL(totalVenda)}
       </td>
     `;
@@ -160,14 +160,25 @@ function renderizarProposta(p) {
   }
 }
 
-// Alterna entre visão detalhada com preços e visão comercial simplificada (Incluso)
-function alternarModoPrecos() {
-  modoExibicaoGlobal = !modoExibicaoGlobal;
-  const txt = document.getElementById("txtModoPreco");
-  if (txt) {
-    txt.textContent = modoExibicaoGlobal ? "Escopo Incluso" : "Preços Detalhados";
+// Alterna entre visão detalhada com preços e visão comercial simplificada (Incluso) via Segmented Control
+function setModoExibicao(isGlobal) {
+  modoExibicaoGlobal = isGlobal;
+  const btnDet = document.getElementById("btnModoDetalhado");
+  const btnGlob = document.getElementById("btnModoGlobal");
+  if (btnDet && btnGlob) {
+    if (isGlobal) {
+      btnDet.classList.remove("active");
+      btnGlob.classList.add("active");
+    } else {
+      btnGlob.classList.remove("active");
+      btnDet.classList.add("active");
+    }
   }
   renderizarProposta(currentProject);
+}
+
+function alternarModoPrecos() {
+  setModoExibicao(!modoExibicaoGlobal);
 }
 
 function getCategoryBadgeHtml(cat) {

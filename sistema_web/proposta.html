@@ -48,22 +48,36 @@
     </div>
 
     <div class="nav-actions">
-      <button id="btnToggleModo" class="btn btn-secondary btn-sm" onclick="alternarModoPrecos()" title="Alternar entre preços unitários detalhados ou escopo incluso">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"></circle>
-          <line x1="12" y1="16" x2="12" y2="12"></line>
-          <line x1="12" y1="8" x2="12.01" y2="8"></line>
-        </svg>
-        <span id="txtModoPreco">Preços Detalhados</span>
-      </button>
-      <button id="btnEditarOrcamento" class="btn btn-secondary btn-sm">
+      <!-- Segmented Control de Modo de Visualização -->
+      <div class="segmented-control-inline" title="Alternar formato de apresentação comercial da proposta">
+        <button id="btnModoDetalhado" class="seg-btn active" onclick="setModoExibicao(false)">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="8" y1="6" x2="21" y2="6"></line>
+            <line x1="8" y1="12" x2="21" y2="12"></line>
+            <line x1="8" y1="18" x2="21" y2="18"></line>
+            <line x1="3" y1="6" x2="3.01" y2="6"></line>
+            <line x1="3" y1="12" x2="3.01" y2="12"></line>
+            <line x1="3" y1="18" x2="3.01" y2="18"></line>
+          </svg>
+          Preços Detalhados
+        </button>
+        <button id="btnModoGlobal" class="seg-btn" onclick="setModoExibicao(true)">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+          Escopo Incluso
+        </button>
+      </div>
+
+      <button id="btnEditarOrcamento" class="btn btn-secondary btn-sm" title="Retornar à tela de edição analítica de quantitativos">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 20h9"></path>
           <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
         </svg>
         Editar Orçamento
       </button>
-      <button class="btn btn-primary btn-sm" onclick="imprimirProposta()">
+
+      <button class="btn btn-primary btn-sm btn-print-pdf" onclick="imprimirProposta()" title="Imprimir proposta ou salvar em formato PDF A4">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="6 9 6 2 18 2 18 9"></polyline>
           <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
@@ -71,6 +85,7 @@
         </svg>
         Imprimir / Salvar PDF
       </button>
+
       <a href="index.html" class="btn btn-outline btn-sm">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="19" y1="12" x2="5" y2="12"></line>
@@ -178,11 +193,23 @@
     <!-- Condições Comerciais e Cronograma de Pagamento -->
     <div class="proposal-terms">
       <h4>2. Condições Comerciais e Cronograma de Faturamento</h4>
-      <ul>
-        <li><strong>Entrada na Confirmação (40%):</strong> <span id="condEntrada" style="font-weight: 700;">R$ 0,00</span> — Mobilização técnica e aquisição de revestimentos modulados.</li>
-        <li><strong>Na Conclusão da Impermeabilização (30%):</strong> <span id="condParcela1" style="font-weight: 700;">R$ 0,00</span> — Liberação da estanqueidade para revestimento.</li>
-        <li><strong>Na Entrega Final da Paginação e Rejunte (30%):</strong> <span id="condParcela2" style="font-weight: 700;">R$ 0,00</span> — Conclusão, limpeza técnica e entrega formal.</li>
-      </ul>
+      <div class="payment-schedule-grid">
+        <div class="schedule-pill">
+          <span class="pill-label">1. Entrada na Confirmação (40%)</span>
+          <span id="condEntrada" class="pill-val">R$ 0,00</span>
+          <span class="pill-desc">Mobilização técnica e compra de revestimentos</span>
+        </div>
+        <div class="schedule-pill">
+          <span class="pill-label">2. Na Impermeabilização (30%)</span>
+          <span id="condParcela1" class="pill-val">R$ 0,00</span>
+          <span class="pill-desc">Liberação de estanqueidade para acabamento</span>
+        </div>
+        <div class="schedule-pill">
+          <span class="pill-label">3. Na Entrega Final (30%)</span>
+          <span id="condParcela2" class="pill-val">R$ 0,00</span>
+          <span class="pill-desc">Conclusão, limpeza técnica e entrega formal</span>
+        </div>
+      </div>
 
       <h4>3. Termos Gerais de Engenharia</h4>
       <p>

@@ -90,13 +90,13 @@ function renderizarTabelaItens() {
         <input type="text" class="table-input" value="${escapeHtml(item.description)}" oninput="atualizarItem(${index}, 'description', this.value)">
       </td>
       <td>
-        <input type="number" step="0.1" class="table-input tabular-nums" style="text-align: right; font-weight: 700; padding: 5px 6px;" value="${item.quantity}" oninput="atualizarItem(${index}, 'quantity', this.value)">
+        <input type="number" step="0.01" class="table-input tabular-nums" style="text-align: right; font-weight: 700; padding: 5px 6px; width: 100%; box-sizing: border-box;" value="${item.quantity}" oninput="atualizarItem(${index}, 'quantity', this.value)">
       </td>
       <td>
-        <input type="text" class="table-input" style="text-align: center; text-transform: lowercase; font-weight: 600; padding: 5px 4px;" value="${escapeHtml(item.unit || 'un')}" oninput="atualizarItem(${index}, 'unit', this.value)">
+        <input type="text" class="table-input" style="text-align: center; text-transform: lowercase; font-weight: 600; padding: 5px 4px; width: 100%; box-sizing: border-box;" value="${escapeHtml(item.unit || 'un')}" oninput="atualizarItem(${index}, 'unit', this.value)">
       </td>
       <td>
-        <input type="number" step="0.5" class="table-input tabular-nums" style="text-align: right; padding: 5px 6px;" value="${item.unit_cost}" oninput="atualizarItem(${index}, 'unit_cost', this.value)">
+        <input type="number" step="0.01" class="table-input tabular-nums" style="text-align: right; padding: 5px 6px; width: 100%; box-sizing: border-box;" value="${item.unit_cost}" oninput="atualizarItem(${index}, 'unit_cost', this.value)">
       </td>
       <td style="font-weight: 800; color: var(--orange-600); font-size: 13px; text-align: right; white-space: nowrap;" class="tabular-nums">
         ${Calculator.formatBRL(item.total_cost || 0)}
