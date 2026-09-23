@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/sistema_web/index.html"
+    },
+    {
+      "source": "/((?!sistema_web/).*)",
+      "destination": "/sistema_web/$1"
+    }
+  ]
+}
