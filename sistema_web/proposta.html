@@ -46,6 +46,14 @@
     </div>
 
     <div class="nav-actions">
+      <button id="btnToggleModo" class="btn btn-secondary btn-sm" onclick="alternarModoPrecos()" title="Alternar entre preços unitários detalhados ou escopo incluso">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+        <span id="txtModoPreco">Preços Detalhados</span>
+      </button>
       <button id="btnEditarOrcamento" class="btn btn-secondary btn-sm">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 20h9"></path>
@@ -140,9 +148,9 @@
         <thead>
           <tr>
             <th>Especificação do Item / Serviço</th>
-            <th style="width: 120px;">Quantitativo</th>
-            <th style="width: 130px; text-align: right;">Unitário</th>
-            <th style="width: 140px; text-align: right;">Total</th>
+            <th style="width: 140px; text-align: center;">Quantitativo</th>
+            <th style="width: 135px; text-align: right;">Unitário</th>
+            <th style="width: 145px; text-align: right;">Total</th>
           </tr>
         </thead>
         <tbody id="propTbody"></tbody>
@@ -153,7 +161,7 @@
     <div class="proposal-total-card">
       <div class="proposal-total-row">
         <span>Subtotal dos Serviços e Materiais:</span>
-        <span id="propTotalSub">Incluso</span>
+        <span id="propTotalSub" style="font-weight: 700; color: var(--text-primary);" class="tabular-nums">R$ 0,00</span>
       </div>
       <div class="proposal-total-row">
         <span>Garantia Técnica de Estanqueidade e Mão de Obra:</span>

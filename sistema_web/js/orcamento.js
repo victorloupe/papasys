@@ -241,7 +241,8 @@ async function salvarOrcamento() {
   }
 }
 
-function abrirPropostaExecutiva() {
+async function abrirPropostaExecutiva() {
+  await salvarOrcamento();
   window.location.href = `proposta.html?id=${currentProject.id}`;
 }
 
