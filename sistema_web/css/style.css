@@ -2152,23 +2152,23 @@ body {
 /* Floating Mode Switcher no Canto Inferior Direito */
 .floating-mode-bar {
   position: fixed;
-  bottom: 24px;
-  right: 28px;
+  bottom: 48px;
+  right: 36px;
   z-index: 1000;
   display: flex;
   align-items: center;
   background: #ffffff;
-  padding: 4px;
+  padding: 5px;
   border-radius: 999px;
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  box-shadow: 0 4px 24px rgba(15, 23, 42, 0.16), 0 1px 4px rgba(15, 23, 42, 0.08);
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  box-shadow: 0 8px 32px rgba(15, 23, 42, 0.18), 0 2px 8px rgba(15, 23, 42, 0.08);
   transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
   backdrop-filter: blur(8px);
 }
 
 .floating-mode-bar:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.22), 0 2px 6px rgba(15, 23, 42, 0.1);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 38px rgba(15, 23, 42, 0.24), 0 4px 12px rgba(15, 23, 42, 0.1);
 }
 
 .floating-mode-bar .segmented-control-inline {
