@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PapaSys Paginação Inteligente</title>
+  <link rel="stylesheet" href="dialog.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header com Logo PapaSys -->
+    <header class="header">
+      <div class="brand">
+        <img src="LogoSite.png" alt="PapaSys" class="logo-img">
+        <div>
+          <h1 class="title"><span class="title-dark">PAPA</span><span class="title-orange">SYS</span></h1>
+          <p class="subtitle">Paginação Modular Sem Recortes</p>
+        </div>
+      </div>
+      <div class="header-badges">
+        <span id="versionBadge" class="badge badge-version">v1.1.0</span>
+        <button id="btnCheckUpdate" class="btn-icon" title="Verificar Atualizações">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <polyline points="1 20 1 14 7 14"></polyline>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+          </svg>
+        </button>
+        <button id="btnToggleConfig" class="btn-icon" title="Configurações de Conexão e Auto-Update" onclick="toggleModalConfig()">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Live Preview da Seleção do SketchUp -->
+    <div id="selectionChip" class="selection-chip no-sel" onclick="solicitarInspecao()" title="Clique para atualizar detecção da seleção no SketchUp">
+      <span class="selection-status-icon">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+          <polyline points="2 17 12 22 22 17"></polyline>
+          <polyline points="2 12 12 17 22 12"></polyline>
+        </svg>
+      </span>
+      <div class="selection-details">
+        <div class="selection-status-row">
+          <div id="selectionStatusText" class="selection-status-title">Nenhuma piscina selecionada</div>
+          <span id="badgeCurva" class="badge-curva" style="display: none;">🌊 Curvas Protegidas</span>
+        </div>
+        <div id="selectionDimsText" class="selection-status-sub">Selecione o grupo ou faces no SketchUp</div>
+      </div>
+      <button type="button" class="btn-detect-refresh" title="Atualizar detecção da seleção" onclick="event.stopPropagation(); solicitarInspecao();">
+        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="23 4 23 10 17 10"></polyline>
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Main Content -->
+    <main class="content">
+      <!-- Section: Presets rápidos -->
+      <div class="form-group">
+        <label class="form-label">Predefinições Rápidas de Revestimento:</label>
+        <div class="preset-buttons">
+          <button type="button" class="btn-preset" onclick="setPreset(10, 10, 0.2)">10x10 cm</button>
+          <button type="button" class="btn-preset active" onclick="setPreset(15, 15, 0.2)">15x15 cm</button>
+          <button type="button" class="btn-preset" onclick="setPreset(20, 20, 0.3)">20x20 cm</button>
+          <button type="button" class="btn-preset" onclick="setPreset(30, 60, 0.2)">30x60 cm</button>
+        </div>
+      </div>
+
+      <!-- Section: Origem da Modulação (Ponto Zero) -->
+      <div class="form-group">
+        <label class="form-label">Origem da Modulação (Ponto Zero):</label>
+        <div class="origin-segmented">
+          <button type="button" class="btn-origin active" id="btnOrigemCentro" onclick="setOrigem('centro')">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <circle cx="12" cy="12" r="3"></circle>
+              <line x1="12" y1="2" x2="12" y2="5"></line>
+              <line x1="12" y1="19" x2="12" y2="22"></line>
+              <line x1="2" y1="12" x2="5" y2="12"></line>
+              <line x1="19" y1="12" x2="22" y2="12"></line>
+            </svg>
+            Centro Simétrico
+          </button>
+          <button type="button" class="btn-origin" id="btnOrigemCanto" onclick="setOrigem('canto')">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="4 20 4 4 20 4"></polyline>
+              <circle cx="4" cy="4" r="2.5"></circle>
+            </svg>
+            Canto / Início
+          </button>
+        </div>
+
+        <!-- Seletor dos 4 Cantos de Referência (Visível apenas quando Canto / Início está ativo) -->
+        <div id="cantoSelectorGroup" class="canto-selector-group" style="display: none;">
+          <span class="canto-selector-label">Escolha o Canto de Partida (Pastilha Inteira):</span>
+          <div class="canto-grid">
+            <button type="button" id="btnCantoSupEsq" class="btn-canto" onclick="setCantoRef('sup_esq')" title="Canto Superior Esquerdo">
+              <span class="canto-arrow">↖</span> Sup. Esquerdo
+            </button>
+            <button type="button" id="btnCantoSupDir" class="btn-canto" onclick="setCantoRef('sup_dir')" title="Canto Superior Direito">
+              Sup. Direito <span class="canto-arrow">↗</span>
+            </button>
+            <button type="button" id="btnCantoInfEsq" class="btn-canto active" onclick="setCantoRef('inf_esq')" title="Canto Inferior Esquerdo (Padrão)">
+              <span class="canto-arrow">↙</span> Inf. Esquerdo
+            </button>
+            <button type="button" id="btnCantoInfDir" class="btn-canto" onclick="setCantoRef('inf_dir')" title="Canto Inferior Direito">
+              Inf. Direito <span class="canto-arrow">↘</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section: Dimensões das peças -->
+      <div class="grid-3">
+        <div class="form-group">
+          <label for="inputLargura" class="form-label">Largura (cm)</label>
+          <input type="number" id="inputLargura" class="form-control" value="15.0" step="0.1" min="1">
+        </div>
+        <div class="form-group">
+          <label for="inputAltura" class="form-label">Altura (cm)</label>
+          <input type="number" id="inputAltura" class="form-control" value="15.0" step="0.1" min="1">
+        </div>
+        <div class="form-group">
+          <label for="inputRejunte" class="form-label">Rejunte (cm)</label>
+          <input type="number" id="inputRejunte" class="form-control" value="0.2" step="0.05" min="0.05">
+        </div>
+      </div>
+
+      <!-- Section: Identificação -->
+      <div class="form-group">
+        <label for="inputProjeto" class="form-label">Nome do Projeto / Piscina</label>
+        <input type="text" id="inputProjeto" class="form-control" value="Piscina Cliente PapaSys">
+      </div>
+
+      <div class="form-group">
+        <label for="inputCliente" class="form-label">Nome do Cliente</label>
+        <input type="text" id="inputCliente" class="form-control" value="Cliente Geral">
+      </div>
+
+      <!-- Actions Group -->
+      <div class="actions-group">
+        <button id="btnAjustarEEnviar" class="btn btn-orange" onclick="ajustarEEnviarTudo()">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+          </svg>
+          Ajustar & Enviar para o PapaSys (1 Clique)
+        </button>
+
+        <button id="btnAjustar" class="btn btn-secondary" onclick="executarAjuste(false)">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+            <polyline points="2 17 12 22 22 17"></polyline>
+            <polyline points="2 12 12 17 22 12"></polyline>
+          </svg>
+          Apenas Ajustar Geometria 3D
+        </button>
+      </div>
+
+      <!-- Results Box -->
+      <div id="resultsCard" class="card results-card hidden">
+        <div class="card-header">
+          <span class="card-title">Quantitativos Calculados</span>
+          <span id="badgeSnapStatus" class="badge badge-success">Snap Central OK</span>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <span class="stat-label">Área Interna Líquida</span>
+            <div class="stat-input-row">
+              <input type="number" id="inputAreaM2" class="stat-input" value="0.00" step="0.01" oninput="recalcularPerda()">
+              <span class="stat-unit">m²</span>
+            </div>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Com Perda / Sobra Técnica</span>
+            <div class="stat-waste-box">
+              <span id="statAreaComPerda" class="stat-waste-value">0.00 m²</span>
+              <div class="waste-toggle-group">
+                <button type="button" class="waste-pill active" id="btnPerda10" onclick="setPercentualPerda(10)">+10%</button>
+                <button type="button" class="waste-pill" id="btnPerda15" onclick="setPercentualPerda(15)">+15%</button>
+              </div>
+            </div>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Perímetro da Borda</span>
+            <div class="stat-input-row">
+              <input type="number" id="inputBordaM" class="stat-input" value="0.00" step="0.01">
+              <span class="stat-unit">m</span>
+            </div>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Vértices / Módulo</span>
+            <div class="stat-combined-meta">
+              <span id="statVertices" class="stat-meta-pill">0 pts</span>
+              <span id="statModulo" class="stat-meta-pill">15.2×15.2 cm</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Alerta de Curvatura Preservada -->
+        <div id="rowCurvaInfo" class="curve-info-box" style="display: none;">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 12c4-8 8-8 12 0s8 8 12 0"></path>
+          </svg>
+          <span id="textCurvaInfo">Curvatura Suave Preservada</span>
+        </div>
+
+        <div class="actions-group" style="margin-top: 10px;">
+          <button id="btnEnviarWeb" class="btn btn-orange btn-sm" onclick="enviarParaWeb()">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            Reenviar para Nuvem Supabase
+          </button>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- Modal de Conexão & Auto-Update -->
+    <div id="modalConfig" class="modal-overlay" style="display: none;" onclick="fecharModalSeClicarFora(event)">
+      <div class="modal-card" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+            Conexão & Auto-Update
+          </div>
+          <button type="button" class="btn-modal-close" onclick="fecharModalConfig()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="inputServerUrl" class="form-label">Servidor / API Supabase:</label>
+            <input type="text" id="inputServerUrl" class="form-control" value="https://bhbbpdvgkyjqxhghbmpe.supabase.co">
+          </div>
+          <div class="form-group checkbox-group" style="margin-top: 6px;">
+            <label>
+              <input type="checkbox" id="chkAutoUpdate" checked>
+              Atualizar plugin automaticamente se houver nova versão
+            </label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="fecharModalConfig()">Cancelar</button>
+          <button type="button" class="btn btn-primary-compact btn-sm" onclick="salvarConfiguracoesEFechar()">Salvar Configurações</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toastContainer" class="toast-container"></div>
+  </div>
+
+  <script src="dialog.js"></script>
+</body>
+</html>

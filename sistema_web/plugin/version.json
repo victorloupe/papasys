@@ -1,0 +1,6 @@
+﻿{
+    "download_url":  "plugin/papasys_paginacao.rbz",
+    "changelog":  "Versao PapaSys v1.1.0: snap de centro sem recortes, calculo de m2 e borda linear, e auto-atualizacao integrada.",
+    "mandatory":  false,
+    "version":  "1.1.0"
+}

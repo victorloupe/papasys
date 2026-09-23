@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PapaSys - Sistema de Orçamentos e Paginação de Piscinas</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <!-- Top Navbar -->
+  <nav class="navbar">
+    <a href="index.html" class="brand">
+      <img src="img/LogoSite.png" alt="PapaSys Logo" class="brand-logo-img">
+      <div>
+        <span class="brand-title"><span class="brand-dark">PAPA</span><span class="brand-orange">SYS</span></span>
+        <span class="brand-sub">Sistema de Orçamento</span>
+      </div>
+    </a>
+
+    <div class="nav-links">
+      <a href="index.html" class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="9" rx="1"></rect>
+          <rect x="14" y="3" width="7" height="5" rx="1"></rect>
+          <rect x="14" y="12" width="7" height="9" rx="1"></rect>
+          <rect x="3" y="16" width="7" height="5" rx="1"></rect>
+        </svg>
+        Dashboard Kanban
+      </a>
+      <a href="precos.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+          <line x1="7" y1="7" x2="7.01" y2="7"></line>
+        </svg>
+        Tabela de Preços
+      </a>
+      <a href="plugin/papasys_paginacao.rbz" class="nav-item" download title="Download do arquivo (.rbz) para instalar no SketchUp">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+          <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+          <line x1="12" y1="22.08" x2="12" y2="12"></line>
+        </svg>
+        Plugin SketchUp (.rbz)
+      </a>
+    </div>
+
+    <div class="nav-actions">
+      <button class="btn btn-secondary btn-sm" onclick="abrirModalSimulacao()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+        </svg>
+        Simular Envio 3D
+      </button>
+      <button class="btn btn-primary btn-sm" onclick="abrirModalSimulacao()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        Novo Orçamento
+      </button>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <!-- Header & Search -->
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Painel de Orçamentos & Obras</h1>
+        <p class="page-subtitle">Projetos recebidos do SketchUp com paginação modular e quantitativos automáticos</p>
+      </div>
+
+      <div class="filter-bar">
+        <div class="search-input-wrap">
+          <span class="search-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+          </span>
+          <input type="text" id="searchProjects" class="search-input" placeholder="Pesquisa Inteligente: projeto, cliente, pastilha, valor (>10k)..." autocomplete="off">
+          <button id="btnClearSearch" class="search-clear-btn hidden" onclick="limparBusca()" title="Limpar busca (Esc)">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+          <span class="search-shortcut">/</span>
+        </div>
+        <div id="searchFeedback" class="search-feedback-badge hidden"></div>
+        <button id="btnToggleAllCards" class="btn-toggle-all" onclick="toggleTodosCards()" title="Recolher ou Expandir todos os orçamentos">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="7 13 12 18 17 13"></polyline>
+            <polyline points="7 6 12 11 17 6"></polyline>
+          </svg>
+          <span id="txtToggleAll">Recolher Todos</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Estatísticas Executivas (Stat Tiles) -->
+    <div class="stats-overview">
+      <div class="stat-tile">
+        <div class="stat-tile-header">
+          <span class="stat-tile-label">Total de Projetos</span>
+          <div class="stat-tile-icon stat-icon-blue">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="9" rx="1"></rect>
+              <rect x="14" y="3" width="7" height="5" rx="1"></rect>
+              <rect x="14" y="12" width="7" height="9" rx="1"></rect>
+              <rect x="3" y="16" width="7" height="5" rx="1"></rect>
+            </svg>
+          </div>
+        </div>
+        <div id="statTotalCount" class="stat-tile-value tabular-nums">0</div>
+        <div class="stat-tile-sub">Registrados no PapaSys</div>
+      </div>
+
+      <div class="stat-tile">
+        <div class="stat-tile-header">
+          <span class="stat-tile-label">Volume em Orçamentos</span>
+          <div class="stat-tile-icon stat-icon-orange">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+              <polyline points="17 6 23 6 23 12"></polyline>
+            </svg>
+          </div>
+        </div>
+        <div id="statTotalValor" class="stat-tile-value tabular-nums" style="color: var(--orange-600);">R$ 0,00</div>
+        <div class="stat-tile-sub">Preço total sugerido</div>
+      </div>
+
+      <div class="stat-tile">
+        <div class="stat-tile-header">
+          <span class="stat-tile-label">Metragem Revestimento</span>
+          <div class="stat-tile-icon stat-icon-green">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+              <path d="M3 9h18"></path>
+              <path d="M3 15h18"></path>
+              <path d="M9 3v18"></path>
+              <path d="M15 3v18"></path>
+            </svg>
+          </div>
+        </div>
+        <div id="statTotalM2" class="stat-tile-value tabular-nums" style="color: var(--status-aprovado);">0.0 m²</div>
+        <div class="stat-tile-sub">Área líquida acumulada</div>
+      </div>
+
+      <div class="stat-tile">
+        <div class="stat-tile-header">
+          <span class="stat-tile-label">Propostas Aprovadas</span>
+          <div class="stat-tile-icon stat-icon-purple">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+          </div>
+        </div>
+        <div id="statAprovados" class="stat-tile-value tabular-nums" style="color: var(--status-enviado);">0</div>
+        <div class="stat-tile-sub">Prontas para execução</div>
+      </div>
+    </div>
+
+    <!-- Segmented Tabs (Filtros por Status) -->
+    <div class="segmented-tabs-container">
+      <button class="tab-pill active" onclick="filtrarPorAba('todos', this)">
+        <span>Todos os Projetos</span>
+        <span id="tab-count-todos" class="tab-count">0</span>
+      </button>
+      <button class="tab-pill" onclick="filtrarPorAba('novo', this)">
+        <span class="tab-dot" style="background: var(--status-novo);"></span>
+        <span>Novos do 3D</span>
+        <span id="tab-count-novo" class="tab-count">0</span>
+      </button>
+      <button class="tab-pill" onclick="filtrarPorAba('em_analise', this)">
+        <span class="tab-dot" style="background: var(--status-analise);"></span>
+        <span>Em Análise</span>
+        <span id="tab-count-em_analise" class="tab-count">0</span>
+      </button>
+      <button class="tab-pill" onclick="filtrarPorAba('enviado', this)">
+        <span class="tab-dot" style="background: var(--status-enviado);"></span>
+        <span>Propostas Enviadas</span>
+        <span id="tab-count-enviado" class="tab-count">0</span>
+      </button>
+      <button class="tab-pill" onclick="filtrarPorAba('aprovado', this)">
+        <span class="tab-dot" style="background: var(--status-aprovado);"></span>
+        <span>Aprovados / Obra</span>
+        <span id="tab-count-aprovado" class="tab-count">0</span>
+      </button>
+      <button class="tab-pill" onclick="filtrarPorAba('rejeitado', this)">
+        <span class="tab-dot" style="background: var(--status-rejeitado);"></span>
+        <span>Arquivados</span>
+        <span id="tab-count-rejeitado" class="tab-count">0</span>
+      </button>
+    </div>
+
+    <!-- Loading Indicator -->
+    <div id="loadingIndicator" class="hidden" style="text-align: center; padding: 24px; color: var(--text-muted); font-size: 13px;">
+      Sincronizando com o Supabase...
+    </div>
+
+    <!-- Kanban Board -->
+    <div class="kanban-board">
+      <!-- Coluna: Novo -->
+      <div class="kanban-column" ondragover="permitirDrop(event)" ondragleave="dragLeave(event)" ondrop="dropNoStatus(event, 'novo')">
+        <div class="column-header">
+          <div class="column-title">
+            <span class="status-dot" style="background: var(--status-novo);"></span>
+            Novos do SketchUp
+          </div>
+          <span id="count-novo" class="column-count-badge">0</span>
+        </div>
+        <div id="col-novo" class="column-body"></div>
+      </div>
+
+      <!-- Coluna: Em Análise -->
+      <div class="kanban-column" ondragover="permitirDrop(event)" ondragleave="dragLeave(event)" ondrop="dropNoStatus(event, 'em_analise')">
+        <div class="column-header">
+          <div class="column-title">
+            <span class="status-dot" style="background: var(--status-analise);"></span>
+            Em Análise Técnica
+          </div>
+          <span id="count-em_analise" class="column-count-badge">0</span>
+        </div>
+        <div id="col-em_analise" class="column-body"></div>
+      </div>
+
+      <!-- Coluna: Enviado -->
+      <div class="kanban-column" ondragover="permitirDrop(event)" ondragleave="dragLeave(event)" ondrop="dropNoStatus(event, 'enviado')">
+        <div class="column-header">
+          <div class="column-title">
+            <span class="status-dot" style="background: var(--status-enviado);"></span>
+            Proposta Enviada
+          </div>
+          <span id="count-enviado" class="column-count-badge">0</span>
+        </div>
+        <div id="col-enviado" class="column-body"></div>
+      </div>
+
+      <!-- Coluna: Aprovado -->
+      <div class="kanban-column" ondragover="permitirDrop(event)" ondragleave="dragLeave(event)" ondrop="dropNoStatus(event, 'aprovado')">
+        <div class="column-header">
+          <div class="column-title">
+            <span class="status-dot" style="background: var(--status-aprovado);"></span>
+            Aprovados / Obra
+          </div>
+          <span id="count-aprovado" class="column-count-badge">0</span>
+        </div>
+        <div id="col-aprovado" class="column-body"></div>
+      </div>
+
+      <!-- Coluna: Rejeitado -->
+      <div class="kanban-column" ondragover="permitirDrop(event)" ondragleave="dragLeave(event)" ondrop="dropNoStatus(event, 'rejeitado')">
+        <div class="column-header">
+          <div class="column-title">
+            <span class="status-dot" style="background: var(--status-rejeitado);"></span>
+            Arquivados
+          </div>
+          <span id="count-rejeitado" class="column-count-badge">0</span>
+        </div>
+        <div id="col-rejeitado" class="column-body"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal: Simulação de Recebimento do SketchUp -->
+  <div id="modalSimulacao" class="modal-overlay hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Simular Envio do Plugin SketchUp</h3>
+        <button class="modal-close" onclick="fecharModalSimulacao()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Nome do Projeto / Piscina</label>
+          <input type="text" id="simNome" class="form-input" value="Piscina Residência Jardins">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nome do Cliente</label>
+          <input type="text" id="simCliente" class="form-input" value="Dr. Carlos Alberto">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Área Interna (m²)</label>
+            <input type="number" id="simArea" class="form-input" value="34.66" step="0.1">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Borda Perímetro (m)</label>
+            <input type="number" id="simBorda" class="form-input" value="17.02" step="0.1">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Especificação Pastilhas</label>
+            <input type="text" id="simSpec" class="form-input" value="15x15">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Dimensões 3D (C x L x P)</label>
+            <input type="text" id="simDim" class="form-input" value="6.7 x 3.0 x 1.5 m">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" onclick="fecharModalSimulacao()">Cancelar</button>
+        <button class="btn btn-primary btn-sm" onclick="executarSimulacao()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+          </svg>
+          Enviar Projeto
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="js/gsap.min.js"></script>
+  <script src="js/animations.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/supabase.js"></script>
+  <script src="js/calculator.js"></script>
+  <script src="js/dialog.js"></script>
+  <script src="js/kanban.js"></script>
+</body>
+</html>

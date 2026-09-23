@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PapaSys - Edição e Precificação de Orçamento</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <a href="index.html" class="brand">
+      <img src="img/LogoSite.png" alt="PapaSys Logo" class="brand-logo-img">
+      <div>
+        <span class="brand-title"><span class="brand-dark">PAPA</span><span class="brand-orange">SYS</span></span>
+        <span class="brand-sub">Sistema de Orçamento</span>
+      </div>
+    </a>
+
+    <div class="nav-links">
+      <a href="index.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="9" rx="1"></rect>
+          <rect x="14" y="3" width="7" height="5" rx="1"></rect>
+          <rect x="14" y="12" width="7" height="9" rx="1"></rect>
+          <rect x="3" y="16" width="7" height="5" rx="1"></rect>
+        </svg>
+        Dashboard Kanban
+      </a>
+      <a href="precos.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+          <line x1="7" y1="7" x2="7.01" y2="7"></line>
+        </svg>
+        Tabela de Preços
+      </a>
+      <a href="plugin/papasys_paginacao.rbz" class="nav-item" download>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+          <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+          <line x1="12" y1="22.08" x2="12" y2="12"></line>
+        </svg>
+        Plugin SketchUp (.rbz)
+      </a>
+    </div>
+
+    <div class="nav-actions">
+      <a href="index.html" class="btn btn-secondary btn-sm">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+        Voltar ao Painel
+      </a>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <!-- Header com botões principais de ação -->
+    <div class="page-header">
+      <div>
+        <h1 id="txtHeaderTitulo" class="page-title">Edição de Orçamento</h1>
+        <p class="page-subtitle">Ajuste dimensões, quantitativos, insumos técnicos e margens comerciais</p>
+      </div>
+
+      <div class="nav-actions">
+        <button class="btn btn-success" onclick="salvarOrcamento()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+            <polyline points="7 3 7 8 15 8"></polyline>
+          </svg>
+          Salvar Alterações
+        </button>
+        <button class="btn btn-primary" onclick="abrirPropostaExecutiva()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+          Visualizar Proposta (PDF)
+        </button>
+      </div>
+    </div>
+
+    <!-- Bloco 1: Property Inspector / Parâmetros do Projeto -->
+    <div class="property-card">
+      <div class="property-header">
+        <div class="property-header-info">
+          <div class="property-header-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+              <polyline points="2 17 12 22 22 17"></polyline>
+              <polyline points="2 12 12 17 22 12"></polyline>
+            </svg>
+          </div>
+          <div>
+            <h2 class="property-title">Parâmetros e Medidas Geométricas</h2>
+            <p class="property-desc">Dados extraídos da piscina 3D no SketchUp com suporte a edição manual direta</p>
+          </div>
+        </div>
+
+        <button class="btn btn-secondary btn-sm" onclick="recalcularPorMedidas()" title="Recalcular automaticamente os consumos de pastilhas, argamassa e borda com base nestas medidas">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <polyline points="1 20 1 14 7 14"></polyline>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+          </svg>
+          Recalcular Insumos por Medidas
+        </button>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Nome do Projeto</label>
+          <input type="text" id="inputNomeProjeto" class="form-input" placeholder="Ex: Piscina Residência Jardins">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Cliente</label>
+          <input type="text" id="inputCliente" class="form-input" placeholder="Ex: Dr. Roberto Silveira">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Área Interna Revestimento</label>
+          <div class="input-with-addon">
+            <input type="number" id="inputAreaM2" class="form-input tabular-nums" step="0.1" min="0" oninput="atualizarResumoMedidas()">
+            <span class="input-addon">m²</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Perímetro da Borda</label>
+          <div class="input-with-addon">
+            <input type="number" id="inputBordaM" class="form-input tabular-nums" step="0.1" min="0" oninput="atualizarResumoMedidas()">
+            <span class="input-addon">m</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Especificação do Revestimento</label>
+          <input type="text" id="inputTileSpec" class="form-input" placeholder="Ex: 15x15 cm">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Status da Obra</label>
+          <select id="selStatus" class="form-select" style="font-weight: 700;">
+            <option value="novo">Novo (SketchUp 3D)</option>
+            <option value="em_analise">Em Análise Técnica</option>
+            <option value="enviado">Proposta Enviada</option>
+            <option value="aprovado">Aprovado pelo Cliente</option>
+            <option value="rejeitado">Rejeitado / Arquivado</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bloco 2: Layout Grid: Composição Analítica dos Itens vs Fechamento Comercial -->
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px; align-items: start;">
+      
+      <!-- Coluna da Esquerda: Composição Analítica dos Itens -->
+      <div style="background: #ffffff; border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: 24px; box-shadow: var(--shadow-xs);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+          <div>
+            <h2 class="card-title">Composição Analítica de Custos e Serviços</h2>
+            <p class="card-subtitle">Edite quantidades, descrições ou adicione serviços complementares</p>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="adicionarItemExtra()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Adicionar Item / Serviço Extra
+          </button>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width: 120px;">Categoria</th>
+                <th>Descrição do Item / Serviço</th>
+                <th style="width: 90px; text-align: right;">Qtd</th>
+                <th style="width: 70px; text-align: center;">Unid</th>
+                <th style="width: 110px; text-align: right;">Unitário</th>
+                <th style="width: 120px; text-align: right;">Subtotal</th>
+                <th style="width: 44px; text-align: center;"></th>
+              </tr>
+            </thead>
+            <tbody id="itensTbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Coluna da Direita: Motor de Margem e Fechamento Comercial -->
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        <div style="background: #ffffff; border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: 24px; box-shadow: var(--shadow-xs);">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px;">
+            <h2 class="commercial-title">
+              Fechamento Comercial
+            </h2>
+            <span id="txtMargemDisplay" class="commercial-bdi-badge tabular-nums">25.0% BDI</span>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 18px;">
+            <label class="form-label" style="display: flex; justify-content: space-between;">
+              <span>Margem de Lucro Bruta (BDI)</span>
+              <span style="font-weight: 600; color: var(--text-muted);">Ajuste livre</span>
+            </label>
+            <input type="range" id="inputMargem" min="5" max="60" step="0.5" value="25" class="form-input" style="padding: 4px 0; cursor: pointer;" oninput="recalcularTotais()">
+          </div>
+
+          <div class="commercial-summary-box">
+            <div class="commercial-summary-row">
+              <span>Custo Direto Total:</span>
+              <span id="txtCustoTotal" style="font-weight: 700; color: var(--text-primary);" class="tabular-nums">R$ 0,00</span>
+            </div>
+
+            <div class="commercial-summary-row" style="color: var(--status-aprovado);">
+              <span>Lucro Bruto Projetado:</span>
+              <span id="txtLucro" style="font-weight: 800;" class="tabular-nums">R$ 0,00</span>
+            </div>
+
+            <div class="commercial-summary-total">
+              <span style="font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-secondary);">Preço de Venda:</span>
+              <span id="txtPrecoVenda" class="commercial-total-price tabular-nums">R$ 0,00</span>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 18px;">
+            <label class="form-label">Notas e Condições Específicas</label>
+            <textarea id="txtNotas" class="form-textarea" rows="3" placeholder="Informações de acesso à obra, cor do rejunte, prazos combinados..."></textarea>
+          </div>
+
+          <div style="margin-top: 20px; display: flex; flex-direction: column; gap: 10px;">
+            <button class="btn btn-success" onclick="salvarOrcamento()" style="padding: 12px;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              Salvar Alterações
+            </button>
+            <button class="btn btn-primary" onclick="abrirPropostaExecutiva()" style="padding: 12px;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+              </svg>
+              Gerar Proposta Executiva (PDF)
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div id="toastBox" class="toast-container"></div>
+
+  <script src="js/gsap.min.js"></script>
+  <script src="js/animations.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/supabase.js"></script>
+  <script src="js/calculator.js"></script>
+  <script src="js/dialog.js"></script>
+  <script src="js/orcamento.js"></script>
+</body>
+</html>
