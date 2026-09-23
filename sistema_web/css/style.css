@@ -2149,6 +2149,81 @@ body {
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
 }
 
+/* Floating Mode Switcher no Canto Inferior Direito */
+.floating-mode-bar {
+  position: fixed;
+  bottom: 24px;
+  right: 28px;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  padding: 4px;
+  border-radius: 999px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 4px 24px rgba(15, 23, 42, 0.16), 0 1px 4px rgba(15, 23, 42, 0.08);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+  backdrop-filter: blur(8px);
+}
+
+.floating-mode-bar:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.22), 0 2px 6px rgba(15, 23, 42, 0.1);
+}
+
+.floating-mode-bar .segmented-control-inline {
+  background: #f1f5f9;
+  border: none;
+  border-radius: 999px;
+  padding: 3px;
+  gap: 3px;
+}
+
+.floating-mode-bar .seg-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.floating-mode-bar .seg-btn:hover:not(.active) {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.floating-mode-bar .seg-btn.active {
+  background: var(--orange-gradient);
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(234, 88, 12, 0.32);
+}
+
+.floating-mode-bar .seg-btn.active svg {
+  stroke: #ffffff;
+}
+
+@media (max-width: 640px) {
+  .floating-mode-bar {
+    bottom: 16px;
+    right: 16px;
+    padding: 3px;
+  }
+  .floating-mode-bar .seg-btn {
+    padding: 6px 10px;
+    font-size: 11.5px;
+  }
+}
+
 .btn-print-pdf {
   background: var(--orange-gradient) !important;
   color: #ffffff !important;

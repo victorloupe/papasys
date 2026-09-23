@@ -51,6 +51,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   renderizarProposta(currentProject);
+
+  if (typeof gsap !== "undefined") {
+    gsap.from(".floating-mode-bar", {
+      y: 35,
+      opacity: 0,
+      duration: 0.6,
+      delay: 0.25,
+      ease: "power3.out"
+    });
+  }
 });
 
 function renderizarProposta(p) {
