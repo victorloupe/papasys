@@ -1499,8 +1499,8 @@ body {
   border: 1px solid var(--border-default);
   color: var(--text-primary);
   border-radius: var(--radius-xs);
-  padding: 6px 10px;
-  font-size: 13px;
+  padding: 5px 8px;
+  font-size: 12.5px;
   font-family: inherit;
   font-variant-numeric: tabular-nums;
   transition: all 0.15s;
@@ -1518,7 +1518,7 @@ body {
   border: 1px solid var(--border-default);
   color: var(--text-primary);
   border-radius: var(--radius-xs);
-  padding: 5px 8px;
+  padding: 5px 6px;
   font-size: 12px;
   font-weight: 600;
   font-family: inherit;
@@ -2051,6 +2051,20 @@ body {
   text-align: center;
   display: block;
   margin-top: 2px;
+}
+
+/* Layout Grid Orçamento & Composição Analítica */
+.orcamento-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 350px;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .orcamento-grid {
+    grid-template-columns: 1fr !important;
+  }
 }
 
 /* ==============================================================================
