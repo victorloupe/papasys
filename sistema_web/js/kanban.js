@@ -43,13 +43,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 async function carregarProjetos() {
-  const loadingIndicator = document.getElementById("loadingIndicator");
-  if (loadingIndicator) loadingIndicator.classList.remove("hidden");
-
   allProjects = await DB.getProjects();
-
-  if (loadingIndicator) loadingIndicator.classList.add("hidden");
-
   renderizarEstatisticas(allProjects);
   atualizarContadoresAbas(allProjects);
   filtrarProjetos();
