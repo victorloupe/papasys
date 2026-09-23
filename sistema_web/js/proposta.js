@@ -53,9 +53,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderizarProposta(currentProject);
 
   if (typeof gsap !== "undefined") {
-    gsap.fromTo(".floating-mode-bar",
-      { scale: 0.9, opacity: 0 },
-      { scale: 1, opacity: 1, duration: 0.35, delay: 0.15, ease: "back.out(1.2)", clearProps: "all" }
+    gsap.fromTo(".proposal-side-dock",
+      { x: 15, opacity: 0 },
+      { x: 0, opacity: 1, duration: 0.4, delay: 0.15, ease: "power2.out", clearProps: "all" }
     );
   }
 });
@@ -85,59 +85,20 @@ function renderizarProposta(p) {
   document.getElementById("propBorda").textContent = Number(p.border_perimeter_linear_m || 0).toFixed(2) + " m linear";
   document.getElementById("propRevestimento").textContent = (p.tile_spec || "15x15 cm") + " (sem recortes)";
 
-  // Tabela de Itens e Escopo Completo
-  const tbody = document.getElementById("propTbody");
-  if (!tbody) return;
-  tbody.innerHTML = "";
+  // Atualiza as linhas da tabela
+  atualizarTabelaItens(p);
 
+  // Calcula e define os totais (executado uma vez no carregamento)
   const items = p.items || [];
   const margem = parseFloat(p.margin_percent !== undefined ? p.margin_percent : 25.0) || 0;
   const fatorMargem = 1 + (margem / 100);
-
-  let somaTotalComercial = 0;
-
-  items.forEach((it) => {
+  const somaTotalComercial = items.reduce((acc, it) => {
     const custoUnit = Number(it.unit_cost) || 0;
     const custoTotal = Number(it.total_cost) || (Number(it.quantity) * custoUnit) || 0;
+    return acc + (custoTotal * fatorMargem);
+  }, 0);
 
-    // Preço de venda comercial proporcional (com margem de lucro inclusa)
-    const unitVenda = custoUnit * fatorMargem;
-    const totalVenda = custoTotal * fatorMargem;
-    somaTotalComercial += totalVenda;
-
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>
-        <div class="prop-item-title-wrap">
-          <span class="prop-item-name">${escapeHtml(it.description)}</span>
-          ${getCategoryBadgeHtml(it.category)}
-        </div>
-      </td>
-      <td class="tabular-nums" style="text-align: center;">
-        <span class="table-unit-tag" style="font-weight: 700; font-size: 11px;">
-          ${Number(it.quantity).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} ${escapeHtml(it.unit || '')}
-        </span>
-      </td>
-      <td class="tabular-nums" style="text-align: right; color: var(--text-secondary); font-size: 12px;">
-        ${modoExibicaoGlobal ? '<span style="color: var(--text-dim);">-</span>' : Calculator.formatBRL(unitVenda)}
-      </td>
-      <td class="tabular-nums" style="text-align: right; font-weight: 700; color: var(--text-primary); font-size: 12.5px;">
-        ${modoExibicaoGlobal ? '<span style="color: var(--status-aprovado); font-weight: 700;">Incluso</span>' : Calculator.formatBRL(totalVenda)}
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
-
-  // O total é o preço de venda gravado ou calculado pela soma
   const total = Number(p.total_price) || parseFloat(somaTotalComercial.toFixed(2));
-
-  // Subtotal e Total Geral
-  const elSub = document.getElementById("propTotalSub");
-  if (elSub) {
-    elSub.textContent = modoExibicaoGlobal ? "Incluso no Pacote Global" : Calculator.formatBRL(total);
-  }
-
-  // Condições de faturamento sugeridas (40% entrada, 30% impermeabilização, 30% entrega)
   const entrada = total * 0.4;
   const parcela1 = total * 0.3;
   const parcela2 = total * 0.3;
@@ -167,9 +128,64 @@ function renderizarProposta(p) {
   }
 }
 
-// Alterna entre visão detalhada com preços e visão comercial simplificada (Incluso) via Segmented Control
+// Renderiza ou atualiza apenas a tabela e o subtotal, sem tocar no cabeçalho (elimina piscamento)
+function atualizarTabelaItens(p) {
+  if (!p) return;
+  const tbody = document.getElementById("propTbody");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  const items = p.items || [];
+  const margem = parseFloat(p.margin_percent !== undefined ? p.margin_percent : 25.0) || 0;
+  const fatorMargem = 1 + (margem / 100);
+
+  let somaTotalComercial = 0;
+
+  items.forEach((it) => {
+    const custoUnit = Number(it.unit_cost) || 0;
+    const custoTotal = Number(it.total_cost) || (Number(it.quantity) * custoUnit) || 0;
+
+    const unitVenda = custoUnit * fatorMargem;
+    const totalVenda = custoTotal * fatorMargem;
+    somaTotalComercial += totalVenda;
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>
+        <div class="prop-item-title-wrap">
+          <span class="prop-item-name">${escapeHtml(it.description)}</span>
+          ${getCategoryBadgeHtml(it.category)}
+        </div>
+      </td>
+      <td class="tabular-nums" style="text-align: center;">
+        <span class="table-unit-tag" style="font-weight: 700; font-size: 11px;">
+          ${Number(it.quantity).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} ${escapeHtml(it.unit || '')}
+        </span>
+      </td>
+      <td class="tabular-nums" style="text-align: right; color: var(--text-secondary); font-size: 12px;">
+        ${modoExibicaoGlobal ? '<span style="color: var(--text-dim);">-</span>' : Calculator.formatBRL(unitVenda)}
+      </td>
+      <td class="tabular-nums" style="text-align: right; font-weight: 700; color: var(--text-primary); font-size: 12.5px;">
+        ${modoExibicaoGlobal ? '<span style="color: var(--status-aprovado); font-weight: 700;">Incluso</span>' : Calculator.formatBRL(totalVenda)}
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  const total = Number(p.total_price) || parseFloat(somaTotalComercial.toFixed(2));
+
+  // Subtotal
+  const elSub = document.getElementById("propTotalSub");
+  if (elSub) {
+    elSub.textContent = modoExibicaoGlobal ? "Incluso no Pacote Global" : Calculator.formatBRL(total);
+  }
+}
+
+// Alterna entre visão detalhada com preços e visão comercial simplificada (Incluso) sem piscar o cabeçalho
 function setModoExibicao(isGlobal) {
+  if (modoExibicaoGlobal === isGlobal) return;
   modoExibicaoGlobal = isGlobal;
+
   const btnDet = document.getElementById("btnModoDetalhado");
   const btnGlob = document.getElementById("btnModoGlobal");
   if (btnDet && btnGlob) {
@@ -181,7 +197,9 @@ function setModoExibicao(isGlobal) {
       btnDet.classList.add("active");
     }
   }
-  renderizarProposta(currentProject);
+
+  // Atualiza apenas as linhas da tabela e o subtotal - ZERO piscamento no cabeçalho
+  atualizarTabelaItens(currentProject);
 }
 
 function alternarModoPrecos() {

@@ -303,6 +303,8 @@ const PapaSysAnimation = {
   // Animação de entrada para páginas de formulário / tabelas (Orçamento, Preços, Proposta)
   initFormPage() {
     if (!this.hasGsap()) return;
+    if (this._formPageInitialized) return;
+    this._formPageInitialized = true;
 
     // 1. Navbar
     if (document.querySelector(".navbar")) {

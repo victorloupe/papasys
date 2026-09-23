@@ -77,6 +77,28 @@
 
   <!-- Proposta Comercial Executiva (Documento A4) -->
   <div class="proposal-wrapper">
+    <!-- Lateral Mode Switcher (Grudado na lateral direita do orçamento) -->
+    <aside class="proposal-side-dock no-print" aria-label="Modo de Visualização">
+      <button id="btnModoDetalhado" class="side-dock-btn active" onclick="setModoExibicao(false)" title="Exibir preços unitários e subtotais detalhados">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="8" y1="6" x2="21" y2="6"></line>
+          <line x1="8" y1="12" x2="21" y2="12"></line>
+          <line x1="8" y1="18" x2="21" y2="18"></line>
+          <line x1="3" y1="6" x2="3.01" y2="6"></line>
+          <line x1="3" y1="12" x2="3.01" y2="12"></line>
+          <line x1="3" y1="18" x2="3.01" y2="18"></line>
+        </svg>
+        <span>Preços Detalhados</span>
+      </button>
+
+      <button id="btnModoGlobal" class="side-dock-btn" onclick="setModoExibicao(true)" title="Ocultar valores unitários e apresentar escopo incluso">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <span>Escopo Incluso</span>
+      </button>
+    </aside>
+
     <!-- Cabeçalho -->
     <header class="proposal-header">
       <div class="proposal-logo-wrap">
@@ -208,29 +230,6 @@
       </div>
     </div>
   </div>
-
-  <!-- Floating Mode Switcher (Fixo no canto inferior direito) -->
-  <aside class="floating-mode-bar no-print" aria-label="Modo de Visualização da Proposta">
-    <div class="segmented-control-inline" title="Alternar formato de apresentação comercial da proposta">
-      <button id="btnModoDetalhado" class="seg-btn active" onclick="setModoExibicao(false)" title="Exibir preços unitários e subtotais por item">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="8" y1="6" x2="21" y2="6"></line>
-          <line x1="8" y1="12" x2="21" y2="12"></line>
-          <line x1="8" y1="18" x2="21" y2="18"></line>
-          <line x1="3" y1="6" x2="3.01" y2="6"></line>
-          <line x1="3" y1="12" x2="3.01" y2="12"></line>
-          <line x1="3" y1="18" x2="3.01" y2="18"></line>
-        </svg>
-        Preços Detalhados
-      </button>
-      <button id="btnModoGlobal" class="seg-btn" onclick="setModoExibicao(true)" title="Ocultar valores unitários e apresentar escopo incluso">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="20 6 9 17 4 12"></polyline>
-        </svg>
-        Escopo Incluso
-      </button>
-    </div>
-  </aside>
 
   <div id="toastBox" class="toast-container"></div>
 
