@@ -48,23 +48,6 @@
     </div>
 
     <div class="nav-actions">
-      <button id="btnEditarOrcamento" class="btn btn-secondary btn-sm" title="Retornar à tela de edição analítica de quantitativos">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 20h9"></path>
-          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
-        </svg>
-        Editar Orçamento
-      </button>
-
-      <button class="btn btn-primary btn-sm btn-print-pdf" onclick="imprimirProposta()" title="Imprimir proposta ou salvar em formato PDF A4">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="6 9 6 2 18 2 18 9"></polyline>
-          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
-          <rect x="6" y="14" width="12" height="8"></rect>
-        </svg>
-        Imprimir / Salvar PDF
-      </button>
-
       <a href="index.html" class="btn btn-outline btn-sm">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="19" y1="12" x2="5" y2="12"></line>
@@ -75,29 +58,49 @@
     </div>
   </nav>
 
+  <!-- Docks Laterais Fixos na Tela (4 Botões Fixos) -->
+  <aside class="proposal-dock-top no-print" aria-label="Modo de Visualização">
+    <button id="btnModoDetalhado" class="side-dock-btn active" onclick="setModoExibicao(false)" title="Exibir preços unitários e subtotais detalhados">
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="8" y1="6" x2="21" y2="6"></line>
+        <line x1="8" y1="12" x2="21" y2="12"></line>
+        <line x1="8" y1="18" x2="21" y2="18"></line>
+        <line x1="3" y1="6" x2="3.01" y2="6"></line>
+        <line x1="3" y1="12" x2="3.01" y2="12"></line>
+        <line x1="3" y1="18" x2="3.01" y2="18"></line>
+      </svg>
+      <span>Preços Detalhados</span>
+    </button>
+
+    <button id="btnModoGlobal" class="side-dock-btn" onclick="setModoExibicao(true)" title="Ocultar valores unitários e apresentar escopo incluso">
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+      <span>Escopo Incluso</span>
+    </button>
+  </aside>
+
+  <aside class="proposal-dock-bottom no-print" aria-label="Ações da Proposta">
+    <button id="btnEditarOrcamento" class="side-dock-btn" title="Retornar à tela de edição analítica de quantitativos">
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 20h9"></path>
+        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+      </svg>
+      <span>Editar Orçamento</span>
+    </button>
+
+    <button class="side-dock-btn side-dock-primary" onclick="imprimirProposta()" title="Imprimir proposta ou salvar em formato PDF A4">
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="6 9 6 2 18 2 18 9"></polyline>
+        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+        <rect x="6" y="14" width="12" height="8"></rect>
+      </svg>
+      <span>Imprimir / Salvar PDF</span>
+    </button>
+  </aside>
+
   <!-- Proposta Comercial Executiva (Documento A4) -->
   <div class="proposal-wrapper">
-    <!-- Lateral Mode Switcher (Grudado na lateral direita do orçamento) -->
-    <aside class="proposal-side-dock no-print" aria-label="Modo de Visualização">
-      <button id="btnModoDetalhado" class="side-dock-btn active" onclick="setModoExibicao(false)" title="Exibir preços unitários e subtotais detalhados">
-        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="8" y1="6" x2="21" y2="6"></line>
-          <line x1="8" y1="12" x2="21" y2="12"></line>
-          <line x1="8" y1="18" x2="21" y2="18"></line>
-          <line x1="3" y1="6" x2="3.01" y2="6"></line>
-          <line x1="3" y1="12" x2="3.01" y2="12"></line>
-          <line x1="3" y1="18" x2="3.01" y2="18"></line>
-        </svg>
-        <span>Preços Detalhados</span>
-      </button>
-
-      <button id="btnModoGlobal" class="side-dock-btn" onclick="setModoExibicao(true)" title="Ocultar valores unitários e apresentar escopo incluso">
-        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="20 6 9 17 4 12"></polyline>
-        </svg>
-        <span>Escopo Incluso</span>
-      </button>
-    </aside>
 
     <!-- Cabeçalho -->
     <header class="proposal-header">

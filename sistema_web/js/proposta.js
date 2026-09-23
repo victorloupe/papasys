@@ -53,7 +53,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderizarProposta(currentProject);
 
   if (typeof gsap !== "undefined") {
-    gsap.fromTo(".proposal-side-dock",
+    gsap.fromTo(".proposal-dock-top, .proposal-dock-bottom",
       { x: 15, opacity: 0 },
       { x: 0, opacity: 1, duration: 0.4, delay: 0.15, ease: "power2.out", clearProps: "all" }
     );

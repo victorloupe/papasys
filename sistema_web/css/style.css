@@ -2151,21 +2151,33 @@ body {
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
 }
 
-/* Lateral Mode Switcher (Grudado na lateral direita do orçamento) */
-.proposal-side-dock {
-  position: absolute;
-  top: 24px;
-  left: calc(100% + 12px);
+/* Lateral Action & Mode Docks (Fixos na tela ao lado do orçamento) */
+.proposal-dock-top {
+  position: fixed;
+  top: 85px;
+  left: calc(50% + 442px);
   display: flex;
   flex-direction: column;
   gap: 10px;
-  z-index: 100;
+  z-index: 999;
+}
+
+.proposal-dock-bottom {
+  position: fixed;
+  bottom: 32px;
+  left: calc(50% + 442px);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 999;
 }
 
 .side-dock-btn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
+  width: 195px;
+  box-sizing: border-box;
   padding: 10px 16px;
   background: #ffffff;
   color: var(--text-secondary);
@@ -2201,14 +2213,29 @@ body {
   stroke: #ffffff;
 }
 
-@media (max-width: 1260px) {
-  .proposal-side-dock {
-    position: static;
-    flex-direction: row;
-    justify-content: flex-end;
-    margin-bottom: 16px;
-    left: auto;
-    top: auto;
+.side-dock-primary {
+  background: var(--orange-gradient) !important;
+  color: #ffffff !important;
+  border-color: rgba(234, 88, 12, 0.5) !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 16px rgba(234, 88, 12, 0.32) !important;
+}
+
+.side-dock-primary:hover {
+  background: var(--orange-gradient-hover) !important;
+  transform: translateX(4px) !important;
+  box-shadow: 0 6px 20px rgba(234, 88, 12, 0.42) !important;
+}
+
+.side-dock-primary svg {
+  stroke: #ffffff;
+}
+
+@media (max-width: 1280px) {
+  .proposal-dock-top,
+  .proposal-dock-bottom {
+    left: auto !important;
+    right: 18px !important;
   }
 }
 
