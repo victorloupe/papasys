@@ -7,7 +7,7 @@ let priceItems = [];
 let currentCategoryFilter = "todos";
 let searchTerm = "";
 let currentPage = 1;
-let pageSize = 5; // Padrão de 5 itens para visualização executiva sem scroll vertical
+let pageSize = 9; // Padrão de 9 itens para encaixe perfeito no layout sem rolagem
 
 document.addEventListener("DOMContentLoaded", async () => {
   await carregarPrecos();
@@ -248,9 +248,9 @@ function renderizarControlesPaginacao(totalItens, totalPaginas, inicio, fim) {
       <div class="pagination-pagesize">
         <label for="selectPageSize">Por página:</label>
         <select id="selectPageSize" onchange="mudarPageSize(this.value)">
-          <option value="5" ${pageSize === 5 ? 'selected' : ''}>5</option>
-          <option value="6" ${pageSize === 6 ? 'selected' : ''}>6</option>
-          <option value="10" ${pageSize === 10 ? 'selected' : ''}>10</option>
+          <option value="9" ${pageSize === 9 ? 'selected' : ''}>9</option>
+          <option value="18" ${pageSize === 18 ? 'selected' : ''}>18</option>
+          <option value="27" ${pageSize === 27 ? 'selected' : ''}>27</option>
           <option value="999" ${pageSize >= 999 ? 'selected' : ''}>Todos</option>
         </select>
       </div>
