@@ -1,559 +1,1264 @@
-// PapaSys Paginação - Script de Interface (HTML <-> SketchUp Ruby v1.1.0)
+// ==============================================================================
+// iGUi Orçamentos 3D - Controlador Frontend HtmlDialog (Abas 1, 2 e 3)
+// ==============================================================================
 
-const SUPABASE_CONFIG = {
-  url: "https://bhbbpdvgkyjqxhghbmpe.supabase.co",
-  key: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJoYmJwZHZna3lqcXhoZ2hibXBlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAxNDk2NTIsImV4cCI6MjEwNTcyNTY1Mn0.8ti8dQiBhX20bVk3BOvFL91Rk3Vw31NS3dbpA6YiR5M"
+const appState = {
+  version: "2.0.0",
+  serverUrl: "https://bhbbpdvgkyjqxhghbmpe.supabase.co",
+  active_tab: 1,
+  user: {
+    id: "usr-victor",
+    name: "Victor Lourenço",
+    email: "victor@igui.com",
+    role: "user",
+    allowed_divisions: ["sob_medida"]
+  },
+  allUsers: [
+    {
+      id: "77b65d92-3aa2-47a6-9dbb-033fd48f7b30",
+      name: "Administrador (PapaSys)",
+      email: "admin@papa.com",
+      role: "admin",
+      allowed_divisions: ["sob_medida", "incorporadora", "internacional"],
+      allowed_stages: ["previa", "galga", "desenho_tecnico"],
+      avatar_color: "#0284c7"
+    },
+    {
+      id: "a0f528a8-ce32-4f4e-85b1-6c15612fda18",
+      name: "Victor Lourenço",
+      email: "usuario@papa.com",
+      role: "user",
+      allowed_divisions: ["sob_medida"],
+      allowed_stages: ["previa", "galga", "desenho_tecnico"],
+      avatar_color: "#f97316"
+    },
+    {
+      id: "usr-admin",
+      name: "Administrador / Diretor",
+      email: "diretoria@igui.com",
+      role: "admin",
+      allowed_divisions: ["sob_medida", "incorporadora", "internacional"],
+      allowed_stages: ["previa", "galga", "desenho_tecnico"],
+      avatar_color: "#0284c7"
+    },
+    {
+      id: "usr-victor",
+      name: "Victor Lourenço (iGUi)",
+      email: "victor@igui.com",
+      role: "user",
+      allowed_divisions: ["sob_medida"],
+      allowed_stages: ["previa", "galga", "desenho_tecnico"],
+      avatar_color: "#f97316"
+    }
+  ],
+  selected_division: "sob_medida", // 'sob_medida', 'incorporadora', 'internacional'
+  modo_orcamento: "novo", // 'novo' ou 'existente'
+  budget_code: "", // Digitado manualmente pelo usuário (vem do e-mail do cliente)
+  orcamentosExistentes: [],
+  orcamentoExistenteSelecionado: null,
+  
+  // Configuração Técnica da Piscina
+  stage: "previa", // 'previa' (+5%) ou 'galga' (0%)
+  pool_type: "convencional", // 'convencional' ou 'especial'
+  structure_type: "nao_autoportante", // 'nao_autoportante' ou 'autoportante'
+  coating_type: "pastilha_15x15",
+  has_mold: false,
+  mold_manual_override: false,
+  units_count: 1,
+
+  // Quantitativos 3D detectados
+  quantitativos: {
+    area_revestimento_m2: 0.0,
+    area_laminacao_m2: 0.0,
+    volume_m3: 0.0,
+    volume_litros: 0,
+    cantos_lineares_m: 0.0,
+    cantos_lineares_cm: 0.0,
+    quinas_vivas_count: 0,
+    finishes: {},
+    has_explicit_revest: false,
+    has_explicit_lamina: false,
+    dimensoes: { comprimento_m: 0.0, largura_m: 0.0, profundidade_m: 0.0 }
+  },
+
+  // Tabela de Preços e Regras (Seção 9, 10 e 11)
+  precos: {
+    revestimentos: [
+      { id: "pastilha_5x5", nome: "Pastilha 5x5", acabamento: "bp11_c3", preco_sem_molde: 85.0, preco_com_molde: 68.0 },
+      { id: "pastilha_7_5x7_5", nome: "Pastilha 7,5x7,5", acabamento: "boleada_7_5", preco_sem_molde: 90.0, preco_com_molde: 72.0 },
+      { id: "pastilha_10x10", nome: "Pastilha 10x10", acabamento: "bp11_c3", preco_sem_molde: 85.0, preco_com_molde: 68.0 },
+      { id: "pastilha_15x15", nome: "Pastilha 15x15", acabamento: "boleada_15", preco_sem_molde: 98.0, preco_com_molde: 78.0 },
+      { id: "porcelanato_villagres", nome: "Porcelanato Villagres", acabamento: "personalizado", preco_sem_molde: 120.0, preco_com_molde: 98.0 },
+      { id: "personalizado", nome: "Personalizado", acabamento: "personalizado", preco_sem_molde: 0.0, preco_com_molde: 0.0 }
+    ],
+    revestimento: {
+      pastilha_5x5: 85.0,
+      pastilha_7_5x7_5: 90.0,
+      pastilha_10x10: 85.0,
+      pastilha_15x15: 98.0,
+      porcelanato_villagres: 120.0,
+      personalizado: 0.0
+    },
+    acabamento: {
+      bp11: 18.50,
+      c3: 14.00,
+      boleada_7_5: 8.50,
+      boleada_15: 12.00,
+      quebra_canto: 15.00
+    },
+    laminacao: {
+      preco_m2: 95.0,
+      sem_molde: 95.0,
+      com_molde: 95.0
+    },
+    regras: {
+      min_unidades_molde: 10,
+      acrescimo_autoportante_pct: 50.0,
+      margem_previa_pct: 5.0,
+      margem_galga_pct: 0.0
+    }
+  },
+
+  selectionInfo: null,
+  valoresCalculados: {}
 };
 
-let currentResult = null;
-let autoSendAfterAdjust = false;
-let currentOrigem = "centro";
-let currentCantoRef = "inf_esq";
-let currentPercentualPerda = 10;
-
+// ==============================================================================
+// INICIALIZAÇÃO
+// ==============================================================================
 document.addEventListener("DOMContentLoaded", () => {
   if (window.sketchup) {
     window.sketchup.ready();
+    window.sketchup.buscar_usuarios();
+  } else {
+    // Modo de teste / navegador local
+    initApp({
+      version: "2.0.0",
+      user: appState.user,
+      selected_division: "sob_medida",
+      info_selecao: { has_selection: true, descricao: "Piscina Teste 3D" }
+    });
   }
 });
 
-function initApp(config) {
-  if (config.version) {
-    document.getElementById("versionBadge").textContent = "v" + config.version;
+function initApp(dados) {
+  if (!dados) return;
+
+  if (dados.version) {
+    appState.version = dados.version;
+    const badge = document.getElementById("versionBadge");
+    if (badge) badge.textContent = `v${dados.version}`;
   }
-  if (config.server_url) {
-    document.getElementById("inputServerUrl").value = config.server_url;
+
+  if (dados.user) {
+    aplicarUsuarioAtivo(dados.user);
   }
-  if (config.auto_update !== undefined) {
-    document.getElementById("chkAutoUpdate").checked = config.auto_update;
+
+  if (dados.users && Array.isArray(dados.users) && dados.users.length > 0) {
+    appState.allUsers = dados.users;
+    renderizarListaUsuariosModal();
   }
-  if (config.largura_cm) {
-    document.getElementById("inputLargura").value = config.largura_cm;
+
+  if (dados.selected_division) {
+    selecionarDivisao(dados.selected_division);
   }
-  if (config.altura_cm) {
-    document.getElementById("inputAltura").value = config.altura_cm;
+
+  if (dados.info_selecao) {
+    atualizarInfoSelecao(dados.info_selecao);
   }
-  if (config.rejunte_cm) {
-    document.getElementById("inputRejunte").value = config.rejunte_cm;
-  }
-  if (config.info_selecao) {
-    atualizarInfoSelecao(config.info_selecao);
-  }
+
+  // Executa análise inicial
+  executarAnaliseGeometrica(false);
 }
 
-// Detecção Automática do 3D Selecionado
-function solicitarInspecao(e) {
-  if (e) e.stopPropagation();
-  if (window.sketchup && window.sketchup.inspecionar_selecao) {
-    window.sketchup.inspecionar_selecao();
-  }
-}
+// ==============================================================================
+// CONTROLE DE ABAS 1, 2 E 3 (ZERO SCROLL)
+// ==============================================================================
+function switchTab(num) {
+  appState.active_tab = num;
 
-function atualizarInfoSelecao(info) {
-  const chip = document.getElementById("selectionChip");
-  const titleEl = document.getElementById("selectionStatusText");
-  const dimsEl = document.getElementById("selectionDimsText");
-
-  if (!chip || !titleEl || !dimsEl) return;
-
-  console.log("[PapaSys JS] Info seleção:", info);
-
-  if (info && info.has_selection) {
-    chip.classList.remove("no-sel");
-    chip.classList.add("has-sel");
-    titleEl.textContent = "✓ " + (info.descricao || "Piscina 3D Selecionada");
-
-    const comp = parseFloat(info.comprimento_m) || 0;
-    const larg = parseFloat(info.largura_m) || 0;
-    const prof = parseFloat(info.profundidade_m) || 0;
-
-    if (comp > 0 && larg > 0) {
-      dimsEl.textContent = `${comp.toFixed(2)}m × ${larg.toFixed(2)}m × ${prof.toFixed(2)}m`;
-    } else {
-      dimsEl.textContent = info.descricao || "Geometria da piscina pronta";
-    }
-
-    const badgeCurva = document.getElementById("badgeCurva");
-    if (badgeCurva) {
-      badgeCurva.style.display = (info.tem_curvas) ? "inline-flex" : "none";
-    }
-
-    // Preenche o nome do projeto automaticamente se o grupo possuir nome no SketchUp
-    if (info.nome_sugerido && info.nome_sugerido.trim() !== "") {
-      const projInput = document.getElementById("inputProjeto");
-      if (projInput && (projInput.value === "Piscina Cliente PapaSys" || projInput.value === "" || projInput.value === "Piscina sem Nome")) {
-        projInput.value = info.nome_sugerido.trim();
+  // Atualiza classes dos botões das abas
+  for (let i = 1; i <= 3; i++) {
+    const btn = document.getElementById(`tabBtn${i}`);
+    const panel = document.getElementById(`tabPanel${i}`);
+    if (btn) btn.classList.toggle("active", i === num);
+    if (panel) {
+      if (i === num) {
+        panel.style.display = "block";
+        panel.classList.add("active");
+      } else {
+        panel.style.display = "none";
+        panel.classList.remove("active");
       }
     }
-  } else {
-    chip.classList.remove("has-sel");
-    chip.classList.add("no-sel");
-    titleEl.textContent = "Nenhuma piscina selecionada";
+  }
 
-    const badgeCurva = document.getElementById("badgeCurva");
-    if (badgeCurva) badgeCurva.style.display = "none";
-    if (info && info.error) {
-      dimsEl.textContent = "Aviso: " + info.error;
-    } else {
-      dimsEl.textContent = "Selecione o grupo ou faces no SketchUp";
+  // Se for para a aba 3, garante que os cálculos e acabamentos estejam recalculados
+  if (num === 3) {
+    if (appState.selectionInfo && appState.selectionInfo.has_selection && (!appState.quantitativos.area_revestimento_m2 || parseFloat(appState.quantitativos.area_revestimento_m2) <= 0)) {
+      executarAnaliseGeometrica(false);
     }
+    recalcularPecasAcabamento();
+    atualizarCalculosFinanceiros();
   }
 }
 
-// Seleção do Ponto de Origem da Modulação
-function setOrigem(origem) {
-  currentOrigem = origem;
-  const btnCentro = document.getElementById("btnOrigemCentro");
-  const btnCanto = document.getElementById("btnOrigemCanto");
-  const cantoGroup = document.getElementById("cantoSelectorGroup");
+// ==============================================================================
+// USUÁRIOS E PERMISSÕES (SEÇÃO 3 E 4)
+// ==============================================================================
+function aplicarUsuarioAtivo(user) {
+  appState.user = user;
 
-  if (btnCentro) btnCentro.classList.toggle("active", origem === "centro");
-  if (btnCanto) btnCanto.classList.toggle("active", origem === "canto");
+  const lblNome = document.getElementById("lblUserName");
+  const lblRole = document.getElementById("lblUserRole");
+  const lblDivs = document.getElementById("lblUserDivisions");
+  const avatar = document.getElementById("userAvatar");
 
-  if (cantoGroup) {
-    cantoGroup.style.display = (origem === "canto") ? "block" : "none";
+  if (lblNome) lblNome.textContent = user.name || "Usuário iGUi";
+  
+  const isAdmin = user.role === "admin";
+  if (lblRole) {
+    lblRole.textContent = isAdmin ? "Diretoria / Admin" : "Projetista";
+    lblRole.className = `badge-role ${isAdmin ? "admin" : ""}`;
   }
-}
 
-// Seleção do Canto de Partida (quando Origem = Canto)
-function setCantoRef(canto) {
-  currentCantoRef = canto;
-  const cantos = {
-    'sup_esq': 'btnCantoSupEsq',
-    'sup_dir': 'btnCantoSupDir',
-    'inf_esq': 'btnCantoInfEsq',
-    'inf_dir': 'btnCantoInfDir'
+  // Iniciais do Avatar
+  const parts = (user.name || "U").trim().split(" ");
+  const initials = parts.length > 1 ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase() : parts[0].slice(0, 2).toUpperCase();
+  if (avatar) {
+    avatar.textContent = initials;
+    if (user.avatar_color) avatar.style.background = user.avatar_color;
+  }
+
+  // Formata texto de divisões
+  const allowed = user.allowed_divisions || ["sob_medida"];
+  const nomesDivs = {
+    sob_medida: "Sob Medida",
+    incorporadora: "Incorporadora",
+    internacional: "Internacional"
   };
-  Object.entries(cantos).forEach(([key, id]) => {
-    const btn = document.getElementById(id);
-    if (btn) btn.classList.toggle('active', key === canto);
-  });
-}
-
-// Predefinições rápidas
-function setPreset(larg, alt, rej) {
-  document.getElementById("inputLargura").value = larg;
-  document.getElementById("inputAltura").value = alt;
-  document.getElementById("inputRejunte").value = rej;
-
-  document.querySelectorAll(".btn-preset").forEach(btn => {
-    btn.classList.remove("active");
-  });
-  if (window.event && window.event.target) {
-    window.event.target.classList.add("active");
-  }
-}
-
-// Margem de perda / sobra técnica
-function setPercentualPerda(pct) {
-  currentPercentualPerda = pct;
-  const btn10 = document.getElementById("btnPerda10");
-  const btn15 = document.getElementById("btnPerda15");
-
-  if (btn10) btn10.classList.toggle("active", pct === 10);
-  if (btn15) btn15.classList.toggle("active", pct === 15);
-
-  recalcularPerda();
-}
-
-function recalcularPerda() {
-  const inputArea = document.getElementById("inputAreaM2");
-  const outEl = document.getElementById("statAreaComPerda");
-  if (!inputArea || !outEl) return;
-
-  const base = parseFloat(inputArea.value) || 0.0;
-  const comPerda = (base * (1 + currentPercentualPerda / 100)).toFixed(2);
-  outEl.textContent = comPerda + " m²";
-}
-
-// 1. Executa Ajuste e Envio imediato em 1 clique
-function ajustarEEnviarTudo() {
-  autoSendAfterAdjust = true;
-  executarAjuste(true);
-}
-
-// 2. Executa o ajuste geométrico modular no SketchUp
-function executarAjuste(autoSend = false) {
-  autoSendAfterAdjust = autoSend;
-
-  const btn = document.getElementById("btnAjustar");
-  btn.disabled = true;
-  btn.innerHTML = 'Modulando geometria...';
-
-  const btnAll = document.getElementById("btnAjustarEEnviar");
-  if (btnAll) {
-    btnAll.disabled = true;
-    btnAll.innerHTML = 'Ajustando e Sincronizando...';
+  if (lblDivs) {
+    lblDivs.textContent = isAdmin ? "Acesso: Todas as Divisões (Admin)" : `Acesso: ${allowed.map(d => nomesDivs[d] || d).join(", ")}`;
   }
 
-  const params = {
-    largura: parseFloat(document.getElementById("inputLargura").value) || 15.0,
-    altura: parseFloat(document.getElementById("inputAltura").value) || 15.0,
-    rejunte: parseFloat(document.getElementById("inputRejunte").value) || 0.2,
-    origem: currentOrigem,
-    canto_ref: currentCantoRef,
-    projeto: document.getElementById("inputProjeto").value || "Piscina sem Nome",
-    cliente: document.getElementById("inputCliente").value || "Cliente Geral",
-    notas: ""
+  // Ativa/Desativa botões conforme permissões
+  atualizarBotoesDivisoesPorPermissao();
+}
+
+function atualizarBotoesDivisoesPorPermissao() {
+  const user = appState.user;
+  const isAdmin = user.role === "admin";
+  const allowed = user.allowed_divisions || ["sob_medida"];
+
+  const bSob = document.getElementById("btnDivSobMedida");
+  const bInc = document.getElementById("btnDivIncorporadora");
+  const bInt = document.getElementById("btnDivInternacional");
+
+  const checkDiv = (btn, divKey) => {
+    if (!btn) return;
+    const permitida = isAdmin || allowed.includes(divKey);
+    btn.disabled = !permitida;
+    if (permitida) {
+      btn.classList.remove("disabled");
+      btn.title = "Clique para selecionar esta divisão";
+    } else {
+      btn.classList.add("disabled");
+      btn.title = `Acesso restrito: o usuário ${user.name} não possui acesso a esta divisão.`;
+    }
   };
+
+  checkDiv(bSob, "sob_medida");
+  checkDiv(bInc, "incorporadora");
+  checkDiv(bInt, "internacional");
+
+  // Se a divisão atual não for permitida, troca para a primeira permitida
+  if (!isAdmin && !allowed.includes(appState.selected_division)) {
+    const primeira = allowed[0] || "sob_medida";
+    selecionarDivisao(primeira);
+  }
+}
+
+function onUsuariosCarregados(usuarios) {
+  if (Array.isArray(usuarios)) {
+    appState.allUsers = usuarios;
+    renderizarListaUsuariosModal();
+  }
+}
+
+function renderizarListaUsuariosModal() {
+  const container = document.getElementById("listaUsuariosLogin");
+  if (!container) return;
+
+  const users = appState.allUsers.length > 0 ? appState.allUsers : [appState.user];
+  container.innerHTML = users.map(u => {
+    const isCurrent = u.id === appState.user.id || u.email === appState.user.email;
+    const parts = (u.name || "U").trim().split(" ");
+    const init = parts.length > 1 ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase() : parts[0].slice(0, 2).toUpperCase();
+    const isAdmin = u.role === "admin";
+
+    return `
+      <div class="user-select-card ${isCurrent ? 'active' : ''}" onclick="selecionarUsuarioLogin('${u.id || u.email}')">
+        <div class="user-avatar" style="background: ${u.avatar_color || '#0284c7'}">${init}</div>
+        <div class="user-info">
+          <div class="user-name-row">
+            <span class="user-name">${u.name}</span>
+            <span class="badge-role ${isAdmin ? 'admin' : ''}">${isAdmin ? 'Admin' : 'Usuário'}</span>
+          </div>
+          <div class="user-permissions">${u.email} &bull; ${(u.allowed_divisions || []).join(', ')}</div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function selecionarUsuarioLogin(userIdOrEmail) {
+  const u = appState.allUsers.find(x => x.id === userIdOrEmail || x.email === userIdOrEmail);
+  if (!u) return;
 
   if (window.sketchup) {
-    window.sketchup.executar_ajuste(params);
+    window.sketchup.login(u);
   } else {
+    aplicarUsuarioAtivo(u);
+    fecharModalUser();
+    showToast(`Usuário alternado para ${u.name}!`, "success");
+  }
+}
+
+function onLoginSucesso(userData) {
+  aplicarUsuarioAtivo(userData);
+  fecharModalUser();
+  showToast(`Sessão ativa: ${userData.name}!`, "success");
+}
+
+function toggleModalUser() {
+  const m = document.getElementById("modalUser");
+  if (!m) return;
+  const isVis = m.style.display !== "none";
+  m.style.display = isVis ? "none" : "flex";
+  if (!isVis) renderizarListaUsuariosModal();
+}
+
+function fecharModalUser() {
+  const m = document.getElementById("modalUser");
+  if (m) m.style.display = "none";
+}
+
+function fecharModalUserSeClicarFora(e) {
+  if (e.target.id === "modalUser") fecharModalUser();
+}
+
+// ==============================================================================
+// NAVEGAÇÃO DE DIVISÕES (SEÇÃO 2 E 4)
+// ==============================================================================
+function selecionarDivisao(divisao) {
+  const user = appState.user;
+  const isAdmin = user.role === "admin";
+  const allowed = user.allowed_divisions || ["sob_medida"];
+
+  if (!isAdmin && !allowed.includes(divisao)) {
+    showToast(`Acesso restrito: ${user.name} não possui acesso a esta divisão.`, "error");
+    return;
+  }
+
+  appState.selected_division = divisao;
+  if (window.sketchup) {
+    window.sketchup.selecionar_divisao(divisao);
+  }
+
+  // Atualiza classes ativas dos 3 botões
+  const bSob = document.getElementById("btnDivSobMedida");
+  const bInc = document.getElementById("btnDivIncorporadora");
+  const bInt = document.getElementById("btnDivInternacional");
+  if (bSob) bSob.classList.toggle("active", divisao === "sob_medida");
+  if (bInc) bInc.classList.toggle("active", divisao === "incorporadora");
+  if (bInt) bInt.classList.toggle("active", divisao === "internacional");
+
+  // Regras específicas de cada divisão (Seção 5 e 10)
+  const inputUnidades = document.getElementById("inputUnidades");
+  const badgeLock = document.getElementById("badgeSobMedidaUnidade");
+  const rowMolde = document.getElementById("rowMoldeIncorporadora");
+  const btnEnvio = document.getElementById("lblTextoBotaoEnvio");
+
+  if (divisao === "sob_medida") {
+    // Sob Medida: 1 orçamento = 1 piscina
+    if (inputUnidades) {
+      inputUnidades.value = 1;
+      inputUnidades.disabled = true;
+    }
+    if (badgeLock) badgeLock.style.display = "inline-block";
+    if (rowMolde) rowMolde.style.display = "none";
+    if (btnEnvio) btnEnvio.textContent = "Enviar para iGUi Sob Medida";
+    appState.units_count = 1;
+  } else if (divisao === "incorporadora") {
+    // Incorporadora: múltiplos modelos/unidades e regra de molde
+    if (inputUnidades) {
+      inputUnidades.disabled = false;
+      appState.units_count = Math.max(1, parseInt(inputUnidades.value) || 1);
+    }
+    if (badgeLock) badgeLock.style.display = "none";
+    if (rowMolde) rowMolde.style.display = "block";
+    if (btnEnvio) btnEnvio.textContent = "Enviar para iGUi Incorporadora";
+    verificarRegraMoldeIncorporadora();
+  } else {
+    // Internacional
+    if (inputUnidades) {
+      inputUnidades.disabled = false;
+      appState.units_count = Math.max(1, parseInt(inputUnidades.value) || 1);
+    }
+    if (badgeLock) badgeLock.style.display = "none";
+    if (rowMolde) rowMolde.style.display = "none";
+    if (btnEnvio) btnEnvio.textContent = "Enviar para iGUi Internacional";
+  }
+
+  // Limpa feedback de pesquisa anterior
+  const boxStatus = document.getElementById("boxStatusBuscaOrcamento");
+  if (boxStatus) boxStatus.style.display = "none";
+
+  if (appState.modo_orcamento === "existente") {
+    carregarOrcamentosExistentes();
+  }
+
+  atualizarCalculosFinanceiros();
+}
+
+// ==============================================================================
+// IDENTIFICAÇÃO DO ORÇAMENTO (NÚMERO MANUAL & PESQUISA INTELIGENTE)
+// ==============================================================================
+function setModoOrcamento(modo) {
+  appState.modo_orcamento = modo;
+  const tabNovo = document.getElementById("tabModoNovo");
+  const tabExistente = document.getElementById("tabModoExistente");
+  const tabGalga = document.getElementById("tabModoGalga");
+  const blocoExistente = document.getElementById("blocoOrcamentoExistente");
+
+  if (tabNovo) tabNovo.classList.toggle("active", modo === "novo");
+  if (tabExistente) tabExistente.classList.toggle("active", modo === "existente");
+  if (tabGalga) tabGalga.classList.toggle("active", modo === "galga");
+
+  const precisaExistente = modo === "existente" || modo === "galga";
+  if (blocoExistente) blocoExistente.style.display = precisaExistente ? "block" : "none";
+
+  const boxStatus = document.getElementById("boxStatusBuscaOrcamento");
+  if (boxStatus) boxStatus.style.display = "none";
+
+  const btnEnvioText = document.getElementById("lblTextoBotaoEnvio");
+
+  if (modo === "galga") {
+    // Galga: define etapa como galga (0% de margem)
+    setEtapa("galga");
+    carregarOrcamentosExistentes();
+    if (btnEnvioText) btnEnvioText.textContent = "Substituir Piscina e Enviar Galga (0%)";
+  } else if (modo === "existente") {
+    carregarOrcamentosExistentes();
+    if (btnEnvioText) btnEnvioText.textContent = "Adicionar Piscina a Existente";
+  } else {
+    // Modo novo
+    const divNomes = { sob_medida: "iGUi Sob Medida", incorporadora: "iGUi Incorporadora", internacional: "iGUi Internacional" };
+    if (btnEnvioText) btnEnvioText.textContent = `Enviar para ${divNomes[appState.selected_division] || "iGUi"}`;
+  }
+}
+
+// Pesquisa orçamento pelo número digitado pelo usuário (vem do e-mail do cliente)
+function pesquisarOrcamentoPorNumero() {
+  const inputCod = document.getElementById("inputNumeroOrcamento");
+  const codigo = inputCod ? inputCod.value.trim() : "";
+  const boxStatus = document.getElementById("boxStatusBuscaOrcamento");
+
+  if (!codigo) {
+    showToast("Digite o número do orçamento para pesquisar.", "error");
+    if (inputCod) inputCod.focus();
+    return;
+  }
+
+  appState.budget_code = codigo;
+  if (boxStatus) {
+    boxStatus.style.display = "block";
+    boxStatus.className = "budget-status-box searching";
+    boxStatus.innerHTML = `
+      <div class="budget-status-inner">
+        <div class="budget-status-loading">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" class="spin-icon">
+            <line x1="12" y1="2" x2="12" y2="6"></line>
+            <line x1="12" y1="18" x2="12" y2="22"></line>
+            <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line>
+            <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line>
+            <line x1="2" y1="12" x2="6" y2="12"></line>
+            <line x1="18" y1="12" x2="22" y2="12"></line>
+            <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line>
+            <line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line>
+          </svg>
+          <span>Pesquisando orçamento nº <strong>${codigo}</strong>...</span>
+        </div>
+      </div>
+    `;
+  }
+
+  if (window.sketchup) {
+    window.sketchup.buscar_orcamento_codigo({
+      codigo: codigo,
+      divisao: appState.selected_division
+    });
+  } else {
+    // Mock local para testes
     setTimeout(() => {
-      onAjusteSucesso({
-        success: true,
-        projeto: params.projeto,
-        cliente: params.cliente,
-        origem_modulacao: params.origem,
-        area_interna_m2: 28.56,
-        area_perda_10_m2: 31.42,
-        area_perda_15_m2: 32.84,
-        borda_perimetro_linear_m: 15.81,
-        pontos_ajustados: 8,
-        mod_horizontal_cm: (params.largura + params.rejunte).toFixed(1),
-        mod_vertical_cm: (params.altura + params.rejunte).toFixed(1),
-        dimensoes: { comprimento_m: 6.0, largura_m: 3.0, profundidade_m: 1.4 }
-      });
+      if (codigo.includes("84") || codigo.includes("2026")) {
+        onResultadoBuscaOrcamento(true, [{
+          id: "orc-mock-found",
+          budget_code: codigo,
+          project_name: "Residencial Grand Park",
+          client_name: "Cyrela Construtora",
+          division: appState.selected_division,
+          stage: "previa"
+        }]);
+      } else {
+        onResultadoBuscaOrcamento(false, []);
+      }
     }, 400);
   }
 }
 
-function onAjusteSucesso(res) {
-  const btn = document.getElementById("btnAjustar");
-  btn.disabled = false;
-  btn.innerHTML = `
-    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
-      <polyline points="2 17 12 22 22 17"></polyline>
-      <polyline points="2 12 12 17 22 12"></polyline>
-    </svg>
-    Apenas Ajustar Geometria 3D
-  `;
+// Callback invocado após a busca no Supabase
+function onResultadoBuscaOrcamento(sucesso, resultados) {
+  const boxStatus = document.getElementById("boxStatusBuscaOrcamento");
+  if (!boxStatus) return;
 
-  currentResult = res;
+  const codigo = (appState.budget_code || "").trim();
 
-  const inputArea = document.getElementById("inputAreaM2");
-  if (inputArea) {
-    inputArea.value = Number(res.area_interna_m2).toFixed(2);
-  }
-  const inputBorda = document.getElementById("inputBordaM");
-  if (inputBorda) {
-    inputBorda.value = Number(res.borda_perimetro_linear_m).toFixed(2);
-  }
+  if (sucesso && Array.isArray(resultados) && resultados.length > 0) {
+    // Orçamento ENCONTRADO!
+    const orc = resultados[0];
+    appState.orcamentoExistenteSelecionado = orc;
+    appState.budget_code = orc.budget_code || codigo;
+    
+    // Preenche os campos do projeto e cliente
+    const inputProj = document.getElementById("inputProjeto");
+    const inputCli = document.getElementById("inputCliente");
+    if (inputProj && orc.project_name) inputProj.value = orc.project_name;
+    if (inputCli && orc.client_name) inputCli.value = orc.client_name;
 
-  // Atualiza perda
-  recalcularPerda();
+    // Define modo como existente
+    setModoOrcamento("existente");
 
-  const snapBadge = document.getElementById("badgeSnapStatus");
-  if (snapBadge) {
-    snapBadge.textContent = (res.origem_modulacao === "canto") ? "Snap Canto OK" : "Snap Central OK";
-  }
+    boxStatus.style.display = "block";
+    boxStatus.className = "budget-status-box found";
+    boxStatus.innerHTML = `
+      <div class="budget-status-inner">
+        <div class="status-badge-row">
+          <span class="status-pill status-pill-success">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            Orçamento Encontrado
+          </span>
+          <span class="status-code">#${orc.budget_code}</span>
+        </div>
+        <div class="status-project-title">${orc.project_name || 'Sem nome'}</div>
+        <div class="status-client-name">Cliente: ${orc.client_name || 'Geral'}</div>
+        <div class="status-hint">Esta piscina será acumulada neste orçamento no envio.</div>
+        <div class="status-actions">
+          <button type="button" class="btn btn-sm btn-primary-igui" onclick="switchTab(2)">
+            Avançar para Configuração
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </button>
+        </div>
+      </div>
+    `;
+    showToast(`Orçamento #${orc.budget_code} localizado com sucesso!`, "success");
 
-  document.getElementById("statVertices").textContent = `${res.pontos_ajustados} pts`;
-  document.getElementById("statModulo").textContent = `${res.mod_horizontal_cm}×${res.mod_vertical_cm} cm`;
-
-  const rowCurva = document.getElementById("rowCurvaInfo");
-  const textCurva = document.getElementById("textCurvaInfo");
-  if (rowCurva && textCurva) {
-    if (res.tem_curvas && res.comprimento_curva_m > 0) {
-      rowCurva.style.display = "flex";
-      textCurva.textContent = `Parede Curva Preservada: ${res.comprimento_curva_m}m desenvolvidos (~${res.qtd_pastilhas_curva} peças inteiras no arco)`;
-    } else {
-      rowCurva.style.display = "none";
-    }
-  }
-
-  document.getElementById("resultsCard").classList.remove("hidden");
-
-  const origTxt = (res.origem_modulacao === "canto") ? "pelo canto inicial" : "pelo centro simétrico";
-  const msgToast = res.tem_curvas 
-    ? `Ajuste 3D concluído! Retas moduladas e curvaturas preservadas suavemente.`
-    : `Ajuste 3D concluído com sucesso (${origTxt})!`;
-  showToast(msgToast, "success");
-
-  // Se o botão de 1 clique foi acionado, dispara o envio imediatamente
-  if (autoSendAfterAdjust) {
-    autoSendAfterAdjust = false;
-    enviarParaWeb();
   } else {
-    const btnAll = document.getElementById("btnAjustarEEnviar");
-    if (btnAll) {
-      btnAll.disabled = false;
-      btnAll.innerHTML = `
-        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-        </svg>
-        Ajustar & Enviar para o PapaSys (1 Clique)
-      `;
-    }
+    // Orçamento NÃO ENCONTRADO! Pergunta se deseja criar um novo com este número
+    appState.orcamentoExistenteSelecionado = null;
+
+    boxStatus.style.display = "block";
+    boxStatus.className = "budget-status-box not-found";
+    boxStatus.innerHTML = `
+      <div class="budget-status-inner">
+        <div class="status-badge-row">
+          <span class="status-pill status-pill-warning">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            Não Encontrado
+          </span>
+        </div>
+        <div class="status-not-found-msg">
+          Nenhum orçamento encontrado com o número <strong>${codigo}</strong>.
+        </div>
+        <div class="status-prompt">
+          Deseja criar um novo orçamento com este número?
+        </div>
+        <div class="status-actions">
+          <button type="button" class="btn btn-sm btn-primary-igui" onclick="confirmarCriarNovoComNumero('${codigo}')">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Sim, criar novo orçamento nº ${codigo}
+          </button>
+        </div>
+      </div>
+    `;
   }
 }
 
-function onAjusteErro(errMsg) {
-  const btn = document.getElementById("btnAjustar");
-  btn.disabled = false;
-  btn.innerHTML = `
-    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
-      <polyline points="2 17 12 22 22 17"></polyline>
-      <polyline points="2 12 12 17 22 12"></polyline>
-    </svg>
-    Apenas Ajustar Geometria 3D
-  `;
+// Confirma a criação de novo orçamento com o número digitado
+function confirmarCriarNovoComNumero(codigo) {
+  appState.modo_orcamento = "novo";
+  appState.budget_code = codigo;
+  appState.orcamentoExistenteSelecionado = null;
 
-  const btnAll = document.getElementById("btnAjustarEEnviar");
-  if (btnAll) {
-    btnAll.disabled = false;
-    btnAll.innerHTML = `
-      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-      </svg>
-      Ajustar & Enviar para o PapaSys (1 Clique)
+  setModoOrcamento("novo");
+
+  const inputCod = document.getElementById("inputNumeroOrcamento");
+  if (inputCod) inputCod.value = codigo;
+
+  const boxStatus = document.getElementById("boxStatusBuscaOrcamento");
+  if (boxStatus) {
+    boxStatus.className = "budget-status-box found";
+    boxStatus.innerHTML = `
+      <div class="budget-status-inner">
+        <div class="status-badge-row">
+          <span class="status-pill status-pill-success">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            Novo Orçamento Definido
+          </span>
+          <span class="status-code">#${codigo}</span>
+        </div>
+        <div class="status-hint">O número <strong>${codigo}</strong> será atribuído a este novo orçamento.</div>
+      </div>
     `;
   }
 
-  showToast(errMsg, "error");
+  showToast(`Criando novo orçamento com o número ${codigo}.`, "success");
 }
 
-async function enviarParaWeb() {
-  if (!currentResult) {
-    ajustarEEnviarTudo();
+function carregarOrcamentosExistentes() {
+  const sel = document.getElementById("selectOrcamentoExistente");
+  if (!sel) return;
+  sel.innerHTML = '<option value="">Carregando orçamentos da nuvem...</option>';
+
+  if (window.sketchup) {
+    window.sketchup.listar_orcamentos(appState.selected_division);
+  } else {
+    setTimeout(() => {
+      onOrcamentosCarregados([
+        { id: "orc-mock-1", budget_code: "84920", project_name: "Residencial Grand Park", client_name: "Cyrela Construtora" },
+        { id: "orc-mock-2", budget_code: "84921", project_name: "Edifício Horizon", client_name: "Gafisa Incorporações" }
+      ]);
+    }, 300);
+  }
+}
+
+function onOrcamentosCarregados(orcamentos) {
+  appState.orcamentosExistentes = orcamentos || [];
+  const sel = document.getElementById("selectOrcamentoExistente");
+  if (!sel) return;
+
+  if (!orcamentos || orcamentos.length === 0) {
+    sel.innerHTML = '<option value="">Nenhum orçamento encontrado nesta divisão</option>';
     return;
   }
 
-  const btn = document.getElementById("btnEnviarWeb");
-  const btnAll = document.getElementById("btnAjustarEEnviar");
+  sel.innerHTML = '<option value="">-- Selecione o Orçamento Existente --</option>' +
+    orcamentos.map(o => `
+      <option value="${o.id}">
+        #${o.budget_code} &bull; ${o.project_name} (${o.client_name || 'Geral'})
+      </option>
+    `).join("");
+}
 
-  if (btn) {
-    btn.disabled = true;
-    btn.innerHTML = 'Gravando no Supabase...';
+function aoSelecionarOrcamentoExistente() {
+  const sel = document.getElementById("selectOrcamentoExistente");
+  if (!sel) return;
+  const id = sel.value;
+  const found = appState.orcamentosExistentes.find(o => o.id === id);
+  appState.orcamentoExistenteSelecionado = found || null;
+
+  if (found) {
+    appState.budget_code = found.budget_code || "";
+    const inputCod = document.getElementById("inputNumeroOrcamento");
+    const inputProj = document.getElementById("inputProjeto");
+    const inputCli = document.getElementById("inputCliente");
+    if (inputCod) inputCod.value = found.budget_code || "";
+    if (inputProj && found.project_name) inputProj.value = found.project_name;
+    if (inputCli && found.client_name) inputCli.value = found.client_name;
   }
-  if (btnAll) {
-    btnAll.disabled = true;
-    btnAll.innerHTML = 'Gravando no Supabase...';
+}
+
+// ==============================================================================
+// CONFIGURAÇÃO TÉCNICA DA PISCINA (SEÇÃO 6)
+// ==============================================================================
+function setEtapa(etapa) {
+  appState.stage = etapa;
+  const bPrevia = document.getElementById("btnEtapaPrevia");
+  const bGalga = document.getElementById("btnEtapaGalga");
+  if (bPrevia) bPrevia.classList.toggle("active", etapa === "previa");
+  if (bGalga) bGalga.classList.toggle("active", etapa === "galga");
+
+  const lblMargem = document.getElementById("lblMargemPct");
+  if (lblMargem) lblMargem.textContent = etapa === "previa" ? "Prévia +5%" : "Galga 0%";
+
+  atualizarCalculosFinanceiros();
+}
+
+function setTipoPiscina(tipo) {
+  appState.pool_type = tipo;
+  const lConv = document.getElementById("lblTipoConvencional");
+  const lEsp = document.getElementById("lblTipoEspecial");
+  if (lConv) lConv.classList.toggle("active", tipo === "convencional");
+  if (lEsp) lEsp.classList.toggle("active", tipo === "especial");
+}
+
+function setEstrutura(estrutura) {
+  appState.structure_type = estrutura;
+  const lNao = document.getElementById("lblEstNaoAuto");
+  const lAuto = document.getElementById("lblEstAuto");
+  if (lNao) lNao.classList.toggle("active", estrutura === "nao_autoportante");
+  if (lAuto) lAuto.classList.toggle("active", estrutura === "autoportante");
+
+  const rowAuto = document.getElementById("rowAutoAcrescimo");
+  if (rowAuto) rowAuto.style.display = estrutura === "autoportante" ? "flex" : "none";
+
+  atualizarCalculosFinanceiros();
+}
+
+function setRevestimento(rev) {
+  appState.coating_type = rev;
+  document.querySelectorAll(".btn-coating").forEach(btn => {
+    btn.classList.toggle("active", btn.getAttribute("data-val") === rev);
+  });
+
+  recalcularPecasAcabamento();
+  atualizarCalculosFinanceiros();
+}
+
+// Regra de Molde da Incorporadora (Seção 10.2)
+function verificarRegraMoldeIncorporadora() {
+  if (appState.selected_division !== "incorporadora") return;
+
+  const minMolde = appState.precos.regras.min_unidades_molde || 10;
+  const inputUnidades = document.getElementById("inputUnidades");
+  const unidades = parseInt(inputUnidades ? inputUnidades.value : 1) || 1;
+  const chk = document.getElementById("chkHasMold");
+  const lbl = document.getElementById("lblMoldeStatus");
+
+  if (!appState.mold_manual_override && chk && lbl) {
+    if (unidades >= minMolde) {
+      appState.has_mold = true;
+      chk.checked = true;
+      lbl.textContent = `Ativado automaticamente: ≥ ${minMolde} unidades viram molde`;
+      lbl.style.color = "var(--green-600)";
+    } else {
+      appState.has_mold = false;
+      chk.checked = false;
+      lbl.textContent = `Sem molde: menos de ${minMolde} unidades (editável)`;
+      lbl.style.color = "var(--slate-500)";
+    }
+  }
+}
+
+function aoAlternarMoldeManual() {
+  const chk = document.getElementById("chkHasMold");
+  if (!chk) return;
+  appState.has_mold = chk.checked;
+  appState.mold_manual_override = true;
+  const lbl = document.getElementById("lblMoldeStatus");
+  if (lbl) {
+    lbl.textContent = chk.checked ? "Com Molde (selecionado manualmente)" : "Sem Molde (selecionado manualmente)";
+    lbl.style.color = "var(--igui-blue-dark)";
+  }
+  atualizarCalculosFinanceiros();
+}
+
+// ==============================================================================
+// DETECÇÃO GEOMÉTRICA & QUANTITATIVOS (SEÇÃO 7 E 8)
+// ==============================================================================
+function solicitarInspecao() {
+  if (window.sketchup) {
+    window.sketchup.inspecionar_selecao();
+    executarAnaliseGeometrica(true);
+  }
+}
+
+function atualizarInfoSelecao(info) {
+  appState.selectionInfo = info;
+  const chip = document.getElementById("selectionChip");
+  const lblTitle = document.getElementById("selectionStatusText");
+  const lblDims = document.getElementById("selectionDimsText");
+  const badgeCurva = document.getElementById("badgeCurva");
+
+  if (!info || !info.has_selection) {
+    if (chip) chip.className = "selection-chip no-sel";
+    if (lblTitle) lblTitle.textContent = "Nenhuma piscina selecionada";
+    if (lblDims) lblDims.textContent = "Selecione o grupo da piscina no SketchUp para quantificar";
+    if (badgeCurva) badgeCurva.style.display = "none";
+    return;
   }
 
-  const inputAreaEl = document.getElementById("inputAreaM2");
-  const inputBordaEl = document.getElementById("inputBordaM");
-  const areaM2 = inputAreaEl ? (parseFloat(inputAreaEl.value) || 0) : (currentResult ? currentResult.area_interna_m2 : 0);
-  const bordaM = inputBordaEl ? (parseFloat(inputBordaEl.value) || 0) : (currentResult ? currentResult.borda_perimetro_linear_m : 0);
-  const custoDireto = Math.round((areaM2 * 230.0 + bordaM * 175.0) * 100) / 100;
-  const precoSugerido = Math.round((custoDireto * 1.25) * 100) / 100;
+  if (chip) chip.className = "selection-chip has-sel";
+  if (lblTitle) lblTitle.textContent = info.descricao || "Piscina Selecionada no SketchUp";
+  
+  if (lblDims) {
+    if (info.comprimento_m && info.largura_m) {
+      lblDims.textContent = `${info.comprimento_m}m × ${info.largura_m}m (Prof: ${info.profundidade_m || 1.4}m)`;
+    } else {
+      lblDims.textContent = `${info.count || 1} elementos selecionados`;
+    }
+  }
 
-  const largPeca = parseFloat(document.getElementById("inputLargura").value) || 15.0;
-  const altPeca = parseFloat(document.getElementById("inputAltura").value) || 15.0;
-  const rejuntePeca = parseFloat(document.getElementById("inputRejunte").value) || 0.2;
-  const nomeProj = document.getElementById("inputProjeto").value || "Piscina sem Nome";
-  const nomeCli = document.getElementById("inputCliente").value || "Cliente Geral";
+  if (badgeCurva) badgeCurva.style.display = info.tem_curvas ? "inline-block" : "none";
 
-  const dim = currentResult.dimensoes || {};
+  // Se sugeriu nome de grupo/modelo
+  if (info.nome_sugerido && info.nome_sugerido.trim().length > 0) {
+    const inputMod = document.getElementById("inputModelo");
+    if (inputMod) inputMod.value = info.nome_sugerido;
+  }
 
-  const payload = {
-    project_name: nomeProj,
-    client_name: nomeCli,
-    tile_spec: `${largPeca}x${altPeca}`,
-    tile_width_cm: largPeca,
-    tile_height_cm: altPeca,
-    grout_cm: rejuntePeca,
-    internal_area_m2: areaM2,
-    border_perimeter_linear_m: bordaM,
-    pool_length_m: parseFloat(dim.comprimento_m || 0),
-    pool_width_m: parseFloat(dim.largura_m || 0),
-    pool_depth_m: parseFloat(dim.profundidade_m || 0),
-    status: 'novo',
-    total_cost: custoDireto,
-    margin_percent: 25.0,
-    total_price: precoSugerido,
-    notes: `Paginação modular sem recortes (${currentOrigem}) gerada no SketchUp.`,
-    plugin_version: '1.1.0'
+  // DISPARO AUTOMÁTICO: sempre que uma piscina for selecionada, calcula imediatamente
+  executarAnaliseGeometrica(false);
+}
+
+function executarAnaliseGeometrica(mostrarToast = false) {
+  const lblMatRev = document.getElementById("lblStatusMatRevest");
+  const lblMatLam = document.getElementById("lblStatusMatLamina");
+  if (lblMatRev && (!appState.quantitativos.area_revestimento_m2 || parseFloat(appState.quantitativos.area_revestimento_m2) <= 0)) {
+    lblMatRev.textContent = "Calculando...";
+  }
+  if (lblMatLam && (!appState.quantitativos.area_laminacao_m2 || parseFloat(appState.quantitativos.area_laminacao_m2) <= 0)) {
+    lblMatLam.textContent = "Calculando...";
+  }
+
+  if (window.sketchup) {
+    window.sketchup.executar_ajuste({
+      largura: 15.0,
+      altura: 15.0,
+      rejunte: 0.2,
+      modificar_3d: false, // Apenas quantifica, sem alterar malha 3D desnecessariamente
+      revestimento: appState.coating_type,
+      structure_type: appState.structure_type,
+      stage: appState.stage
+    });
+  } else {
+    // Mock para desenvolvimento local
+    onAjusteSucesso({
+      area_revestimento_m2: 24.50,
+      area_laminacao_m2: 38.99,
+      volume_m3: 18.20,
+      volume_litros: 18200,
+      linear_corners_m: 2.80,
+      linear_corners_cm: 280.0,
+      alive_corners_count: 1, // Exatamente 1 quina viva conforme geometria da escada
+      has_explicit_revest: true,
+      has_explicit_lamina: true
+    });
+  }
+}
+
+function onAjusteSucesso(res) {
+  let areaRev = parseFloat(res.area_revestimento_m2 || res.area_interna_m2 || 0);
+  let areaLam = parseFloat(res.area_laminacao_m2 || 0);
+  let volM3 = parseFloat(res.volume_m3 || res.internal_volume_m3 || 0);
+  let volL = parseInt(res.volume_litros || res.internal_volume_liters || 0);
+  let cantosM = parseFloat(res.linear_corners_m || 0);
+  let cantosCm = parseFloat(res.linear_corners_cm || (cantosM * 100.0) || 0);
+  let quinas = parseInt(res.alive_corners_count !== undefined ? res.alive_corners_count : 0);
+
+
+
+  appState.quantitativos = {
+    area_revestimento_m2: areaRev.toFixed(2),
+    area_laminacao_m2: areaLam.toFixed(2),
+    volume_m3: volM3.toFixed(2),
+    volume_litros: volL,
+    cantos_lineares_m: cantosM.toFixed(2),
+    cantos_lineares_cm: cantosCm.toFixed(1),
+    quinas_vivas_count: quinas,
+    finishes: res.finishes || {},
+    has_explicit_revest: !!res.has_explicit_revest || areaRev > 0,
+    has_explicit_lamina: !!res.has_explicit_lamina || areaLam > 0,
+    dimensoes: res.dimensoes || {}
   };
 
-  const inputServerUrl = document.getElementById("inputServerUrl").value.trim().replace(/\/$/, "");
-  const serverBase = inputServerUrl || SUPABASE_CONFIG.url;
+  // Atualiza indicadores de Materiais (Seção 8)
+  const lblMatRev = document.getElementById("lblStatusMatRevest");
+  const lblMatLam = document.getElementById("lblStatusMatLamina");
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 6000);
+  if (lblMatRev) {
+    lblMatRev.textContent = res.has_explicit_revest ? `Detectado (${appState.quantitativos.area_revestimento_m2} m²)` : `Automático (${appState.quantitativos.area_revestimento_m2} m²)`;
+    lblMatRev.style.color = res.has_explicit_revest ? "var(--green-600)" : "var(--slate-700)";
+  }
 
-  try {
-    const response = await fetch(`${serverBase}/rest/v1/projects`, {
-      method: "POST",
-      headers: {
-        "apikey": SUPABASE_CONFIG.key,
-        "Authorization": `Bearer ${SUPABASE_CONFIG.key}`,
-        "Content-Type": "application/json",
-        "Prefer": "return=representation"
-      },
-      body: JSON.stringify(payload),
-      signal: controller.signal
-    });
+  if (lblMatLam) {
+    lblMatLam.textContent = res.has_explicit_lamina ? `Detectado (${appState.quantitativos.area_laminacao_m2} m²)` : `Estimado (${appState.quantitativos.area_laminacao_m2} m²)`;
+    lblMatLam.style.color = res.has_explicit_lamina ? "var(--green-600)" : "var(--slate-700)";
+  }
 
-    clearTimeout(timeoutId);
+  // Atualiza valores nas caixas
+  const elAreaRev = document.getElementById("statAreaRevest");
+  const elAreaLam = document.getElementById("statAreaLamina");
+  const elVolM3 = document.getElementById("statVolumeM3");
+  const elVolL = document.getElementById("statVolumeLitros");
+  const elCantos = document.getElementById("statCantosLineares");
+  const elQuinas = document.getElementById("statQuinasVivas");
 
-    if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(`HTTP ${response.status}: ${errText}`);
-    }
+  if (elAreaRev) elAreaRev.textContent = appState.quantitativos.area_revestimento_m2;
+  if (elAreaLam) elAreaLam.textContent = appState.quantitativos.area_laminacao_m2;
+  if (elVolM3) elVolM3.textContent = appState.quantitativos.volume_m3;
+  if (elVolL) elVolL.textContent = `${Number(appState.quantitativos.volume_litros).toLocaleString('pt-BR')} L`;
+  if (elCantos) elCantos.textContent = appState.quantitativos.cantos_lineares_m;
+  if (elQuinas) {
+    const qCount = parseInt(appState.quantitativos.quinas_vivas_count) || 0;
+    elQuinas.textContent = qCount > 0 ? `${qCount} quina(s) viva(s)` : "0 quinas vivas";
+  }
 
-    const data = await response.json();
-    const created = Array.isArray(data) ? data[0] : data;
-    const projectId = created ? created.id : null;
+  recalcularPecasAcabamento();
+  atualizarCalculosFinanceiros();
+}
 
-    onEnvioSucesso({
-      message: "Projeto sincronizado com sucesso com o PapaSys!",
-      project_id: projectId
-    });
+function onAjusteErro(erro) {
+  const lblMatRev = document.getElementById("lblStatusMatRevest");
+  const lblMatLam = document.getElementById("lblStatusMatLamina");
+  if (lblMatRev && (!appState.quantitativos.area_revestimento_m2 || parseFloat(appState.quantitativos.area_revestimento_m2) <= 0)) {
+    lblMatRev.textContent = "Não detectado";
+  }
+  if (lblMatLam && (!appState.quantitativos.area_laminacao_m2 || parseFloat(appState.quantitativos.area_laminacao_m2) <= 0)) {
+    lblMatLam.textContent = "Não detectado";
+  }
+  showToast(erro || "Falha na análise geométrica.", "error");
+}
 
-    if (window.sketchup && window.sketchup.notificar_envio_concluido) {
-      window.sketchup.notificar_envio_concluido({ id: projectId, nome: nomeProj });
-    }
-  } catch (err) {
-    clearTimeout(timeoutId);
-    console.warn("Envio via fetch CEF falhou, acionando fallback Ruby:", err);
-
-    if (window.sketchup && window.sketchup.enviar_web) {
-      window.sketchup.enviar_web(payload);
+function aplicarLaminacaoTotal() {
+  if (window.sketchup) {
+    if (window.sketchup.aplicar_laminacao) {
+      window.sketchup.aplicar_laminacao();
     } else {
-      onEnvioErro("Erro de gravação: " + (err.name === 'AbortError' ? 'Tempo limite esgotado' : err.message));
+      window.sketchup.aplicar_materiais_padrao();
     }
+  } else {
+    showToast("Todo o componente da piscina foi pintado de cinza (Laminação)!", "success");
+  }
+}
+
+function aplicarMateriaisPadrao() {
+  aplicarLaminacaoTotal();
+}
+
+function destacarLaminacao3D() {
+  if (window.sketchup && window.sketchup.selecionar_faces_laminacao) {
+    window.sketchup.selecionar_faces_laminacao();
+  } else {
+    showToast("Faces de laminação (borda + paredes externas) destacadas no 3D!", "info");
+  }
+}
+
+function destacarRevestimento3D() {
+  if (window.sketchup && window.sketchup.selecionar_faces_revestimento) {
+    window.sketchup.selecionar_faces_revestimento();
+  } else {
+    showToast("Faces de revestimento interno destacadas no 3D!", "info");
+  }
+}
+
+// ==============================================================================
+// RECALCULO DE PEÇAS DE ACABAMENTO (SEÇÃO 7)
+// ==============================================================================
+function recalcularPecasAcabamento() {
+  const rev = appState.coating_type;
+  const cantosCm = parseFloat(appState.quantitativos.cantos_lineares_cm) || (parseFloat(appState.quantitativos.cantos_lineares_m) * 100.0) || 0;
+  const quinas = parseInt(appState.quantitativos.quinas_vivas_count) || 0;
+
+  const boxNorm = document.getElementById("finishDetailsNormal");
+  const boxAlert = document.getElementById("alertPersonalizado");
+  const badgeRule = document.getElementById("badgeFinishRule");
+
+  const lblLinearNome = document.getElementById("lblFinishLinearNome");
+  const lblLinearQtd = document.getElementById("lblFinishLinearQtd");
+  const lblQuinaNome = document.getElementById("lblFinishQuinaNome");
+  const lblQuinaQtd = document.getElementById("lblFinishQuinaQtd");
+
+  const cInfo = (appState.precos.revestimentos || []).find(r => r.id === rev) || { acabamento: "personalizado" };
+  const regra = cInfo.acabamento || (rev === "porcelanato_villagres" || rev === "personalizado" ? "personalizado" : (rev === "pastilha_7_5x7_5" ? "boleada_7_5" : (rev === "pastilha_15x15" ? "boleada_15" : "bp11_c3")));
+
+  if (regra === "personalizado") {
+    // Porcelanato Villagres ou Personalizado:
+    // Informa metragens e quinas, mas sem cálculo prévio de peças
+    if (boxNorm) boxNorm.style.display = "none";
+    if (boxAlert) boxAlert.style.display = "flex";
+    if (badgeRule) {
+      badgeRule.textContent = "Personalizado";
+      badgeRule.style.background = "#fef3c7";
+      badgeRule.style.color = "#92400e";
+    }
+  } else {
+    if (boxNorm) boxNorm.style.display = "flex";
+    if (boxAlert) boxAlert.style.display = "none";
+
+    if (regra === "bp11_c3") {
+      // Cantoneira BP11 (20 cm cada) -> ceil(comprimento ÷ 20 cm) + 1 C3 por quina viva
+      const qtdBp11 = Math.ceil(cantosCm / 20.0);
+      const qtdC3 = quinas * 1;
+
+      if (badgeRule) {
+        badgeRule.textContent = "BP11 + C3";
+        badgeRule.style.background = "#e0f2fe";
+        badgeRule.style.color = "#0369a1";
+      }
+      if (lblLinearNome) lblLinearNome.textContent = "Cantoneira BP11 (20 cm cada)";
+      if (lblLinearQtd) lblLinearQtd.textContent = `${qtdBp11} un`;
+      if (lblQuinaNome) lblQuinaNome.textContent = "Peça C3 (quina viva)";
+      if (lblQuinaQtd) lblQuinaQtd.textContent = `${qtdC3} un`;
+
+    } else if (regra === "boleada_7_5") {
+      // Boleada reta 7,5cm -> ceil(comprimento ÷ 7,5 cm) + 1 quebra-canto por quina
+      const qtdBoleada = Math.ceil(cantosCm / 7.5);
+      const qtdQuebra = quinas * 1;
+
+      if (badgeRule) {
+        badgeRule.textContent = "Boleada 7,5 + Quebra-canto";
+        badgeRule.style.background = "#e0f2fe";
+        badgeRule.style.color = "#0369a1";
+      }
+      if (lblLinearNome) lblLinearNome.textContent = "Pastilha Boleada Reta 7,5x7,5 cm";
+      if (lblLinearQtd) lblLinearQtd.textContent = `${qtdBoleada} un`;
+      if (lblQuinaNome) lblQuinaNome.textContent = "Peça Quebra-canto (quina viva)";
+      if (lblQuinaQtd) lblQuinaQtd.textContent = `${qtdQuebra} un`;
+
+    } else if (regra === "boleada_15") {
+      // Boleada reta 15cm -> ceil(comprimento ÷ 15 cm) + 1 quebra-canto por quina
+      const qtdBoleada = Math.ceil(cantosCm / 15.0);
+      const qtdQuebra = quinas * 1;
+
+      if (badgeRule) {
+        badgeRule.textContent = "Boleada 15 + Quebra-canto";
+        badgeRule.style.background = "#e0f2fe";
+        badgeRule.style.color = "#0369a1";
+      }
+      if (lblLinearNome) lblLinearNome.textContent = "Pastilha Boleada Reta 15x15 cm";
+      if (lblLinearQtd) lblLinearQtd.textContent = `${qtdBoleada} un`;
+      if (lblQuinaNome) lblQuinaNome.textContent = "Peça Quebra-canto (quina viva)";
+      if (lblQuinaQtd) lblQuinaQtd.textContent = `${qtdQuebra} un`;
+    }
+  }
+}
+
+// ==============================================================================
+// MOTOR DE PRECIFICAÇÃO E REGRAS (SEÇÃO 9 E 11)
+// ==============================================================================
+function atualizarCalculosFinanceiros() {
+  verificarRegraMoldeIncorporadora();
+
+  const areaRevest = parseFloat(appState.quantitativos.area_revestimento_m2) || 0.0;
+  const areaLamina = parseFloat(appState.quantitativos.area_laminacao_m2) || 0.0;
+  const cantosCm = parseFloat(appState.quantitativos.cantos_lineares_cm) || (parseFloat(appState.quantitativos.cantos_lineares_m) * 100.0) || 0.0;
+  const quinas = parseInt(appState.quantitativos.quinas_vivas_count) || 0;
+
+  const rev = appState.coating_type;
+  const precos = appState.precos;
+
+  // 1. Custo Revestimento (O preço da pastilha muda se for Com Molde ou Sem Molde)
+  const cInfo = (appState.precos.revestimentos || []).find(r => r.id === rev) || { preco_sem_molde: 98.0, preco_com_molde: 78.0 };
+  const precoM2Rev = appState.has_mold ? (cInfo.preco_com_molde !== undefined ? cInfo.preco_com_molde : cInfo.preco_sem_molde) : cInfo.preco_sem_molde;
+  const custoRevest = areaRevest * precoM2Rev;
+
+  // 2. Custo Acabamentos (Seção 7)
+  let custoAcabamentos = 0.0;
+  if (rev === "pastilha_5x5" || rev === "pastilha_10x10") {
+    const qtdBp11 = Math.ceil(cantosCm / 20.0);
+    const qtdC3 = quinas * 1;
+    custoAcabamentos = (qtdBp11 * precos.acabamento.bp11) + (qtdC3 * precos.acabamento.c3);
+  } else if (rev === "pastilha_7_5x7_5") {
+    const qtdBoleada = Math.ceil(cantosCm / 7.5);
+    const qtdQuebra = quinas * 1;
+    custoAcabamentos = (qtdBoleada * precos.acabamento.boleada_7_5) + (qtdQuebra * precos.acabamento.quebra_canto);
+  } else if (rev === "pastilha_15x15") {
+    const qtdBoleada = Math.ceil(cantosCm / 15.0);
+    const qtdQuebra = quinas * 1;
+    custoAcabamentos = (qtdBoleada * precos.acabamento.boleada_15) + (qtdQuebra * precos.acabamento.quebra_canto);
+  } else {
+    // Porcelanato Villagres ou Personalizado -> sem acabamento calculado
+    custoAcabamentos = 0.0;
+  }
+
+  // 3. Custo Laminação (preço fixo por m² - o benefício do molde incide na pastilha)
+  const precoM2Lamina = precos.laminacao.preco_m2 !== undefined ? precos.laminacao.preco_m2 : (precos.laminacao.sem_molde || 95.0);
+  const custoLamina = areaLamina * precoM2Lamina;
+
+  // Insumos básicos complementares (argamassa e rejunte)
+  const custoInsumos = (areaRevest * 12.0);
+
+  // 4. VALOR BASE
+  const valorBaseUnitario = custoRevest + custoAcabamentos + custoLamina + custoInsumos;
+
+  // 5. + ACRÉSCIMO AUTOPORTANTE (+50%)
+  const isAuto = appState.structure_type === "autoportante";
+  const pctAuto = isAuto ? (precos.regras.acrescimo_autoportante_pct || 50.0) : 0.0;
+  const valorComAuto = valorBaseUnitario * (1 + pctAuto / 100.0);
+  const diffAuto = valorComAuto - valorBaseUnitario;
+
+  // 6. + MARGEM DA ETAPA (Prévia +5% ou Galga 0%)
+  const pctEtapa = appState.stage === "previa" ? (precos.regras.margem_previa_pct || 5.0) : (precos.regras.margem_galga_pct || 0.0);
+  const valorFinalUnitario = valorComAuto * (1 + pctEtapa / 100.0);
+  const diffMargem = valorFinalUnitario - valorComAuto;
+
+  // 7. TOTAL MULTIPLICADO PELAS UNIDADES
+  const inputUnidades = document.getElementById("inputUnidades");
+  const unidades = appState.selected_division === "sob_medida" ? 1 : Math.max(1, parseInt(inputUnidades ? inputUnidades.value : 1) || 1);
+  const valorTotalGeral = valorFinalUnitario * unidades;
+
+  // Atualiza Valores na UI
+  const formatBRL = (v) => Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+  const lblBase = document.getElementById("lblValorBase");
+  const lblAuto = document.getElementById("lblValorAuto");
+  const lblMarg = document.getElementById("lblValorMargem");
+  const lblUnit = document.getElementById("lblValorUnitario");
+  const lblCount = document.getElementById("lblTotalUnitsCount");
+  const lblTotal = document.getElementById("lblValorTotalGeral");
+
+  if (lblBase) lblBase.textContent = formatBRL(valorBaseUnitario);
+  if (lblAuto) lblAuto.textContent = `+ ${formatBRL(diffAuto)}`;
+  if (lblMarg) lblMarg.textContent = `+ ${formatBRL(diffMargem)}`;
+  if (lblUnit) lblUnit.textContent = formatBRL(valorFinalUnitario);
+  if (lblCount) lblCount.textContent = `${unidades} un`;
+  if (lblTotal) lblTotal.textContent = formatBRL(valorTotalGeral);
+
+  appState.valoresCalculados = {
+    unit_base_value: valorBaseUnitario,
+    unit_autoportante_value: valorComAuto,
+    unit_stage_margin_value: diffMargem,
+    unit_final_value: valorFinalUnitario,
+    total_model_value: valorTotalGeral,
+    units_count: unidades
+  };
+}
+
+// ==============================================================================
+// ENVIO PARA O SISTEMA WEB (SEÇÃO 4 E 5)
+// ==============================================================================
+function enviarParaSistemaWeb() {
+  const modo = appState.modo_orcamento;
+  const divisao = appState.selected_division;
+  const etapa = appState.stage;
+
+  // Validação obrigatória do número do orçamento digitado pelo usuário (vem do e-mail)
+  const inputCod = document.getElementById("inputNumeroOrcamento");
+  const budgetCode = (inputCod ? inputCod.value : "").trim();
+  if (!budgetCode) {
+    showToast("Por favor, digite o número do orçamento (fornecido por e-mail).", "error");
+    switchTab(1);
+    if (inputCod) inputCod.focus();
+    return;
+  }
+
+  const inputProj = document.getElementById("inputProjeto");
+  const inputCli = document.getElementById("inputCliente");
+  const inputMod = document.getElementById("inputModelo");
+  const inputUnid = document.getElementById("inputUnidades");
+
+  let projNome = inputProj ? inputProj.value.trim() : "";
+  let cliNome = inputCli ? inputCli.value.trim() : "";
+  const modeloNome = (inputMod ? inputMod.value.trim() : "") || "Modelo iGUi 3D";
+  const unidades = appState.selected_division === "sob_medida" ? 1 : Math.max(1, parseInt(inputUnid ? inputUnid.value : 1) || 1);
+
+  let budgetId = null;
+  if (modo === "existente" || modo === "galga") {
+    if (appState.orcamentoExistenteSelecionado) {
+      budgetId = appState.orcamentoExistenteSelecionado.id;
+      projNome = appState.orcamentoExistenteSelecionado.project_name || projNome;
+      cliNome = appState.orcamentoExistenteSelecionado.client_name || cliNome;
+    } else {
+      const sel = document.getElementById("selectOrcamentoExistente");
+      budgetId = sel ? sel.value : null;
+    }
+  }
+
+  const payload = {
+    modo_orcamento: modo,
+    budget_code: budgetCode,
+    budget_id: budgetId,
+    division: divisao,
+    stage: etapa,
+    project_name: projNome || `Projeto ${budgetCode}`,
+    client_name: cliNome || "Cliente Geral",
+    model_name: modeloNome,
+    units_count: unidades,
+    pool_type: appState.pool_type,
+    structure_type: appState.structure_type,
+    coating_type: appState.coating_type,
+    has_mold: appState.has_mold,
+    
+    // Quantitativos 3D
+    area_revestimento_m2: parseFloat(appState.quantitativos.area_revestimento_m2),
+    area_laminacao_m2: parseFloat(appState.quantitativos.area_laminacao_m2),
+    internal_volume_m3: parseFloat(appState.quantitativos.volume_m3),
+    internal_volume_liters: parseInt(appState.quantitativos.volume_litros),
+    linear_corners_m: parseFloat(appState.quantitativos.cantos_lineares_m),
+    linear_corners_cm: parseFloat(appState.quantitativos.cantos_lineares_cm),
+    alive_corners_count: parseInt(appState.quantitativos.quinas_vivas_count),
+    finishes: appState.quantitativos.finishes,
+
+    // Valores
+    unit_base_value: appState.valoresCalculados.unit_base_value || 0,
+    unit_autoportante_value: appState.valoresCalculados.unit_autoportante_value || 0,
+    unit_final_value: appState.valoresCalculados.unit_final_value || 0,
+    total_model_value: appState.valoresCalculados.total_model_value || 0,
+
+    // Usuário
+    user_id: appState.user.id,
+    user_name: appState.user.name
+  };
+
+  showToast("Enviando orçamento para a nuvem iGUi...", "info");
+
+  if (window.sketchup) {
+    window.sketchup.enviar_orcamento(payload);
+  } else {
+    setTimeout(() => {
+      onEnvioSucesso({
+        success: true,
+        budget_id: "orc-mock-saved",
+        message: `Orçamento nº ${budgetCode} enviado com sucesso para ${divisao.toUpperCase()} (${etapa.toUpperCase()})!`,
+        project_url: `orcamento.html?id=mock`
+      });
+    }, 600);
   }
 }
 
 function onEnvioSucesso(res) {
-  const btn = document.getElementById("btnEnviarWeb");
-  if (btn) {
-    btn.disabled = false;
-    btn.innerHTML = `
-      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-        <polyline points="17 8 12 3 7 8"></polyline>
-        <line x1="12" y1="3" x2="12" y2="15"></line>
-      </svg>
-      Reenviar para Nuvem Supabase
-    `;
-  }
-
-  const btnAll = document.getElementById("btnAjustarEEnviar");
-  if (btnAll) {
-    btnAll.disabled = false;
-    btnAll.innerHTML = `
-      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="20 6 9 17 4 12"></polyline>
-      </svg>
-      Sincronizado com Sucesso!
-    `;
-    setTimeout(() => {
-      btnAll.innerHTML = `
-        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-        </svg>
-        Ajustar & Enviar para o PapaSys (1 Clique)
-      `;
-    }, 4000);
-  }
-
-  showToast("✅ Gravado no PapaSys com sucesso!", "success");
-}
-
-function onEnvioErro(errMsg) {
-  const btn = document.getElementById("btnEnviarWeb");
-  if (btn) {
-    btn.disabled = false;
-    btn.innerHTML = 'Tentar Novamente';
-  }
-
-  const btnAll = document.getElementById("btnAjustarEEnviar");
-  if (btnAll) {
-    btnAll.disabled = false;
-    btnAll.innerHTML = `
-      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-      </svg>
-      Ajustar & Enviar para o PapaSys (1 Clique)
-    `;
-  }
-
-  showToast("Erro ao gravar: " + errMsg, "error");
-}
-
-function salvarConfiguracoes() {
-  const serverUrl = document.getElementById("inputServerUrl").value;
-  const autoUpdate = document.getElementById("chkAutoUpdate").checked;
-
-  if (window.sketchup) {
-    window.sketchup.salvar_config({
-      server_url: serverUrl,
-      auto_update: autoUpdate
-    });
-  } else {
-    showToast("Configurações salvas!", "success");
-  }
-}
-
-// Modal de Configurações (Conexão e Auto-Update)
-function toggleModalConfig() {
-  const modal = document.getElementById("modalConfig");
-  if (!modal) return;
-  if (modal.style.display === "none" || modal.style.display === "") {
-    abrirModalConfig();
-  } else {
-    fecharModalConfig();
-  }
-}
-
-function abrirModalConfig() {
-  const modal = document.getElementById("modalConfig");
-  if (modal) modal.style.display = "flex";
-}
-
-function fecharModalConfig() {
-  const modal = document.getElementById("modalConfig");
-  if (modal) modal.style.display = "none";
-}
-
-function fecharModalSeClicarFora(e) {
-  if (e.target && e.target.id === "modalConfig") {
-    fecharModalConfig();
-  }
-}
-
-function salvarConfiguracoesEFechar() {
-  salvarConfiguracoes();
-  fecharModalConfig();
-}
-
-document.getElementById("btnCheckUpdate").addEventListener("click", verificarAtualizacaoManual);
-
-function verificarAtualizacaoManual() {
-  const btn = document.getElementById("btnCheckUpdate");
-  if (btn) btn.classList.add("spinning");
-  showToast("Verificando se há novas versões do PapaSys...", "info");
-  if (window.sketchup) {
-    window.sketchup.verificar_atualizacao();
-  }
+  showToast(res.message || "Orçamento enviado com sucesso!", "success");
   setTimeout(() => {
-    if (btn) btn.classList.remove("spinning");
-  }, 4000);
+    if (confirm("Orçamento sincronizado com sucesso!\n\nDeseja abrir a página do orçamento no sistema web agora?")) {
+      const url = res.project_url || `index.html?divisao=${appState.selected_division}&etapa=${appState.stage}`;
+      if (window.sketchup) {
+        window.sketchup.abrir_url(url);
+      } else {
+        window.open(`../${url}`, "_blank");
+      }
+    }
+  }, 400);
 }
 
-// Monitoramento ativo e resiliente da seleção no SketchUp
-window.addEventListener("focus", () => {
-  solicitarInspecao();
-});
+function onEnvioErro(erro) {
+  showToast(erro || "Falha ao enviar orçamento.", "error");
+}
 
-setInterval(() => {
-  solicitarInspecao();
-}, 1200);
-
-function showToast(text, type = "info") {
+// ==============================================================================
+// TOAST NOTIFICATIONS
+// ==============================================================================
+function showToast(msg, tipo = "info") {
   const container = document.getElementById("toastContainer");
-  const toast = document.createElement("div");
-  toast.className = `toast toast-${type}`;
-  toast.textContent = text;
-  container.appendChild(toast);
-
+  if (!container) return;
+  const t = document.createElement("div");
+  t.className = `toast ${tipo}`;
+  t.textContent = msg;
+  container.appendChild(t);
   setTimeout(() => {
-    toast.style.opacity = "0";
-    setTimeout(() => toast.remove(), 300);
-  }, 4000);
+    t.remove();
+  }, 3500);
 }

@@ -1,238 +1,145 @@
 // ==============================================================================
-// CONTROLLER DA PROPOSTA EXECUTIVA (PDF) - PAPASYS
-// Exibição analítica e comercial completa dos fornecimentos e serviços
+// PROPOSTA COMERCIAL EXECUTIVA & FICHA TÉCNICA iGUi
+// Formatada para Impressão e Salvamento em PDF
 // ==============================================================================
-
-let currentProject = null;
-let modoExibicaoGlobal = false; // false = Valores Detalhados (padrão); true = Incluso no Escopo
 
 document.addEventListener("DOMContentLoaded", async () => {
   const urlParams = new URLSearchParams(window.location.search);
-  const projectId = urlParams.get("id");
+  const budgetId = urlParams.get("id");
 
-  if (!projectId) {
-    await PapaSysDialog.alert({
-      title: "Identificador Inválido",
-      message: "Nenhum ID de projeto válido foi especificado.",
-      type: "warning"
-    });
-    window.location.href = "index.html";
-    return;
-  }
-
-  currentProject = await DB.getProjectById(projectId);
-  if (!currentProject) {
-    await PapaSysDialog.alert({
-      title: "Projeto Não Encontrado",
-      message: "O projeto solicitado não foi localizado no sistema.",
-      type: "error"
-    });
-    window.location.href = "index.html";
-    return;
-  }
-
-  // Se o projeto ainda não possui lista de itens gravada, gera a composição analítica completa automaticamente
-  if (!currentProject.items || currentProject.items.length === 0) {
-    const calc = Calculator.calcularOrcamento({
-      internal_area_m2: currentProject.internal_area_m2,
-      border_perimeter_linear_m: currentProject.border_perimeter_linear_m,
-      tile_spec: currentProject.tile_spec,
-      margin_percent: currentProject.margin_percent !== undefined ? currentProject.margin_percent : 25.0
-    });
-    currentProject.items = calc.items;
-    currentProject.total_cost = calc.total_cost;
-    currentProject.total_price = calc.total_price;
-
-    // Sincroniza em segundo plano no Supabase e LocalStorage para persistência
-    DB.updateProject(currentProject.id, {
-      total_cost: calc.total_cost,
-      total_price: calc.total_price
-    }, currentProject.items).catch(err => console.warn("[Proposta] Sincronização automática de itens:", err));
-  }
-
-  renderizarProposta(currentProject);
-
-  if (typeof gsap !== "undefined") {
-    gsap.fromTo(".proposal-dock-top, .proposal-dock-bottom",
-      { x: 15, opacity: 0 },
-      { x: 0, opacity: 1, duration: 0.4, delay: 0.15, ease: "power2.out", clearProps: "all" }
-    );
-  }
+  await carregarProposta(budgetId);
 });
 
-function renderizarProposta(p) {
-  if (!p) return;
-
-  const dataHoje = new Date().toLocaleDateString("pt-BR", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric"
-  });
-
-  const validade = new Date(Date.now() + 15 * 86400000).toLocaleDateString("pt-BR", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric"
-  });
-
-  document.getElementById("docNumero").textContent = (p.id ? p.id.slice(0, 8) : "000000").toUpperCase();
-  document.getElementById("docData").textContent = dataHoje;
-  document.getElementById("docValidade").textContent = validade;
-
-  document.getElementById("propCliente").textContent = p.client_name || "Cliente Geral";
-  document.getElementById("propProjeto").textContent = p.project_name || "Projeto de Piscina";
-  document.getElementById("propArea").textContent = Number(p.internal_area_m2 || 0).toFixed(2) + " m²";
-  document.getElementById("propBorda").textContent = Number(p.border_perimeter_linear_m || 0).toFixed(2) + " m linear";
-  document.getElementById("propRevestimento").textContent = (p.tile_spec || "15x15 cm") + " (sem recortes)";
-
-  // Atualiza as linhas da tabela
-  atualizarTabelaItens(p);
-
-  // Calcula e define os totais (executado uma vez no carregamento)
-  const items = p.items || [];
-  const margem = parseFloat(p.margin_percent !== undefined ? p.margin_percent : 25.0) || 0;
-  const fatorMargem = 1 + (margem / 100);
-  const somaTotalComercial = items.reduce((acc, it) => {
-    const custoUnit = Number(it.unit_cost) || 0;
-    const custoTotal = Number(it.total_cost) || (Number(it.quantity) * custoUnit) || 0;
-    return acc + (custoTotal * fatorMargem);
-  }, 0);
-
-  const total = Number(p.total_price) || parseFloat(somaTotalComercial.toFixed(2));
-  const entrada = total * 0.4;
-  const parcela1 = total * 0.3;
-  const parcela2 = total * 0.3;
-
-  if (typeof PapaSysAnimation !== "undefined") {
-    PapaSysAnimation.initFormPage();
-    PapaSysAnimation.animateCounter("propTotalFinal", total, { format: "currency", duration: 0.8 });
-    PapaSysAnimation.animateCounter("condEntrada", entrada, { format: "currency", duration: 0.8 });
-    PapaSysAnimation.animateCounter("condParcela1", parcela1, { format: "currency", duration: 0.8 });
-    PapaSysAnimation.animateCounter("condParcela2", parcela2, { format: "currency", duration: 0.8 });
-  } else {
-    document.getElementById("propTotalFinal").textContent = Calculator.formatBRL(total);
-    document.getElementById("condEntrada").textContent = Calculator.formatBRL(entrada);
-    document.getElementById("condParcela1").textContent = Calculator.formatBRL(parcela1);
-    document.getElementById("condParcela2").textContent = Calculator.formatBRL(parcela2);
+async function carregarProposta(budgetId) {
+  let budget = null;
+  if (budgetId) {
+    budget = await DB.getBudgetById(budgetId);
   }
 
-  // Assinatura
-  document.getElementById("signCliente").textContent = p.client_name || "CLIENTE";
-
-  // Botão de editar orçamento
-  const btnEditar = document.getElementById("btnEditarOrcamento");
-  if (btnEditar) {
-    btnEditar.onclick = () => {
-      window.location.href = `orcamento.html?id=${p.id}`;
-    };
+  if (!budget) {
+    const all = await DB.getBudgets();
+    budget = all[0] || null;
   }
-}
 
-// Renderiza ou atualiza apenas a tabela e o subtotal, sem tocar no cabeçalho (elimina piscamento)
-function atualizarTabelaItens(p) {
-  if (!p) return;
-  const tbody = document.getElementById("propTbody");
-  if (!tbody) return;
-  tbody.innerHTML = "";
-
-  const items = p.items || [];
-  const margem = parseFloat(p.margin_percent !== undefined ? p.margin_percent : 25.0) || 0;
-  const fatorMargem = 1 + (margem / 100);
-
-  let somaTotalComercial = 0;
-
-  items.forEach((it) => {
-    const custoUnit = Number(it.unit_cost) || 0;
-    const custoTotal = Number(it.total_cost) || (Number(it.quantity) * custoUnit) || 0;
-
-    const unitVenda = custoUnit * fatorMargem;
-    const totalVenda = custoTotal * fatorMargem;
-    somaTotalComercial += totalVenda;
-
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>
-        <div class="prop-item-title-wrap">
-          <span class="prop-item-name">${escapeHtml(it.description)}</span>
-          ${getCategoryBadgeHtml(it.category)}
-        </div>
-      </td>
-      <td class="tabular-nums" style="text-align: center;">
-        <span class="table-unit-tag" style="font-weight: 700; font-size: 11px;">
-          ${Number(it.quantity).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} ${escapeHtml(it.unit || '')}
-        </span>
-      </td>
-      <td class="tabular-nums" style="text-align: right; color: var(--text-secondary); font-size: 12px;">
-        ${modoExibicaoGlobal ? '<span style="color: var(--text-dim);">-</span>' : Calculator.formatBRL(unitVenda)}
-      </td>
-      <td class="tabular-nums" style="text-align: right; font-weight: 700; color: var(--text-primary); font-size: 12.5px;">
-        ${modoExibicaoGlobal ? '<span style="color: var(--status-aprovado); font-weight: 700;">Incluso</span>' : Calculator.formatBRL(totalVenda)}
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
-
-  const total = Number(p.total_price) || parseFloat(somaTotalComercial.toFixed(2));
-
-  // Subtotal
-  const elSub = document.getElementById("propTotalSub");
-  if (elSub) {
-    elSub.textContent = modoExibicaoGlobal ? "Incluso no Pacote Global" : Calculator.formatBRL(total);
-  }
-}
-
-// Alterna entre visão detalhada com preços e visão comercial simplificada (Incluso) sem piscar o cabeçalho
-function setModoExibicao(isGlobal) {
-  if (modoExibicaoGlobal === isGlobal) return;
-  modoExibicaoGlobal = isGlobal;
-
-  const btnDet = document.getElementById("btnModoDetalhado");
-  const btnGlob = document.getElementById("btnModoGlobal");
-  if (btnDet && btnGlob) {
-    if (isGlobal) {
-      btnDet.classList.remove("active");
-      btnGlob.classList.add("active");
-    } else {
-      btnGlob.classList.remove("active");
-      btnDet.classList.add("active");
+  if (!budget) {
+    if (typeof PapaSysDialog !== "undefined") {
+      await PapaSysDialog.alert({
+        title: "Orçamento Não Encontrado",
+        message: "O orçamento solicitado não foi localizado no sistema.",
+        type: "warning"
+      });
     }
+    window.location.href = "index.html";
+    return;
   }
 
-  // Atualiza apenas as linhas da tabela e o subtotal - ZERO piscamento no cabeçalho
-  atualizarTabelaItens(currentProject);
+  renderizarProposta(budget);
 }
 
-function alternarModoPrecos() {
-  setModoExibicao(!modoExibicaoGlobal);
-}
+function renderizarProposta(b) {
+  const pools = b.pools || [];
+  const nomesDiv = { sob_medida: "iGUi Sob Medida", incorporadora: "iGUi Incorporadora", internacional: "iGUi Internacional" };
+  const nomesEtapas = { previa: "Prévia (Estimativa Preliminar)", galga: "Galga (Pré-venda)", desenho_tecnico: "Desenho Técnico (Venda)" };
 
-function getCategoryBadgeHtml(cat) {
-  switch (cat) {
-    case "material":
-      return '<span class="badge badge-cat-material" style="font-size: 10px; padding: 2px 7px;">Revestimento Modular</span>';
-    case "insumo":
-      return '<span class="badge badge-cat-insumo" style="font-size: 10px; padding: 2px 7px;">Insumo de Assentamento</span>';
-    case "borda":
-      return '<span class="badge badge-cat-borda" style="font-size: 10px; padding: 2px 7px;">Borda Perimetral</span>';
-    case "mao_de_obra":
-      return '<span class="badge badge-cat-mao_de_obra" style="font-size: 10px; padding: 2px 7px;">Mão de Obra Especializada</span>';
-    case "extra":
-      return '<span class="badge" style="background:#f1f5f9; color:#475569; font-size: 10px; padding: 2px 7px; border: 1px solid #e2e8f0;">Serviço Complementar</span>';
-    default:
-      return '<span class="badge" style="font-size: 10px; padding: 2px 7px;">Composição</span>';
+  const isAdmin = typeof Auth !== "undefined" && Auth.isAdmin();
+  const docTitle = document.querySelector(".prop-doc-title");
+  if (docTitle) {
+    docTitle.textContent = "PROPOSTA COMERCIAL & FICHA TÉCNICA";
   }
-}
 
-function imprimirProposta() {
-  window.print();
-}
+  // Identificação
+  document.getElementById("propCodigo").textContent = b.budget_code;
+  document.getElementById("propData").textContent = new Date(b.created_at || Date.now()).toLocaleDateString("pt-BR");
+  document.getElementById("propDivisao").textContent = nomesDiv[b.division] || b.division;
+  document.getElementById("propEtapa").textContent = nomesEtapas[b.stage] || b.stage;
 
-function escapeHtml(str) {
-  if (!str) return "";
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+  document.getElementById("propProjeto").textContent = b.project_name;
+  document.getElementById("propCliente").textContent = b.client_name || "Cliente Geral";
+  document.getElementById("propResponsavel").textContent = b.assigned_user_name || "Victor Lourenço";
+
+  // Totalizador de preço
+  const tileValor = document.getElementById("propTileValor");
+  if (tileValor) tileValor.style.display = "flex";
+
+  const thUnit = document.getElementById("propThUnitario");
+  if (thUnit) thUnit.style.display = "";
+
+  const thSub = document.getElementById("propThSubtotal");
+  if (thSub) thSub.style.display = "";
+
+  const secPreco = document.getElementById("propSecaoComposicaoPreco");
+  if (secPreco) secPreco.style.display = "block";
+
+  const secCrono = document.getElementById("propSecaoCronograma");
+  if (secCrono) secCrono.style.display = "block";
+
+  // Totalizadores
+  const elTotal = document.getElementById("propTotalValor");
+  if (elTotal) elTotal.textContent = PricingEngine.formatBRL(b.total_price);
+
+  document.getElementById("propTotalRevest").textContent = `${b.total_area_revestimento || 0} m²`;
+  document.getElementById("propTotalLamina").textContent = `${b.total_area_laminacao || 0} m²`;
+  document.getElementById("propTotalVolume").textContent = `${b.total_volume_m3 || 0} m³ (${Number(b.total_volume_liters || 0).toLocaleString('pt-BR')} L)`;
+
+  // Tabela de Modelos de Piscinas
+  const tbody = document.getElementById("propModelosTbody");
+  if (tbody) {
+    tbody.innerHTML = pools.map((p, idx) => {
+      const acab = p.finishes_details || PricingEngine.calcularAcabamentosPiscina(p.coating_type, p.linear_corners_m, p.alive_corners_count);
+      const isAuto = p.structure_type === "autoportante";
+      const hasMold = p.has_mold;
+
+      return `
+        <tr>
+          <td>
+            <strong>#${idx + 1} ${p.model_name}</strong>
+            <div class="field-hint">
+              ${p.pool_type === 'especial' ? 'Piscina Especial' : 'Piscina Convencional'} &bull;
+              ${isAuto ? 'Autoportante (+50%)' : 'Não autoportante'}
+              ${hasMold ? ' &bull; <span class="badge-mold">COM MOLDE</span>' : ''}
+            </div>
+          </td>
+          <td class="text-center"><strong>${p.units_count} un</strong></td>
+          <td>
+            <div>${p.coating_type.replace('_', ' ')}</div>
+            <div class="field-hint">${acab.observacao || ''}</div>
+          </td>
+          <td class="text-right">
+            <div>${p.internal_area_m2} m² revest.</div>
+            <div class="field-hint">${p.lamination_area_m2} m² lâmina</div>
+          </td>
+          <td class="text-right">
+            <div>${p.internal_volume_m3} m³</div>
+            <div class="field-hint">${Number((p.internal_volume_liters || (p.internal_volume_m3 * 1000))).toLocaleString('pt-BR')} L</div>
+          </td>
+          <td class="text-right tabular-nums">
+            ${PricingEngine.formatBRL(p.unit_final_value || (p.total_model_value / p.units_count))}
+          </td>
+          <td class="text-right tabular-nums font-bold" style="color: var(--igui-blue-dark);">
+            ${PricingEngine.formatBRL(p.total_model_value)}
+          </td>
+        </tr>
+      `;
+    }).join("");
+  }
+
+  // Composição Financeira da Seção 11 e Cronograma
+  document.getElementById("propBaseCost").textContent = PricingEngine.formatBRL(b.total_base_cost);
+  const diffAuto = (b.total_price - b.total_base_cost) * 0.7; // aproximado
+  const diffMargem = b.stage === 'previa' ? (b.total_price * 0.05 / 1.05) : 0;
+
+  document.getElementById("propAutoCost").textContent = `+ ${PricingEngine.formatBRL(diffAuto)}`;
+  document.getElementById("propStageMargin").textContent = `+ ${PricingEngine.formatBRL(diffMargem)} (${b.stage === 'previa' ? '+5%' : '0%'})`;
+  document.getElementById("propGrandTotal").textContent = PricingEngine.formatBRL(b.total_price);
+
+  // Cronograma de Desembolso
+  const total = b.total_price || 0;
+  document.getElementById("cronoEntrada").textContent = PricingEngine.formatBRL(total * 0.40);
+  document.getElementById("cronoCasco").textContent = PricingEngine.formatBRL(total * 0.30);
+  document.getElementById("cronoEntrega").textContent = PricingEngine.formatBRL(total * 0.30);
+
+  // Notas
+  if (b.notes) {
+    document.getElementById("propNotas").textContent = b.notes;
+  }
 }

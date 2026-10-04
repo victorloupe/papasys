@@ -3,269 +3,433 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PapaSys - Edição e Precificação de Orçamento</title>
+  <title>iGUi - Edição e Engenharia de Orçamento</title>
   <link rel="icon" type="image/png" href="img/Icone.png">
   <link rel="shortcut icon" href="favicon.ico">
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css?v=1.4.1">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
+  
   <!-- Navbar -->
   <nav class="navbar">
-    <a href="index.html" class="brand">
-      <img src="img/Icone.png" alt="PapaSys Icon" class="brand-logo-img">
-      <div>
-        <span class="brand-title"><span class="brand-dark">PAPA</span><span class="brand-orange">SYS</span></span>
-        <span class="brand-sub">Sistema de Orçamento</span>
-      </div>
-    </a>
-
-    <div class="nav-links">
-      <a href="index.html" class="nav-item">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="3" width="7" height="9" rx="1"></rect>
-          <rect x="14" y="3" width="7" height="5" rx="1"></rect>
-          <rect x="14" y="12" width="7" height="9" rx="1"></rect>
-          <rect x="3" y="16" width="7" height="5" rx="1"></rect>
-        </svg>
-        Dashboard Kanban
-      </a>
-      <a href="precos.html" class="nav-item">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
-          <line x1="7" y1="7" x2="7.01" y2="7"></line>
-        </svg>
-        Tabela de Preços
-      </a>
-      <a href="plugin/papasys_paginacao.rbz" class="nav-item" download>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-          <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-          <line x1="12" y1="22.08" x2="12" y2="12"></line>
-        </svg>
-        Plugin SketchUp (.rbz)
+    <div class="nav-left">
+      <a href="index.html" class="brand">
+        <img src="img/Logo_Oficial_iGUi.png" alt="iGUi" class="brand-logo-img">
+        <div class="brand-text">
+          <span class="brand-title">EDITOR DE ORÇAMENTO</span>
+          <span class="brand-sub">Composição Técnica e Comercial</span>
+        </div>
       </a>
     </div>
 
-    <div class="nav-actions">
+    <div class="nav-right">
       <a href="index.html" class="btn btn-secondary btn-sm">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="19" y1="12" x2="5" y2="12"></line>
-          <polyline points="12 19 5 12 12 5"></polyline>
-        </svg>
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 3px;"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
         Voltar ao Painel
       </a>
+
+      <button class="btn btn-success btn-sm" onclick="salvarOrcamento()">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 3px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+        Salvar Alterações
+      </button>
+
+      <button class="btn btn-primary btn-sm" onclick="abrirPropostaExecutiva()">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 3px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+        Proposta PDF
+      </button>
+
+      <div class="nav-divider"></div>
+
+      <!-- Perfil do Usuário Ativo com Sair Integrado -->
+      <div class="user-profile-menu">
+        <div class="user-profile-info" onclick="window.location.href='index.html'" title="Usuário Ativo - Voltar ao Painel">
+          <div class="user-profile-avatar" id="orcUserAvatar">AD</div>
+          <div class="user-profile-meta">
+            <span class="user-profile-name" id="orcUserName">Administrador</span>
+            <span class="badge-user-role admin" id="orcUserRole">Diretoria / Admin</span>
+          </div>
+          <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" class="user-profile-chevron">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+
+        <div class="user-profile-divider"></div>
+
+        <button type="button" class="btn-inline-logout" onclick="event.stopPropagation(); Auth.logout();" title="Encerrar Sessão e Sair do Sistema">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+        </button>
+      </div>
     </div>
   </nav>
 
   <!-- Main Content -->
   <main class="main-content">
-    <!-- Header com botões principais de ação -->
-    <div class="page-header">
+    
+    <!-- Alerta de Alteração Manual do Orçamento -->
+    <div id="alertaEdicaoManual" class="banner-alerta-edicao" style="display: none; margin-bottom: 12px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 10px 14px; color: #92400e; font-size: 13px; align-items: center; justify-content: space-between;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#d97706" stroke-width="2" style="flex-shrink: 0;">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <span><strong>Aviso de Alteração Manual:</strong> As especificações ou medidas deste orçamento foram alteradas diretamente no editor. Os valores consolidados foram recalculados. Clique em <strong>"Salvar Alterações"</strong> para gravar.</span>
+      </div>
+      <button type="button" class="btn btn-xs btn-primary" onclick="salvarOrcamento()" style="white-space: nowrap; margin-left: 10px;">Salvar Alterações</button>
+    </div>
+
+    <!-- Header -->
+    <div class="page-context-header">
       <div>
-        <h1 id="txtHeaderTitulo" class="page-title">Edição de Orçamento</h1>
-        <p class="page-subtitle">Ajuste dimensões, quantitativos, insumos técnicos e margens comerciais</p>
+        <div class="budget-meta-top">
+          <div class="code-badge-edit-wrap" title="Clique para editar o número do orçamento">
+            <span class="code-badge-hash">#</span>
+            <input type="text" id="inputCodigoOrcamento" class="input-code-badge" value="ORC-0000" onchange="aoMudarCodigoOrcamento(this.value)">
+            <svg class="code-edit-icon" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+          </div>
+          <span class="tag-div" id="badgeDivisao">iGUi Sob Medida</span>
+        </div>
+        <h1 class="page-main-title" id="txtHeaderTitulo">Edição de Orçamento</h1>
+        <p class="page-main-sub">Composição analítica de modelos, quantitativos de revestimento e laminação, acabamentos e precificação.</p>
       </div>
 
-      <div class="nav-actions">
-        <button class="btn btn-success" onclick="salvarOrcamento()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
-            <polyline points="17 21 17 13 7 13 7 21"></polyline>
-            <polyline points="7 3 7 8 15 8"></polyline>
-          </svg>
-          Salvar Alterações
-        </button>
-        <button class="btn btn-primary" onclick="abrirPropostaExecutiva()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-            <polyline points="14 2 14 8 20 8"></polyline>
-            <line x1="16" y1="13" x2="8" y2="13"></line>
-            <line x1="16" y1="17" x2="8" y2="17"></line>
-            <polyline points="10 9 9 9 8 9"></polyline>
-          </svg>
-          Visualizar Proposta (PDF)
-        </button>
+      <!-- Barra de Controle de Etapas no Fluxo -->
+      <div class="stage-stepper-wrap">
+        <span class="stepper-label">Etapa do Fluxo:</span>
+        <div class="stage-stepper-buttons">
+          <button type="button" class="stage-step-btn active" data-stage="previa" onclick="solicitarMudancaEtapa('previa')">
+            1. Prévia (+5%)
+          </button>
+          <button type="button" class="stage-step-btn" data-stage="galga" onclick="solicitarMudancaEtapa('galga')">
+            2. Galga (0%)
+          </button>
+          <button type="button" class="stage-step-btn" data-stage="desenho_tecnico" onclick="solicitarMudancaEtapa('desenho_tecnico')">
+            3. Desenho Técnico (Venda)
+          </button>
+        </div>
       </div>
     </div>
 
-    <!-- Bloco 1: Property Inspector / Parâmetros do Projeto -->
-    <div class="property-card">
-      <div class="property-header">
-        <div class="property-header-info">
-          <div class="property-header-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Banner Especial de Desenho Técnico -->
+    <div id="bannerDesenhoTecnico" class="banner-desenho-tecnico" style="display: none;">
+      <div class="banner-icon">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M2 22h20"></path>
+          <path d="M5 18H3a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h18a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-2"></path>
+          <path d="M6 18v4"></path>
+          <path d="M18 18v4"></path>
+        </svg>
+      </div>
+      <div class="banner-content">
+        <strong>Etapa 3: Desenho Técnico (Venda)</strong>
+        <p>O Desenho Técnico não passa pelo SketchUp. É elaborado e finalizado diretamente no sistema com documentação executiva e memorial descritivo para venda.</p>
+      </div>
+    </div>
+
+    <!-- Bloco 1: Informações Gerais do Orçamento & Responsável -->
+    <div class="dash-card full-width">
+      <div class="dash-card-header">
+        <div class="dash-card-title-group">
+          <div class="dash-card-icon-pill">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+          </div>
+          <div>
+            <h3 class="dash-card-title">Identificação do Orçamento &amp; Responsável</h3>
+            <p class="dash-card-sub">Dados do projeto, cliente e equipe responsável pela proposta</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-grid-5">
+        <div class="form-group">
+          <label class="form-label">Número do Orçamento (Código):</label>
+          <input type="text" id="inputBudgetCode" class="form-control" style="font-weight: 700; color: #0f172a;" placeholder="Ex: 84920 ou ORC-2026-0842" onchange="aoMudarCodigoOrcamento(this.value)">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Nome do Projeto / Empreendimento:</label>
+          <input type="text" id="inputProjNome" class="form-control" value="Residencial Prime" placeholder="Ex: Residencial Prime" onchange="registrarEdicaoManual()">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Cliente / Contratante:</label>
+          <input type="text" id="inputCliNome" class="form-control" value="Cliente Geral" placeholder="Nome do cliente" onchange="registrarEdicaoManual()">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Divisão iGUi:</label>
+          <select id="selectDivisao" class="form-control" onchange="currentBudget.division = this.value; registrarEdicaoManual(); renderizarOrcamento();">
+            <option value="sob_medida">iGUi Sob Medida (1 piscina)</option>
+            <option value="incorporadora">iGUi Incorporadora (Multi-modelos)</option>
+            <option value="internacional">iGUi Internacional</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Responsável pelo Orçamento:</label>
+          <select id="selectResponsavel" class="form-control" onchange="registrarEdicaoManual()">
+            <!-- Usuários injetados via JS -->
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-top: 12px;">
+        <label class="form-label">Observações Técnicas / Comerciais:</label>
+        <textarea id="txtNotas" class="form-control" rows="2" placeholder="Observações sobre a piscina, acesso ao terreno, prazos e memorial descritivo..."></textarea>
+      </div>
+    </div>
+
+    <!-- Bloco 2: Totais Consolidados do Orçamento -->
+    <div class="stats-overview" style="margin-top: 14px;">
+      <div class="stat-tile" id="statTileValor">
+        <div class="stat-tile-header">
+          <span class="stat-tile-label">Valor Total do Orçamento</span>
+          <div class="stat-tile-icon stat-icon-blue">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="1" x2="12" y2="23"></line>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+          </div>
+        </div>
+        <div id="statTotalValor" class="stat-tile-value tabular-nums" style="color: var(--igui-blue);">R$ 0,00</div>
+        <div class="stat-tile-sub" id="statTotalUnidades">1 unidade</div>
+      </div>
+
+      <div class="stat-tile">
+        <div class="stat-tile-header">
+          <span class="stat-tile-label">Área de Revestimento (Interna)</span>
+          <div class="stat-tile-icon stat-icon-green">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="3" y1="9" x2="21" y2="9"></line>
+              <line x1="3" y1="15" x2="21" y2="15"></line>
+              <line x1="9" y1="3" x2="9" y2="21"></line>
+              <line x1="15" y1="3" x2="15" y2="21"></line>
+            </svg>
+          </div>
+        </div>
+        <div id="statTotalRevest" class="stat-tile-value tabular-nums">0.0 m²</div>
+        <div class="stat-tile-sub">Pastilhas / Porcelanato</div>
+      </div>
+
+      <div class="stat-tile">
+        <div class="stat-tile-header">
+          <span class="stat-tile-label">Área de Laminação (Casco/Borda)</span>
+          <div class="stat-tile-icon stat-icon-orange">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+              <polyline points="2 17 12 22 22 17"></polyline>
+              <polyline points="2 12 12 17 22 12"></polyline>
+            </svg>
+          </div>
+        </div>
+        <div id="statTotalLamina" class="stat-tile-value tabular-nums">0.0 m²</div>
+        <div class="stat-tile-sub">Fibra de vidro e laminação externa</div>
+      </div>
+
+      <div class="stat-tile">
+        <div class="stat-tile-header">
+          <span class="stat-tile-label">Volume Interno de Água</span>
+          <div class="stat-tile-icon stat-icon-purple">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path>
+            </svg>
+          </div>
+        </div>
+        <div id="statTotalVolume" class="stat-tile-value tabular-nums">0.0 m³ (0 L)</div>
+        <div class="stat-tile-sub">Capacidade cúbica e em litros</div>
+      </div>
+    </div>
+
+    <!-- Bloco 3: Modelos de Piscinas do Orçamento -->
+    <div class="dash-card full-width" style="margin-top: 14px;">
+      <div class="dash-card-header">
+        <div class="dash-card-title-group">
+          <div class="dash-card-icon-pill">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M2 12c2.5-3 5.5-3 8 0s5.5 3 8 0 3-1.5 4-1.5"></path>
+              <path d="M2 17c2.5-3 5.5-3 8 0s5.5 3 8 0 3-1.5 4-1.5"></path>
+            </svg>
+          </div>
+          <div>
+            <h3 class="dash-card-title">Composição de Piscinas / Modelos</h3>
+            <p class="dash-card-sub">Detalhamento técnico, acabamentos (BP11, C3, boleadas) e precificação por modelo</p>
+          </div>
+        </div>
+        <div class="dash-card-header-actions" style="display: flex; align-items: center; gap: 8px;">
+          <button type="button" class="btn btn-sm btn-secondary" onclick="expandirTodosModelos()" title="Expandir todas as piscinas">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 3px;">
+              <polyline points="7 11 12 6 17 11"></polyline>
+              <polyline points="7 18 12 13 17 18"></polyline>
+            </svg>
+            Expandir Todos
+          </button>
+          <button type="button" class="btn btn-sm btn-secondary" onclick="recolherTodosModelos()" title="Recolher todas as piscinas">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 3px;">
+              <polyline points="7 13 12 18 17 13"></polyline>
+              <polyline points="7 6 12 11 17 6"></polyline>
+            </svg>
+            Recolher Todos
+          </button>
+          <button type="button" id="btnAddPoolModel" class="btn btn-sm btn-primary" onclick="adicionarNovoModelo()">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Adicionar Modelo
+          </button>
+        </div>
+      </div>
+
+      <div id="poolsContainer" class="pools-editor-list" style="margin-top: 12px;">
+        <!-- Injetado dinamicamente por orcamento.js -->
+      </div>
+    </div>
+
+    <!-- Bloco 4: Seção Especial de Engenharia para Desenho Técnico (Venda) -->
+    <div id="secaoDesenhoTecnico" class="dash-card full-width" style="display: none; margin-top: 14px;">
+      <div class="dash-card-header">
+        <div class="dash-card-title-group">
+          <div class="dash-card-icon-pill">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
               <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
               <polyline points="2 17 12 22 22 17"></polyline>
               <polyline points="2 12 12 17 22 12"></polyline>
             </svg>
           </div>
           <div>
-            <h2 class="property-title">Parâmetros e Medidas Geométricas</h2>
-            <p class="property-desc">Dados extraídos da piscina 3D no SketchUp com suporte a edição manual direta</p>
+            <h3 class="dash-card-title">Memorial Descritivo &amp; Equipamentos Técnicos (Desenho Técnico)</h3>
+            <p class="dash-card-sub">Especificações técnicas de venda e fabricação prontas para emissão executiva em PDF</p>
           </div>
         </div>
+      </div>
 
-        <button class="btn btn-secondary btn-sm" onclick="recalcularPorMedidas()" title="Recalcular automaticamente os consumos de pastilhas, argamassa e borda com base nestas medidas">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="23 4 23 10 17 10"></polyline>
-            <polyline points="1 20 1 14 7 14"></polyline>
-            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-          </svg>
-          Recalcular Insumos por Medidas
+      <div class="tech-spec-grid" style="margin-top: 12px;">
+        <div class="tech-spec-item">
+          <label class="form-label">Sistema de Filtração e Bomba:</label>
+          <input type="text" class="form-control" value="Filtro iGUi Pro 50 + Motobomba 3/4 CV Autoescorvante">
+        </div>
+        <div class="tech-spec-item">
+          <label class="form-label">Iluminação Subaquática:</label>
+          <input type="text" class="form-control" value="2x Refletores LED RGB 18W com Central de Comando Touch e Wi-Fi">
+        </div>
+        <div class="tech-spec-item">
+          <label class="form-label">Pontos de Hidromassagem:</label>
+          <input type="text" class="form-control" value="4 Bicos de Hidroterapia com Regulagem de Ar e Direção">
+        </div>
+        <div class="tech-spec-item">
+          <label class="form-label">Quadro Elétrico e Disjuntor DR:</label>
+          <input type="text" class="form-control" value="Quadro elétrico com proteção DR (Diferencial Residual) de 30mA">
+        </div>
+      </div>
+
+      <div style="margin-top: 14px; text-align: right;">
+        <button class="btn btn-primary" onclick="abrirPropostaExecutiva()">
+          Visualizar Proposta Comercial & Ficha Técnica PDF →
         </button>
       </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Nome do Projeto</label>
-          <input type="text" id="inputNomeProjeto" class="form-input" placeholder="Ex: Piscina Residência Jardins">
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Cliente</label>
-          <input type="text" id="inputCliente" class="form-input" placeholder="Ex: Dr. Roberto Silveira">
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Área Interna Revestimento</label>
-          <div class="input-with-addon">
-            <input type="number" id="inputAreaM2" class="form-input tabular-nums" step="0.1" min="0" oninput="atualizarResumoMedidas()">
-            <span class="input-addon">m²</span>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Perímetro da Borda</label>
-          <div class="input-with-addon">
-            <input type="number" id="inputBordaM" class="form-input tabular-nums" step="0.1" min="0" oninput="atualizarResumoMedidas()">
-            <span class="input-addon">m</span>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Especificação do Revestimento</label>
-          <input type="text" id="inputTileSpec" class="form-input" placeholder="Ex: 15x15 cm">
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Status da Obra</label>
-          <select id="selStatus" class="form-select" style="font-weight: 700;">
-            <option value="novo">Novo (SketchUp 3D)</option>
-            <option value="em_analise">Em Análise Técnica</option>
-            <option value="enviado">Proposta Enviada</option>
-            <option value="aprovado">Aprovado pelo Cliente</option>
-            <option value="rejeitado">Rejeitado / Arquivado</option>
-          </select>
-        </div>
-      </div>
     </div>
 
-    <!-- Bloco 2: Layout Grid: Composição Analítica dos Itens vs Fechamento Comercial -->
-    <div class="orcamento-grid">
-      
-      <!-- Coluna da Esquerda: Composição Analítica dos Itens -->
-      <div style="background: #ffffff; border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: 20px; box-shadow: var(--shadow-xs);">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
-          <div>
-            <h2 class="card-title">Composição Analítica de Custos e Serviços</h2>
-            <p class="card-subtitle">Edite quantidades, descrições ou adicione serviços complementares</p>
-          </div>
-          <button class="btn btn-secondary btn-sm" onclick="adicionarItemExtra()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-            Adicionar Item / Serviço Extra
-          </button>
-        </div>
-
-        <div class="table-container" style="margin-top: 0; overflow-x: auto;">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th style="width: 135px;">Categoria</th>
-                <th style="min-width: 190px;">Descrição do Item / Serviço</th>
-                <th style="width: 90px; text-align: right;">Qtd</th>
-                <th style="width: 85px; text-align: center;">Unid</th>
-                <th style="width: 90px; text-align: right;">Unitário</th>
-                <th style="width: 110px; text-align: right;">Subtotal</th>
-                <th style="width: 36px; text-align: center;"></th>
-              </tr>
-            </thead>
-            <tbody id="itensTbody"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Coluna da Direita: Motor de Margem e Fechamento Comercial -->
-      <div style="display: flex; flex-direction: column; gap: 16px;">
-        <div style="background: #ffffff; border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: 24px; box-shadow: var(--shadow-xs);">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px;">
-            <h2 class="commercial-title">
-              Fechamento Comercial
-            </h2>
-            <span id="txtMargemDisplay" class="commercial-bdi-badge tabular-nums">25.0% BDI</span>
-          </div>
-
-          <div class="form-group" style="margin-bottom: 18px;">
-            <label class="form-label" style="display: flex; justify-content: space-between;">
-              <span>Margem de Lucro Bruta (BDI)</span>
-              <span style="font-weight: 600; color: var(--text-muted);">Ajuste livre</span>
-            </label>
-            <input type="range" id="inputMargem" min="5" max="60" step="0.5" value="25" class="form-input" style="padding: 4px 0; cursor: pointer;" oninput="recalcularTotais()">
-          </div>
-
-          <div class="commercial-summary-box">
-            <div class="commercial-summary-row">
-              <span>Custo Direto Total:</span>
-              <span id="txtCustoTotal" style="font-weight: 700; color: var(--text-primary);" class="tabular-nums">R$ 0,00</span>
-            </div>
-
-            <div class="commercial-summary-row" style="color: var(--status-aprovado);">
-              <span>Lucro Bruto Projetado:</span>
-              <span id="txtLucro" style="font-weight: 800;" class="tabular-nums">R$ 0,00</span>
-            </div>
-
-            <div class="commercial-summary-total">
-              <span style="font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-secondary);">Preço de Venda:</span>
-              <span id="txtPrecoVenda" class="commercial-total-price tabular-nums">R$ 0,00</span>
-            </div>
-          </div>
-
-          <div class="form-group" style="margin-top: 18px;">
-            <label class="form-label">Notas e Condições Específicas</label>
-            <textarea id="txtNotas" class="form-textarea" rows="3" placeholder="Informações de acesso à obra, cor do rejunte, prazos combinados..."></textarea>
-          </div>
-
-          <div style="margin-top: 20px; display: flex; flex-direction: column; gap: 10px;">
-            <button class="btn btn-success" onclick="salvarOrcamento()" style="padding: 12px;">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="20 6 9 17 4 12"></polyline>
-              </svg>
-              Salvar Alterações
-            </button>
-            <button class="btn btn-primary" onclick="abrirPropostaExecutiva()" style="padding: 12px;">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                <polyline points="14 2 14 8 20 8"></polyline>
-              </svg>
-              Gerar Proposta Executiva (PDF)
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
   </main>
 
-  <div id="toastBox" class="toast-container"></div>
+  <!-- MODAL: CONFIRMAÇÃO DE GALGA TÉCNICA COM A FÁBRICA -->
+  <div id="modalConfirmarGalga" class="papasys-dialog-overlay" style="display: none;" onclick="fecharModalConfirmarGalga()">
+    <div class="papasys-dialog-card modal-lg" style="max-width: 680px;" onclick="event.stopPropagation()">
+      <div class="papasys-dialog-header">
+        <div class="papasys-dialog-icon dialog-icon-warning">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+            <polyline points="2 17 12 22 22 17"></polyline>
+            <polyline points="2 12 12 17 22 12"></polyline>
+          </svg>
+        </div>
+        <div class="papasys-dialog-headings">
+          <h3 class="papasys-dialog-title">Confirmação de Galga Técnica com a Fábrica</h3>
+          <p class="papasys-dialog-message">Validação definitiva de medidas com pastilhas antes de avançar para a etapa de Galga (0% de margem).</p>
+        </div>
+        <button type="button" class="btn-close-modal" onclick="fecharModalConfirmarGalga()">&times;</button>
+      </div>
 
+      <div class="papasys-dialog-body" style="padding-top: 4px;">
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px; margin-bottom: 14px; font-size: 12.5px; color: #1e40af; line-height: 1.5;">
+          <strong>Atenção:</strong> Na etapa de <strong>Prévia (+5% de margem)</strong>, as medidas são estimativas preliminares de projeto. A etapa de <strong>Galga (0% de margem)</strong> exige a confirmação técnica da fábrica sobre a viabilidade com a modulação real das pastilhas e encaixe de peças, podendo haver pequenas alterações nas medidas da piscina. Confirme ou ajuste as dimensões abaixo:
+        </div>
+
+        <div id="galgaPoolsFormContainer">
+          <!-- Injetado dinamicamente com as piscinas do orçamento e campos de medidas -->
+        </div>
+
+        <div style="margin-top: 14px; padding: 10px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+          <label style="display: flex; align-items: flex-start; gap: 8px; font-size: 13px; cursor: pointer; color: #1e293b;">
+            <input type="checkbox" id="chkConfirmacaoGalgaFabrica" onchange="aoAlternarCheckboxGalga(this.checked)" style="margin-top: 2px;">
+            <span><strong>Confirmo que a galga técnica foi validada junto à fábrica</strong> para este modelo de pastilha e que as medidas acima foram verificadas e são definitivas para a etapa de Galga.</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="papasys-dialog-footer" style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px solid #f1f5f9;">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="fecharModalConfirmarGalga()">Cancelar / Manter em Prévia</button>
+        <button type="button" id="btnConfirmarAvancoGalga" class="btn btn-primary btn-sm" onclick="executarConfirmacaoGalga()" disabled>
+          Confirmar e Avançar para Galga (0%)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: DIVIDIR UNIDADES (INCORPORADORA / MULTI-UNIDADES) -->
+  <div id="modalDividirUnidades" class="papasys-dialog-overlay" style="display: none;" onclick="fecharModalDividirUnidades()">
+    <div class="papasys-dialog-card modal-md" style="max-width: 520px;" onclick="event.stopPropagation()">
+      <div class="papasys-dialog-header">
+        <div class="papasys-dialog-icon dialog-icon-info">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="16 3 21 3 21 8"></polyline>
+            <line x1="4" y1="20" x2="21" y2="3"></line>
+            <polyline points="21 16 21 21 16 21"></polyline>
+            <line x1="15" y1="15" x2="21" y2="21"></line>
+            <line x1="4" y1="4" x2="9" y2="9"></line>
+          </svg>
+        </div>
+        <div class="papasys-dialog-headings">
+          <h3 class="papasys-dialog-title">Dividir Unidades do Modelo</h3>
+          <p class="papasys-dialog-message">Desmembrar unidades deste modelo para gerar um novo orçamento independente ou redistribuir lotes.</p>
+        </div>
+        <button type="button" class="btn-close-modal" onclick="fecharModalDividirUnidades()">&times;</button>
+      </div>
+
+      <div class="papasys-dialog-body" id="conteudoDividirUnidades" style="padding-top: 6px;">
+        <!-- Injetado dinamicamente por orcamento.js -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Scripts -->
   <script src="js/gsap.min.js"></script>
-  <script src="js/animations.js"></script>
-  <script src="js/config.js"></script>
-  <script src="js/supabase.js"></script>
-  <script src="js/calculator.js"></script>
-  <script src="js/dialog.js"></script>
-  <script src="js/orcamento.js"></script>
+  <script src="js/animations.js?v=1.4.0"></script>
+  <script src="js/config.js?v=1.4.0"></script>
+  <script src="js/dialog.js?v=1.4.0"></script>
+  <script src="js/auth.js?v=1.4.0"></script>
+  <script src="js/pricing.js?v=1.4.0"></script>
+  <script src="js/supabase.js?v=1.4.0"></script>
+  <script src="js/orcamento.js?v=1.4.0"></script>
 </body>
 </html>

@@ -3,37 +3,92 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PapaSys Paginação Inteligente</title>
+  <title>iGUi Orçamentos 3D</title>
   <link rel="stylesheet" href="dialog.css">
 </head>
 <body>
   <div class="app-container">
-    <!-- Header com Logo PapaSys -->
+    
+    <!-- Topbar: Branding + Versão + Usuário Ativo -->
     <header class="header">
       <div class="brand">
-        <img src="Icone.png" alt="PapaSys" class="logo-img">
+        <img src="Logo_Oficial_iGUi.png" alt="iGUi" style="height: 32px; width: auto; object-fit: contain;">
         <div>
-          <h1 class="title"><span class="title-dark">PAPA</span><span class="title-orange">SYS</span></h1>
-          <p class="subtitle">Paginação Modular Sem Recortes</p>
+          <h1 class="title"><span class="title-blue">iGUi</span> <span class="title-dark">ORÇAMENTOS</span></h1>
+          <p class="subtitle">Integração 3D SketchUp &amp; Sistema Web</p>
         </div>
       </div>
-      <div class="header-badges">
-        <span id="versionBadge" class="badge badge-version">v1.1.0</span>
-        <button id="btnCheckUpdate" class="btn-icon" title="Verificar Atualizações">
-          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="23 4 23 10 17 10"></polyline>
-            <polyline points="1 20 1 14 7 14"></polyline>
-            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-          </svg>
-        </button>
-        <button id="btnToggleConfig" class="btn-icon" title="Configurações de Conexão e Auto-Update" onclick="toggleModalConfig()">
-          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="3"></circle>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+
+      <div class="header-right">
+        <span id="versionBadge" class="badge badge-version">v2.0.0</span>
+        <button id="btnToggleUser" class="btn-icon" title="Alternar Usuário / Permissões" onclick="toggleModalUser()">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
           </svg>
         </button>
       </div>
     </header>
+
+    <!-- Barra de Usuário Logado & Permissões (Seção 3 e 4) -->
+    <div class="user-strip">
+      <div class="user-avatar" id="userAvatar">VL</div>
+      <div class="user-info">
+        <div class="user-name-row">
+          <span id="lblUserName" class="user-name">Victor Lourenço</span>
+          <span id="lblUserRole" class="badge-role">Usuário</span>
+        </div>
+        <div id="lblUserDivisions" class="user-permissions">Acesso: iGUi Sob Medida</div>
+      </div>
+      <button class="btn-switch-user" onclick="toggleModalUser()" title="Trocar Usuário">Alternar</button>
+    </div>
+
+    <!-- SEÇÃO 2 & 4: AS 3 DIVISÕES INDEPENDENTES (Botões com ativação por permissão) -->
+    <div class="section-divisions">
+      <div class="division-buttons-grid">
+        <button type="button" id="btnDivSobMedida" class="btn-division active" onclick="selecionarDivisao('sob_medida')">
+          <div class="div-icon">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2 12h20M2 17h20M7 7h10"></path>
+              <circle cx="12" cy="4" r="1.5"></circle>
+            </svg>
+          </div>
+          <div class="div-name">iGUi Sob Medida</div>
+          <div class="div-hint">1 piscina / orçamento</div>
+        </button>
+
+        <button type="button" id="btnDivIncorporadora" class="btn-division" onclick="selecionarDivisao('incorporadora')">
+          <div class="div-icon">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect>
+              <line x1="9" y1="22" x2="9" y2="22.01"></line>
+              <line x1="15" y1="22" x2="15" y2="22.01"></line>
+              <line x1="8" y1="6" x2="8" y2="6.01"></line>
+              <line x1="16" y1="6" x2="16" y2="6.01"></line>
+              <line x1="8" y1="10" x2="8" y2="10.01"></line>
+              <line x1="16" y1="10" x2="16" y2="10.01"></line>
+              <line x1="8" y1="14" x2="8" y2="14.01"></line>
+              <line x1="16" y1="14" x2="16" y2="14.01"></line>
+            </svg>
+          </div>
+          <div class="div-name">iGUi Incorporadora</div>
+          <div class="div-hint">Múltiplos modelos/unidades</div>
+        </button>
+
+        <button type="button" id="btnDivInternacional" class="btn-division" onclick="selecionarDivisao('internacional')">
+          <div class="div-icon">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+            </svg>
+          </div>
+          <div class="div-name">iGUi Internacional</div>
+          <div class="div-hint">Exportação &amp; Global</div>
+        </button>
+      </div>
+      <div id="divisionPermissionNotice" class="division-notice" style="display: none;"></div>
+    </div>
 
     <!-- Live Preview da Seleção do SketchUp -->
     <div id="selectionChip" class="selection-chip no-sel" onclick="solicitarInspecao()" title="Clique para atualizar detecção da seleção no SketchUp">
@@ -47,9 +102,14 @@
       <div class="selection-details">
         <div class="selection-status-row">
           <div id="selectionStatusText" class="selection-status-title">Nenhuma piscina selecionada</div>
-          <span id="badgeCurva" class="badge-curva" style="display: none;">🌊 Curvas Protegidas</span>
+          <span id="badgeCurva" class="badge-curva" style="display: none;">
+            <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 2px;">
+              <path d="M2 12c3-4 6-4 9 0s6 4 9 0"></path>
+            </svg>
+            Curvas
+          </span>
         </div>
-        <div id="selectionDimsText" class="selection-status-sub">Selecione o grupo ou faces no SketchUp</div>
+        <div id="selectionDimsText" class="selection-status-sub">Selecione o grupo ou faces da piscina no SketchUp</div>
       </div>
       <button type="button" class="btn-detect-refresh" title="Atualizar detecção da seleção" onclick="event.stopPropagation(); solicitarInspecao();">
         <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
@@ -59,199 +119,420 @@
       </button>
     </div>
 
-    <!-- Main Content -->
-    <main class="content">
-      <!-- Section: Presets rápidos -->
-      <div class="form-group">
-        <label class="form-label">Predefinições Rápidas de Revestimento:</label>
-        <div class="preset-buttons">
-          <button type="button" class="btn-preset" onclick="setPreset(10, 10, 0.2)">10x10 cm</button>
-          <button type="button" class="btn-preset active" onclick="setPreset(15, 15, 0.2)">15x15 cm</button>
-          <button type="button" class="btn-preset" onclick="setPreset(20, 20, 0.3)">20x20 cm</button>
-          <button type="button" class="btn-preset" onclick="setPreset(30, 60, 0.2)">30x60 cm</button>
-        </div>
-      </div>
+    <!-- BARRA DE ABAS 1, 2 E 3 (Zero Scroll) -->
+    <nav class="plugin-tabs-nav" aria-label="Navegação em abas">
+      <button type="button" id="tabBtn1" class="tab-nav-btn active" onclick="switchTab(1)">
+        <span class="tab-badge">1</span>
+        <span class="tab-title">Identificação</span>
+      </button>
+      <button type="button" id="tabBtn2" class="tab-nav-btn" onclick="switchTab(2)">
+        <span class="tab-badge">2</span>
+        <span class="tab-title">Configuração</span>
+      </button>
+      <button type="button" id="tabBtn3" class="tab-nav-btn" onclick="switchTab(3)">
+        <span class="tab-badge">3</span>
+        <span class="tab-title">Quantitativos 3D</span>
+      </button>
+    </nav>
 
-      <!-- Section: Origem da Modulação (Ponto Zero) -->
-      <div class="form-group">
-        <label class="form-label">Origem da Modulação (Ponto Zero):</label>
-        <div class="origin-segmented">
-          <button type="button" class="btn-origin active" id="btnOrigemCentro" onclick="setOrigem('centro')">
-            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10"></circle>
-              <circle cx="12" cy="12" r="3"></circle>
-              <line x1="12" y1="2" x2="12" y2="5"></line>
-              <line x1="12" y1="19" x2="12" y2="22"></line>
-              <line x1="2" y1="12" x2="5" y2="12"></line>
-              <line x1="19" y1="12" x2="22" y2="12"></line>
-            </svg>
-            Centro Simétrico
-          </button>
-          <button type="button" class="btn-origin" id="btnOrigemCanto" onclick="setOrigem('canto')">
-            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="4 20 4 4 20 4"></polyline>
-              <circle cx="4" cy="4" r="2.5"></circle>
-            </svg>
-            Canto / Início
-          </button>
-        </div>
+    <!-- CONTAINER DAS ABAS (Sem scroll vertical, organizado por abas) -->
+    <main class="tabs-body">
 
-        <!-- Seletor dos 4 Cantos de Referência (Visível apenas quando Canto / Início está ativo) -->
-        <div id="cantoSelectorGroup" class="canto-selector-group" style="display: none;">
-          <span class="canto-selector-label">Escolha o Canto de Partida (Pastilha Inteira):</span>
-          <div class="canto-grid">
-            <button type="button" id="btnCantoSupEsq" class="btn-canto" onclick="setCantoRef('sup_esq')" title="Canto Superior Esquerdo">
-              <span class="canto-arrow">↖</span> Sup. Esquerdo
-            </button>
-            <button type="button" id="btnCantoSupDir" class="btn-canto" onclick="setCantoRef('sup_dir')" title="Canto Superior Direito">
-              Sup. Direito <span class="canto-arrow">↗</span>
-            </button>
-            <button type="button" id="btnCantoInfEsq" class="btn-canto active" onclick="setCantoRef('inf_esq')" title="Canto Inferior Esquerdo (Padrão)">
-              <span class="canto-arrow">↙</span> Inf. Esquerdo
-            </button>
-            <button type="button" id="btnCantoInfDir" class="btn-canto" onclick="setCantoRef('inf_dir')" title="Canto Inferior Direito">
-              Inf. Direito <span class="canto-arrow">↘</span>
-            </button>
+      <!-- ==================================================================== -->
+      <!-- ABA 1: IDENTIFICAÇÃO DO ORÇAMENTO -->
+      <!-- ==================================================================== -->
+      <section id="tabPanel1" class="tab-pane active">
+        <div class="card form-card">
+          
+          <!-- Seletor de Modo: Novo vs Existente vs Galga (Substituir) -->
+          <div class="segmented-control">
+            <button type="button" id="tabModoNovo" class="seg-btn active" onclick="setModoOrcamento('novo')">+ Novo Orçamento</button>
+            <button type="button" id="tabModoExistente" class="seg-btn" onclick="setModoOrcamento('existente')">⇄ Adicionar a Existente</button>
+            <button type="button" id="tabModoGalga" class="seg-btn" onclick="setModoOrcamento('galga')">📐 Galga (Substituir)</button>
           </div>
-        </div>
-      </div>
 
-      <!-- Section: Dimensões das peças -->
-      <div class="grid-3">
-        <div class="form-group">
-          <label for="inputLargura" class="form-label">Largura (cm)</label>
-          <input type="number" id="inputLargura" class="form-control" value="15.0" step="0.1" min="1">
-        </div>
-        <div class="form-group">
-          <label for="inputAltura" class="form-label">Altura (cm)</label>
-          <input type="number" id="inputAltura" class="form-control" value="15.0" step="0.1" min="1">
-        </div>
-        <div class="form-group">
-          <label for="inputRejunte" class="form-label">Rejunte (cm)</label>
-          <input type="number" id="inputRejunte" class="form-control" value="0.2" step="0.05" min="0.05">
-        </div>
-      </div>
-
-      <!-- Section: Identificação -->
-      <div class="form-group">
-        <label for="inputProjeto" class="form-label">Nome do Projeto / Piscina</label>
-        <input type="text" id="inputProjeto" class="form-control" value="Piscina Cliente PapaSys">
-      </div>
-
-      <div class="form-group">
-        <label for="inputCliente" class="form-label">Nome do Cliente</label>
-        <input type="text" id="inputCliente" class="form-control" value="Cliente Geral">
-      </div>
-
-      <!-- Actions Group -->
-      <div class="actions-group">
-        <button id="btnAjustarEEnviar" class="btn btn-orange" onclick="ajustarEEnviarTudo()">
-          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-          </svg>
-          Ajustar & Enviar para o PapaSys (1 Clique)
-        </button>
-
-        <button id="btnAjustar" class="btn btn-secondary" onclick="executarAjuste(false)">
-          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
-            <polyline points="2 17 12 22 22 17"></polyline>
-            <polyline points="2 12 12 17 22 12"></polyline>
-          </svg>
-          Apenas Ajustar Geometria 3D
-        </button>
-      </div>
-
-      <!-- Results Box -->
-      <div id="resultsCard" class="card results-card hidden">
-        <div class="card-header">
-          <span class="card-title">Quantitativos Calculados</span>
-          <span id="badgeSnapStatus" class="badge badge-success">Snap Central OK</span>
-        </div>
-        <div class="stats-grid">
-          <div class="stat-item">
-            <span class="stat-label">Área Interna Líquida</span>
-            <div class="stat-input-row">
-              <input type="number" id="inputAreaM2" class="stat-input" value="0.00" step="0.01" oninput="recalcularPerda()">
-              <span class="stat-unit">m²</span>
+          <!-- CAMPO PRINCIPAL: NÚMERO DO ORÇAMENTO (MANUAL / DO EMAIL) -->
+          <div class="form-group">
+            <div class="label-with-action">
+              <label for="inputNumeroOrcamento" class="form-label">
+                Número do Orçamento (do E-mail):
+                <span class="req-star">*</span>
+              </label>
+              <button type="button" class="btn-link-action" onclick="pesquisarOrcamentoPorNumero()">
+                <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 2px;">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                Buscar
+              </button>
+            </div>
+            <div class="search-input-wrap">
+              <input type="text" id="inputNumeroOrcamento" class="form-control input-budget-code" placeholder="Ex: 84920 ou ORC-2026-0842" oninput="appState.budget_code = this.value" onkeyup="if(event.key==='Enter') pesquisarOrcamentoPorNumero()">
+              <button type="button" id="btnBuscarOrcamento" class="btn-search-inline" onclick="pesquisarOrcamentoPorNumero()" title="Pesquisar este número na base de dados">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+              </button>
             </div>
           </div>
-          <div class="stat-item">
-            <span class="stat-label">Com Perda / Sobra Técnica</span>
-            <div class="stat-waste-box">
-              <span id="statAreaComPerda" class="stat-waste-value">0.00 m²</span>
-              <div class="waste-toggle-group">
-                <button type="button" class="waste-pill active" id="btnPerda10" onclick="setPercentualPerda(10)">+10%</button>
-                <button type="button" class="waste-pill" id="btnPerda15" onclick="setPercentualPerda(15)">+15%</button>
+
+          <!-- BANNER DINÂMICO DE PESQUISA (Encontrado vs Não Encontrado com Pergunta) -->
+          <div id="boxStatusBuscaOrcamento" class="budget-status-box" style="display: none;">
+            <!-- Injetado dinamicamente via JS -->
+          </div>
+
+          <!-- Dados do Projeto e Cliente -->
+          <div class="grid-2">
+            <div class="form-group">
+              <label for="inputProjeto" class="form-label">Nome do Projeto:</label>
+              <input type="text" id="inputProjeto" class="form-control" value="Residencial iGUi Prime">
+            </div>
+            <div class="form-group">
+              <label for="inputCliente" class="form-label">Cliente / Contratante:</label>
+              <input type="text" id="inputCliente" class="form-control" value="Cliente Geral">
+            </div>
+          </div>
+
+          <!-- Modelo e Unidades (Seção 5) -->
+          <div class="grid-2">
+            <div class="form-group">
+              <label for="inputModelo" class="form-label">Modelo da Piscina:</label>
+              <input type="text" id="inputModelo" class="form-control" value="Modelo Ravello 7x3">
+            </div>
+            <div class="form-group">
+              <label for="inputUnidades" class="form-label">Quantidade de Unidades:</label>
+              <div class="units-input-wrap">
+                <input type="number" id="inputUnidades" class="form-control" value="1" min="1" step="1" oninput="atualizarCalculosFinanceiros()">
+                <span id="badgeSobMedidaUnidade" class="badge-units-lock" style="display: none;">1 un (Sob Medida)</span>
               </div>
             </div>
           </div>
-          <div class="stat-item">
-            <span class="stat-label">Perímetro da Borda</span>
-            <div class="stat-input-row">
-              <input type="number" id="inputBordaM" class="stat-input" value="0.00" step="0.01">
-              <span class="stat-unit">m</span>
+
+          <!-- Lista Suspensa Auxiliar (Adicionar a Existente) -->
+          <div id="blocoOrcamentoExistente" style="display: none;" class="form-group mt-1">
+            <div class="label-with-action">
+              <label for="selectOrcamentoExistente" class="form-label">Ou selecione na lista recente:</label>
+              <button type="button" class="btn-link-action" onclick="carregarOrcamentosExistentes()">Atualizar lista</button>
             </div>
+            <select id="selectOrcamentoExistente" class="form-control" onchange="aoSelecionarOrcamentoExistente()">
+              <option value="">Carregando orçamentos...</option>
+            </select>
           </div>
-          <div class="stat-item">
-            <span class="stat-label">Vértices / Módulo</span>
-            <div class="stat-combined-meta">
-              <span id="statVertices" class="stat-meta-pill">0 pts</span>
-              <span id="statModulo" class="stat-meta-pill">15.2×15.2 cm</span>
-            </div>
-          </div>
+
         </div>
 
-        <!-- Alerta de Curvatura Preservada -->
-        <div id="rowCurvaInfo" class="curve-info-box" style="display: none;">
-          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M2 12c4-8 8-8 12 0s8 8 12 0"></path>
-          </svg>
-          <span id="textCurvaInfo">Curvatura Suave Preservada</span>
-        </div>
-
-        <div class="actions-group" style="margin-top: 10px;">
-          <button id="btnEnviarWeb" class="btn btn-orange btn-sm" onclick="enviarParaWeb()">
-            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="17 8 12 3 7 8"></polyline>
-              <line x1="12" y1="3" x2="12" y2="15"></line>
+        <!-- Footer da Aba 1 -->
+        <div class="tab-footer">
+          <div class="tab-footer-hint">Etapa 1 de 3 &bull; Identificação preenchida</div>
+          <button type="button" class="btn btn-primary-igui btn-nav-step" onclick="switchTab(2)">
+            Avançar para Configuração
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6"></polyline>
             </svg>
-            Reenviar para Nuvem Supabase
           </button>
         </div>
-      </div>
+      </section>
+
+      <!-- ==================================================================== -->
+      <!-- ABA 2: CONFIGURAÇÃO TÉCNICA DA PISCINA -->
+      <!-- ==================================================================== -->
+      <section id="tabPanel2" class="tab-pane" style="display: none;">
+        <div class="card form-card">
+
+          <!-- 6.1 Etapa do Orçamento (Prévia vs Galga) -->
+          <div class="form-group">
+            <label class="form-label">Etapa do Orçamento:</label>
+            <div class="stage-toggle-grid">
+              <button type="button" id="btnEtapaPrevia" class="btn-stage active" onclick="setEtapa('previa')">
+                <div class="stage-title">Prévia</div>
+                <div class="stage-desc">Estimativa preliminar (+5% margem padrão)</div>
+              </button>
+              <button type="button" id="btnEtapaGalga" class="btn-stage" onclick="setEtapa('galga')">
+                <div class="stage-title">Galga (Pré-venda)</div>
+                <div class="stage-desc">Quadro técnico pré-venda (0% margem)</div>
+              </button>
+            </div>
+            <div class="stage-note">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 3px;">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+              </svg>
+              <strong>Desenho Técnico (Venda):</strong> executado diretamente no sistema web, sem passar pelo SketchUp.
+            </div>
+          </div>
+
+          <!-- 6.2 Tipo de Piscina & 6.3 Estrutura -->
+          <div class="grid-2">
+            <div class="form-group">
+              <label class="form-label">Tipo de Piscina:</label>
+              <div class="radio-pill-group">
+                <label class="pill-radio active" id="lblTipoConvencional">
+                  <input type="radio" name="poolType" value="convencional" checked onchange="setTipoPiscina('convencional')">
+                  Convencional
+                </label>
+                <label class="pill-radio" id="lblTipoEspecial">
+                  <input type="radio" name="poolType" value="especial" onchange="setTipoPiscina('especial')">
+                  Especial
+                </label>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Estrutura:</label>
+              <div class="radio-pill-group">
+                <label class="pill-radio active" id="lblEstNaoAuto">
+                  <input type="radio" name="structureType" value="nao_autoportante" checked onchange="setEstrutura('nao_autoportante')">
+                  Não autoportante
+                </label>
+                <label class="pill-radio" id="lblEstAuto">
+                  <input type="radio" name="structureType" value="autoportante" onchange="setEstrutura('autoportante')">
+                  Autoportante (+50%)
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- 6.4 Revestimento (Seção 6 e 7) -->
+          <div class="form-group">
+            <label class="form-label">Revestimento:</label>
+            <div class="coating-buttons-grid">
+              <button type="button" class="btn-coating" data-val="pastilha_5x5" onclick="setRevestimento('pastilha_5x5')">
+                <span class="c-title">Pastilha 5x5</span>
+                <span class="c-finish">BP11 / C3</span>
+              </button>
+              <button type="button" class="btn-coating" data-val="pastilha_7_5x7_5" onclick="setRevestimento('pastilha_7_5x7_5')">
+                <span class="c-title">Pastilha 7,5x7,5</span>
+                <span class="c-finish">Boleada 7,5</span>
+              </button>
+              <button type="button" class="btn-coating" data-val="pastilha_10x10" onclick="setRevestimento('pastilha_10x10')">
+                <span class="c-title">Pastilha 10x10</span>
+                <span class="c-finish">BP11 / C3</span>
+              </button>
+              <button type="button" class="btn-coating active" data-val="pastilha_15x15" onclick="setRevestimento('pastilha_15x15')">
+                <span class="c-title">Pastilha 15x15</span>
+                <span class="c-finish">Boleada 15</span>
+              </button>
+              <button type="button" class="btn-coating" data-val="porcelanato_villagres" onclick="setRevestimento('porcelanato_villagres')">
+                <span class="c-title">Porcelanato Villagres</span>
+                <span class="c-finish">Personalizado</span>
+              </button>
+              <button type="button" class="btn-coating" data-val="personalizado" onclick="setRevestimento('personalizado')">
+                <span class="c-title">Personalizado</span>
+                <span class="c-finish">Definido depois</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Molde (Incorporadora - Seção 10.2) -->
+          <div id="rowMoldeIncorporadora" class="form-group" style="display: none;">
+            <div class="mold-box">
+              <div class="mold-info">
+                <span class="mold-label">Regra de Molde (Incorporadora):</span>
+                <span id="lblMoldeStatus" class="mold-sub">Definido automaticamente por unidades &ge; 10</span>
+              </div>
+              <label class="switch-toggle" title="Alterar manualmente para Com Molde / Sem Molde">
+                <input type="checkbox" id="chkHasMold" onchange="aoAlternarMoldeManual()">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Footer da Aba 2 -->
+        <div class="tab-footer">
+          <button type="button" class="btn btn-secondary btn-nav-step" onclick="switchTab(1)">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+            Voltar
+          </button>
+          <button type="button" class="btn btn-primary-igui btn-nav-step" onclick="switchTab(3)">
+            Avançar para Quantitativos
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </button>
+        </div>
+      </section>
+
+      <!-- ==================================================================== -->
+      <!-- ABA 3: QUANTITATIVOS 3D & ACABAMENTOS -->
+      <!-- ==================================================================== -->
+      <section id="tabPanel3" class="tab-pane" style="display: none;">
+        <div class="card form-card">
+
+          <!-- Barra de Ações Rápidas de Materiais -->
+          <div class="mat-actions-toolbar">
+            <div class="mat-status-badges">
+              <span class="mat-badge-status mat-badge-revest">
+                <span class="mat-dot mat-revest"></span>
+                Revest: <strong id="lblStatusMatRevest">Detectando...</strong>
+              </span>
+              <span class="mat-badge-status mat-badge-lamina">
+                <span class="mat-dot mat-lamina"></span>
+                Lamina: <strong id="lblStatusMatLamina">Detectando...</strong>
+              </span>
+            </div>
+            <div class="mat-buttons-group">
+              <button type="button" class="btn-sub-action" onclick="executarAnaliseGeometrica(true)" title="Recalcular geometria da piscina selecionada">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="23 4 23 10 17 10"></polyline>
+                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                </svg>
+                Recalcular
+              </button>
+              <button type="button" class="btn-sub-action btn-apply-mat" onclick="aplicarLaminacaoTotal()" title="Pintar todo o componente de cinza (Laminação iGUi)">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 19l7-7 3 3-7 7-3-3z"></path>
+                  <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
+                  <path d="M2 2l7.586 7.586"></path>
+                  <circle cx="11" cy="11" r="2"></circle>
+                </svg>
+                Aplicar Laminação
+              </button>
+            </div>
+          </div>
+
+          <!-- Grid de Quantitativos 3D (Seção 8) -->
+          <div class="quant-grid">
+            <div class="quant-item" onclick="destacarRevestimento3D()" style="cursor: pointer;" title="Clique para inspecionar / selecionar faces de revestimento no 3D">
+              <span class="quant-label">Área Revestimento (Interna)</span>
+              <div class="quant-val-row">
+                <span id="statAreaRevest" class="quant-value">0.00</span>
+                <span class="quant-unit">m²</span>
+              </div>
+            </div>
+
+            <div class="quant-item" onclick="destacarLaminacao3D()" style="cursor: pointer;" title="Clique para inspecionar / selecionar faces de laminação (borda + paredes externas) no 3D">
+              <span class="quant-label">Área Laminação (Externa + Borda)</span>
+              <div class="quant-val-row">
+                <span id="statAreaLamina" class="quant-value">0.00</span>
+                <span class="quant-unit">m²</span>
+              </div>
+            </div>
+
+            <div class="quant-item">
+              <span class="quant-label">Volume Interno da Piscina</span>
+              <div class="quant-val-row">
+                <span id="statVolumeM3" class="quant-value">0.00</span>
+                <span class="quant-unit">m³</span>
+              </div>
+              <div id="statVolumeLitros" class="quant-sub">0 L</div>
+            </div>
+
+            <div class="quant-item">
+              <span class="quant-label">Cantos Lineares &amp; Quinas</span>
+              <div class="quant-val-row">
+                <span id="statCantosLineares" class="quant-value">0.00</span>
+                <span class="quant-unit">m</span>
+              </div>
+              <div id="statQuinasVivas" class="quant-sub">0 quinas vivas</div>
+            </div>
+          </div>
+
+          <!-- Seção 7: Peças de Acabamento Calculadas -->
+          <div id="boxAcabamentos" class="finish-box">
+            <div class="finish-header">
+              <span class="finish-title">Peças de Acabamento Calculadas (Seção 7)</span>
+              <span id="badgeFinishRule" class="badge-finish-rule">BP11 + C3</span>
+            </div>
+            
+            <div id="finishDetailsNormal" class="finish-items-list">
+              <div class="finish-row">
+                <span id="lblFinishLinearNome" class="finish-name">Cantoneira BP11 (20 cm)</span>
+                <span id="lblFinishLinearQtd" class="finish-qty">0 un</span>
+              </div>
+              <div class="finish-row">
+                <span id="lblFinishQuinaNome" class="finish-name">Peça C3 (quina viva)</span>
+                <span id="lblFinishQuinaQtd" class="finish-qty">0 un</span>
+              </div>
+            </div>
+
+            <!-- Alerta de Revestimento Personalizado (Seção 7) -->
+            <div id="alertPersonalizado" class="alert-personalizado" style="display: none;">
+              <div class="alert-icon">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                  <line x1="12" y1="9" x2="12" y2="13"></line>
+                  <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+              </div>
+              <div class="alert-text">
+                <strong>Revestimento personalizado – definido posteriormente pelo cliente.</strong>
+                <div>Metragens de cantos e quinas apuradas, sem cálculo prévio de acabamentos.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Resumo Financeiro da Piscina (Seção 11) -->
+          <div class="pricing-summary-card">
+            <div class="price-row">
+              <span>Valor Base (Revestimento + Acabamento + Laminação):</span>
+              <span id="lblValorBase" class="tabular-nums">R$ 0,00</span>
+            </div>
+            <div class="price-row" id="rowAutoAcrescimo" style="display: none;">
+              <span>Acréscimo Autoportante (+50%):</span>
+              <span id="lblValorAuto" class="tabular-nums" style="color: var(--amber-600);">+ R$ 0,00</span>
+            </div>
+            <div class="price-row" id="rowMargemEtapa">
+              <span>Margem da Etapa (<span id="lblMargemPct">Prévia +5%</span>):</span>
+              <span id="lblValorMargem" class="tabular-nums">+ R$ 0,00</span>
+            </div>
+            <div class="price-total-row">
+              <div>
+                <div class="total-title">Total Estimado (<span id="lblTotalUnitsCount">1 un</span>):</div>
+                <div class="total-sub">Valor unitário: <span id="lblValorUnitario">R$ 0,00</span></div>
+              </div>
+              <div id="lblValorTotalGeral" class="total-value tabular-nums">R$ 0,00</div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Footer da Aba 3: Botão de Envio Principal -->
+        <div class="tab-footer">
+          <button type="button" class="btn btn-secondary btn-nav-step" onclick="switchTab(2)">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+            Voltar
+          </button>
+          
+          <button id="btnEnviarSistema" class="btn btn-primary-igui btn-send-action" onclick="enviarParaSistemaWeb()">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            <span id="lblTextoBotaoEnvio">Enviar para iGUi Sob Medida</span>
+          </button>
+        </div>
+      </section>
 
     </main>
 
-    <!-- Modal de Conexão & Auto-Update -->
-    <div id="modalConfig" class="modal-overlay" style="display: none;" onclick="fecharModalSeClicarFora(event)">
+    <!-- MODAL DE TROCA DE USUÁRIO / PERMISSÕES (Seção 3) -->
+    <div id="modalUser" class="modal-overlay" style="display: none;" onclick="fecharModalUserSeClicarFora(event)">
       <div class="modal-card" onclick="event.stopPropagation()">
         <div class="modal-header">
           <div class="modal-title">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="3"></circle>
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
             </svg>
-            Conexão & Auto-Update
+            Alternar Usuário &amp; Permissões
           </div>
-          <button type="button" class="btn-modal-close" onclick="fecharModalConfig()">&times;</button>
+          <button type="button" class="btn-modal-close" onclick="fecharModalUser()">&times;</button>
         </div>
         <div class="modal-body">
-          <div class="form-group">
-            <label for="inputServerUrl" class="form-label">Servidor / API Supabase:</label>
-            <input type="text" id="inputServerUrl" class="form-control" value="https://bhbbpdvgkyjqxhghbmpe.supabase.co">
-          </div>
-          <div class="form-group checkbox-group" style="margin-top: 6px;">
-            <label>
-              <input type="checkbox" id="chkAutoUpdate" checked>
-              Atualizar plugin automaticamente se houver nova versão
-            </label>
+          <p class="modal-desc">Selecione o usuário autenticado para carregar as divisões e orçamentos permitidos:</p>
+          <div id="listaUsuariosLogin" class="users-list-select">
+            <!-- Usuários injetados via JS -->
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary btn-sm" onclick="fecharModalConfig()">Cancelar</button>
-          <button type="button" class="btn btn-primary-compact btn-sm" onclick="salvarConfiguracoesEFechar()">Salvar Configurações</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="fecharModalUser()">Fechar</button>
         </div>
       </div>
     </div>

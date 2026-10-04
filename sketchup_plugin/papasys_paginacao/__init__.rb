@@ -80,10 +80,12 @@ module PapaSys
           res = GeomEngine.ajustar_piscina(larg, alt, rej, { projeto: 'Piscina PapaSys 3D' })
           if res[:success]
             ApiClient.enviar_projeto(res) do |ok, msg|
-              if ok
-                UI.messagebox("⚡ PapaSys: Piscina modulada pelo centro e enviada com SUCESSO!\n\nÁrea: #{res[:area_interna_m2]} m²\nBorda: #{res[:borda_perimetro_linear_m]} m linear\n\nAbra o painel web PapaSys para visualizar o orçamento completo.")
-              else
-                UI.messagebox("Ajuste concluído no 3D, mas falhou o envio para nuvem: #{msg[:error]}")
+              UI.start_timer(0.05, false) do
+                if ok
+                  UI.messagebox("⚡ PapaSys: Piscina modulada pelo centro e enviada com SUCESSO!\n\nÁrea: #{res[:area_interna_m2]} m²\nBorda: #{res[:borda_perimetro_linear_m]} m linear\n\nAbra o painel web PapaSys para visualizar o orçamento completo.")
+                else
+                  UI.messagebox("Ajuste concluído no 3D, mas falhou o envio para nuvem: #{msg[:error]}")
+                end
               end
             end
           else

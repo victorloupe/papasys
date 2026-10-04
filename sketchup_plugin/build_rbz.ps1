@@ -50,10 +50,22 @@ Copy-Item $RbzPath -Destination (Join-Path $SistemaWebPluginDir "papasys_paginac
 $VersionJson = @{
     version = $PluginVersion
     download_url = "plugin/papasys_paginacao.rbz"
-    changelog = "Versao PapaSys v${PluginVersion}: snap de centro sem recortes, calculo de m2 e borda linear, e auto-atualizacao integrada."
+    changelog = "Versao iGUi v${PluginVersion}: Reestruturacao por paginas (Previa, Galga, Desenho Tecnico), 3 divisoes independentes, autenticacao e permissoes de usuario, quantitativos de materiais e acabamentos BP11/C3/Boleadas/Quebra-cantos."
     mandatory = $false
 } | ConvertTo-Json
 Set-Content -Path (Join-Path $SistemaWebPluginDir "version.json") -Value $VersionJson -Encoding UTF8
+
+# 4. Sincroniza diretamente para as pastas de Plugins do SketchUp instaladas no AppData
+Write-Host "4. Sincronizando plugin diretamente para as instalações do SketchUp..." -ForegroundColor Yellow
+$SketchUpAppDatas = Get-ChildItem -Path "$env:APPDATA\SketchUp" -Directory -Filter "SketchUp 20*" -ErrorAction SilentlyContinue
+foreach ($suDir in $SketchUpAppDatas) {
+    $pluginsDir = Join-Path $suDir.FullName "SketchUp\Plugins"
+    if (Test-Path $pluginsDir) {
+        Write-Host "   -> Instalando em: $pluginsDir" -ForegroundColor Cyan
+        Copy-Item (Join-Path $CurrentDir "papasys_paginacao.rb") -Destination $pluginsDir -Force
+        Copy-Item (Join-Path $CurrentDir "papasys_paginacao") -Destination $pluginsDir -Recurse -Force
+    }
+}
 
 # Limpeza
 Remove-Item $TempStage -Recurse -Force

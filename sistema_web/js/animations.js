@@ -347,5 +347,115 @@ const PapaSysAnimation = {
       ease: "power2.out",
       clearProps: "all"
     });
+  },
+
+  // Transição fluida de abas e divisões (Sob Medida, Incorporadora, Internacional, Dashboard)
+  animateViewTransition(containerEl, renderCallback) {
+    if (!containerEl) {
+      if (renderCallback) renderCallback();
+      return;
+    }
+
+    if (!this.hasGsap()) {
+      containerEl.classList.remove("view-transition-fade-slide");
+      void containerEl.offsetWidth; // trigger reflow
+      if (renderCallback) renderCallback();
+      containerEl.classList.add("view-transition-fade-slide");
+      return;
+    }
+
+    gsap.to(containerEl, {
+      opacity: 0,
+      y: -8,
+      duration: 0.12,
+      ease: "power2.in",
+      onComplete: () => {
+        if (renderCallback) renderCallback();
+
+        gsap.fromTo(containerEl,
+          { opacity: 0, y: 12 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.28,
+            ease: "power2.out",
+            clearProps: "transform,opacity",
+            onComplete: () => {
+              this.animateEntranceElements(containerEl);
+            }
+          }
+        );
+      }
+    });
+  },
+
+  // Animação de entrada dos elementos internos renderizados
+  animateEntranceElements(containerEl) {
+    if (!this.hasGsap() || !containerEl) return;
+
+    // Stat tiles / KPI cards
+    const statTiles = containerEl.querySelectorAll(".stat-tile, .exec-stat-card");
+    if (statTiles.length > 0) {
+      gsap.fromTo(statTiles,
+        { y: 12, opacity: 0, scale: 0.98 },
+        { y: 0, opacity: 1, scale: 1, duration: 0.32, stagger: 0.04, ease: "back.out(1.2)", clearProps: "all" }
+      );
+    }
+
+    // Linhas de tabela ou cards de orçamentos
+    const rows = containerEl.querySelectorAll(".budget-table-row, .budget-card, .pool-model-card");
+    if (rows.length > 0) {
+      gsap.fromTo(rows,
+        { y: 10, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.26, stagger: 0.025, ease: "power2.out", clearProps: "all" }
+      );
+    }
+  },
+
+  // Renderiza esqueleto animado durante carregamento dos dados
+  renderSkeletonLoading(containerEl, customTitle = "Carregando orçamentos e quantitativos...") {
+    if (!containerEl) return;
+
+    containerEl.innerHTML = `
+      <div class="loading-skeleton-container">
+        <div class="loading-data-banner">
+          <div class="loading-data-banner-left">
+            <div class="spinner-icon-igui"></div>
+            <span>${customTitle}</span>
+          </div>
+          <span style="font-size: 11.5px; opacity: 0.85;">Sincronizando com Supabase & Engenharia 3D</span>
+        </div>
+
+        <div class="skeleton-kpis-grid">
+          <div class="skeleton-kpi-card">
+            <div class="skeleton-shimmer skeleton-kpi-title"></div>
+            <div class="skeleton-shimmer skeleton-kpi-val"></div>
+            <div class="skeleton-shimmer skeleton-kpi-sub"></div>
+          </div>
+          <div class="skeleton-kpi-card">
+            <div class="skeleton-shimmer skeleton-kpi-title"></div>
+            <div class="skeleton-shimmer skeleton-kpi-val"></div>
+            <div class="skeleton-shimmer skeleton-kpi-sub"></div>
+          </div>
+          <div class="skeleton-kpi-card">
+            <div class="skeleton-shimmer skeleton-kpi-title"></div>
+            <div class="skeleton-shimmer skeleton-kpi-val"></div>
+            <div class="skeleton-shimmer skeleton-kpi-sub"></div>
+          </div>
+          <div class="skeleton-kpi-card">
+            <div class="skeleton-shimmer skeleton-kpi-title"></div>
+            <div class="skeleton-shimmer skeleton-kpi-val"></div>
+            <div class="skeleton-shimmer skeleton-kpi-sub"></div>
+          </div>
+        </div>
+
+        <div class="skeleton-table-card">
+          <div class="skeleton-shimmer skeleton-table-header-row"></div>
+          <div class="skeleton-shimmer skeleton-table-row"></div>
+          <div class="skeleton-shimmer skeleton-table-row"></div>
+          <div class="skeleton-shimmer skeleton-table-row"></div>
+        </div>
+      </div>
+    `;
   }
 };

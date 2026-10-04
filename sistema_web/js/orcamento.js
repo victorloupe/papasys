@@ -1,278 +1,1032 @@
 // ==============================================================================
-// CONTROLLER DO EDITOR E CALCULADORA DE ORÇAMENTO - PAPASYS
-// Permite edição total: medidas, materiais, serviços extras, preços e margem
+// CONTROLADOR DO EDITOR DE ORÇAMENTO DETALHADO iGUi
+// Divisões: iGUi Sob Medida | iGUi Incorporadora | iGUi Internacional
+// Fluxo por Etapas: Prévia (+5%) -> Galga (0% pré-venda) -> Desenho Técnico (0% venda)
 // ==============================================================================
 
-let currentProject = null;
-let currentItems = [];
+let currentBudget = null;
+let currentBudgetPools = [];
+let hasUnsavedManualEdits = false;
 
 document.addEventListener("DOMContentLoaded", async () => {
   const urlParams = new URLSearchParams(window.location.search);
-  const projectId = urlParams.get("id");
+  const budgetId = urlParams.get("id");
 
-  if (!projectId) {
-    await PapaSysDialog.alert({
-      title: "Projeto Não Especificado",
-      message: "Nenhum ID de projeto foi informado para abrir o orçamento.",
-      type: "warning"
-    });
-    window.location.href = "index.html";
-    return;
+  await carregarOrcamento(budgetId);
+
+  // Inicializa componentes do usuário no header
+  if (typeof Auth !== "undefined" && Auth.updateUserUI) {
+    Auth.updateUserUI();
   }
-
-  await carregarDadosProjeto(projectId);
 });
 
-async function carregarDadosProjeto(id) {
-  currentProject = await DB.getProjectById(id);
+// Carrega o orçamento do banco
+async function carregarOrcamento(budgetId) {
+  const poolsContainer = document.getElementById("poolsContainer");
+  if (poolsContainer && typeof PapaSysAnimation !== "undefined") {
+    PapaSysAnimation.renderSkeletonLoading(poolsContainer, "Carregando engenharia 3D e precificação do orçamento...");
+  }
 
-  if (!currentProject) {
-    await PapaSysDialog.alert({
-      title: "Projeto Não Encontrado",
-      message: "O projeto solicitado não foi localizado no banco de dados.",
-      type: "error"
-    });
+  if (budgetId) {
+    currentBudget = await DB.getBudgetById(budgetId);
+  }
+
+  // Se não encontrou ou não tem ID, pega o primeiro orçamento disponível
+  if (!currentBudget) {
+    const all = await DB.getBudgets();
+    currentBudget = all[0] || null;
+  }
+
+  if (!currentBudget) {
+    if (typeof PapaSysDialog !== "undefined") {
+      await PapaSysDialog.alert({
+        title: "Orçamento Não Encontrado",
+        message: "Nenhum orçamento foi localizado com o identificador fornecido.",
+        type: "warning"
+      });
+    }
     window.location.href = "index.html";
     return;
   }
 
-  // Preenche os campos editáveis
-  document.getElementById("txtHeaderTitulo").textContent = "Orçamento: " + (currentProject.project_name || "Sem Nome");
-  document.getElementById("inputNomeProjeto").value = currentProject.project_name || "";
-  document.getElementById("inputCliente").value = currentProject.client_name || "";
-  document.getElementById("inputAreaM2").value = Number(currentProject.internal_area_m2 || 0).toFixed(2);
-  document.getElementById("inputBordaM").value = Number(currentProject.border_perimeter_linear_m || 0).toFixed(2);
-  document.getElementById("inputTileSpec").value = currentProject.tile_spec || "15x15 cm";
-  document.getElementById("selStatus").value = currentProject.status || "novo";
-  document.getElementById("inputMargem").value = currentProject.margin_percent || 25.0;
-  document.getElementById("txtNotas").value = currentProject.notes || "";
+  // Clona os modelos de piscinas associados
+  currentBudgetPools = JSON.parse(JSON.stringify(currentBudget.pools || []));
 
-  // Carrega itens existentes ou calcula se vazio
-  if (currentProject.items && currentProject.items.length > 0) {
-    currentItems = JSON.parse(JSON.stringify(currentProject.items));
+  // FALLBACK SEGURO: Se não houver piscina gravada, sintetiza a piscina com base nos totais do orçamento
+  if (currentBudgetPools.length === 0) {
+    const areaRev = parseFloat(currentBudget.total_area_revestimento) || 28.0;
+    const areaLam = parseFloat(currentBudget.total_area_laminacao) || 38.99;
+    const volM3 = parseFloat(currentBudget.total_volume_m3) || 21.0;
+    
+    currentBudgetPools = [{
+      id: `pool-${currentBudget.id}-1`,
+      budget_id: currentBudget.id,
+      model_name: currentBudget.project_name || "Piscina Sob Medida iGUi",
+      units_count: 1,
+      pool_type: "convencional",
+      structure_type: "nao_autoportante",
+      coating_type: "pastilha_15x15",
+      has_mold: false,
+      comprimento_m: 6.00,
+      largura_m: 3.00,
+      profundidade_m: 1.40,
+      internal_area_m2: areaRev,
+      lamination_area_m2: areaLam,
+      internal_volume_m3: volM3,
+      internal_volume_liters: volM3 * 1000,
+      linear_corners_m: 21.60,
+      alive_corners_count: 4
+    }];
   } else {
-    const calc = Calculator.calcularOrcamento({
-      internal_area_m2: currentProject.internal_area_m2,
-      border_perimeter_linear_m: currentProject.border_perimeter_linear_m,
-      tile_spec: currentProject.tile_spec,
-      margin_percent: currentProject.margin_percent || 25.0
+    // Garante dimensões técnicas em cada piscina existente
+    currentBudgetPools.forEach(p => {
+      if (!p.comprimento_m) p.comprimento_m = 6.00;
+      if (!p.largura_m) p.largura_m = 3.00;
+      if (!p.profundidade_m) p.profundidade_m = 1.40;
     });
-    currentItems = calc.items;
   }
 
-  renderizarTabelaItens();
+  renderizarOrcamento();
+}
+
+// Renderiza todos os dados do orçamento na tela
+function renderizarOrcamento() {
+  const b = currentBudget;
+  const isIncorporadora = b.division === "incorporadora";
+  const isSobMedida = b.division === "sob_medida";
+
+  // Header
+  document.getElementById("txtHeaderTitulo").textContent = `${b.budget_code} • ${b.project_name || 'Orçamento'}`;
+  const inputCodHeader = document.getElementById("inputCodigoOrcamento");
+  const inputCodForm = document.getElementById("inputBudgetCode");
+  const badgeCodigo = document.getElementById("badgeCodigo");
+  if (inputCodHeader) inputCodHeader.value = b.budget_code || "";
+  if (inputCodForm) inputCodForm.value = b.budget_code || "";
+  if (badgeCodigo) badgeCodigo.textContent = b.budget_code || "";
+  
+  const badgeDiv = document.getElementById("badgeDivisao");
+  const nomesDiv = { sob_medida: "iGUi Sob Medida", incorporadora: "iGUi Incorporadora", internacional: "iGUi Internacional" };
+  badgeDiv.textContent = nomesDiv[b.division] || b.division;
+
+  // Informações do Orçamento
+  document.getElementById("inputProjNome").value = b.project_name || "";
+  document.getElementById("inputCliNome").value = b.client_name || "";
+  document.getElementById("selectDivisao").value = b.division || "sob_medida";
+  document.getElementById("txtNotas").value = b.notes || "";
+
+  // Responsável
+  carregarSelectUsuarios(b.assigned_user_id);
+
+  // Etapa Atual
+  atualizarBotoesEtapa(b.stage);
+
+  // Modelos de Piscinas
+  renderizarModelosPiscina();
+
+  // Se for etapa Desenho Técnico, mostra a seção de engenharia executiva
+  const secDesenho = document.getElementById("secaoDesenhoTecnico");
+  if (secDesenho) {
+    secDesenho.style.display = b.stage === "desenho_tecnico" ? "block" : "none";
+  }
+
+  // Botão Adicionar Modelo (escondido para Sob Medida onde 1 orçamento = 1 piscina)
+  const btnAddPool = document.getElementById("btnAddPoolModel");
+  if (btnAddPool) {
+    btnAddPool.style.display = isSobMedida ? "none" : "inline-flex";
+  }
+
+  // Recalcula totais
   recalcularTotais();
 
+  // Micro-animações de entrada suave
   if (typeof PapaSysAnimation !== "undefined") {
-    PapaSysAnimation.initFormPage();
+    PapaSysAnimation.animateEntranceElements(document.querySelector(".main-content"));
   }
 }
 
-// Renderiza todas as linhas editáveis da tabela de composição analítica
-function renderizarTabelaItens() {
-  const tbody = document.getElementById("itensTbody");
-  tbody.innerHTML = "";
+// Manipulador de edição manual do código/número do orçamento
+function aoMudarCodigoOrcamento(novoCodigo) {
+  const cod = (novoCodigo || "").trim();
+  if (!cod) {
+    showToast("O número do orçamento não pode ser vazio.", "error");
+    const inputCodHeader = document.getElementById("inputCodigoOrcamento");
+    const inputCodForm = document.getElementById("inputBudgetCode");
+    if (inputCodHeader) inputCodHeader.value = currentBudget.budget_code || "";
+    if (inputCodForm) inputCodForm.value = currentBudget.budget_code || "";
+    return;
+  }
 
-  currentItems.forEach((item, index) => {
-    const tr = document.createElement("tr");
+  currentBudget.budget_code = cod;
+  const inputCodHeader = document.getElementById("inputCodigoOrcamento");
+  const inputCodForm = document.getElementById("inputBudgetCode");
+  const badgeCodigo = document.getElementById("badgeCodigo");
+  if (inputCodHeader) inputCodHeader.value = cod;
+  if (inputCodForm) inputCodForm.value = cod;
+  if (badgeCodigo) badgeCodigo.textContent = cod;
 
-    tr.innerHTML = `
-      <td>
-        <select class="table-select" onchange="atualizarItem(${index}, 'category', this.value)">
-          <option value="material" ${item.category === "material" ? "selected" : ""}>Material</option>
-          <option value="insumo" ${item.category === "insumo" ? "selected" : ""}>Insumo</option>
-          <option value="borda" ${item.category === "borda" ? "selected" : ""}>Borda</option>
-          <option value="mao_de_obra" ${item.category === "mao_de_obra" ? "selected" : ""}>Mão de Obra</option>
-          <option value="extra" ${item.category === "extra" ? "selected" : ""}>Extra/Serviço</option>
-        </select>
-      </td>
-      <td>
-        <input type="text" class="table-input" value="${escapeHtml(item.description)}" oninput="atualizarItem(${index}, 'description', this.value)">
-      </td>
-      <td>
-        <input type="number" step="0.01" class="table-input tabular-nums" style="text-align: right; font-weight: 700; padding: 5px 6px; width: 100%; box-sizing: border-box;" value="${item.quantity}" oninput="atualizarItem(${index}, 'quantity', this.value)">
-      </td>
-      <td>
-        <input type="text" class="table-input" style="text-align: center; text-transform: lowercase; font-weight: 600; padding: 5px 4px; width: 100%; box-sizing: border-box;" value="${escapeHtml(item.unit || 'un')}" oninput="atualizarItem(${index}, 'unit', this.value)">
-      </td>
-      <td>
-        <input type="number" step="0.01" class="table-input tabular-nums" style="text-align: right; padding: 5px 6px; width: 100%; box-sizing: border-box;" value="${item.unit_cost}" oninput="atualizarItem(${index}, 'unit_cost', this.value)">
-      </td>
-      <td style="font-weight: 800; color: var(--orange-600); font-size: 13px; text-align: right; white-space: nowrap;" class="tabular-nums">
-        ${Calculator.formatBRL(item.total_cost || 0)}
-      </td>
-      <td style="text-align: center;">
-        <button class="btn-danger-ghost" onclick="removerItem(${index})" title="Remover item">
-          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="3 6 5 6 21 6"></polyline>
-            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-          </svg>
-        </button>
-      </td>
-    `;
-
-    tbody.appendChild(tr);
-  });
+  document.getElementById("txtHeaderTitulo").textContent = `${cod} • ${currentBudget.project_name || "Orçamento"}`;
+  registrarEdicaoManual();
+  showToast(`Número do orçamento alterado para ${cod}. Clique em 'Salvar Alterações' para gravar.`, "info");
 }
 
-function atualizarItem(index, campo, valor) {
-  if (campo === "quantity" || campo === "unit_cost") {
-    currentItems[index][campo] = parseFloat(valor) || 0;
-    currentItems[index].total_cost = parseFloat((currentItems[index].quantity * currentItems[index].unit_cost).toFixed(2));
+// Carrega dropdown de responsáveis
+function carregarSelectUsuarios(assignedId) {
+  const sel = document.getElementById("selectResponsavel");
+  if (!sel) return;
+  const users = Auth.getAllUsers();
+
+  sel.innerHTML = users.map(u => `
+    <option value="${u.id}" ${u.id === assignedId ? "selected" : ""}>
+      ${u.name} (${u.role === 'admin' ? 'Admin' : 'Projetista'})
+    </option>
+  `).join("");
+}
+
+// Atualiza botões da etapa (Prévia -> Galga -> Desenho Técnico)
+function atualizarBotoesEtapa(stage) {
+  document.querySelectorAll(".stage-step-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.getAttribute("data-stage") === stage);
+  });
+
+  const banner = document.getElementById("bannerDesenhoTecnico");
+  if (banner) {
+    banner.style.display = stage === "desenho_tecnico" ? "block" : "none";
+  }
+}
+
+// Solicita mudança de etapa no fluxo com validações técnicas
+async function solicitarMudancaEtapa(novaEtapa) {
+  if (novaEtapa === currentBudget.stage) return;
+
+  // REGRA TÉCNICA DA GALGA:
+  // "para o orçamento virar galga ele precisa ter a galga em si ,entao ao tentar mudar , coloque um aviso , se tem a galga e abare para editar as medidas da piscina , pois a piscina na previa tem uma medida e a galga é a confirmação com a fabrica se faz essas medidas com as aquelas pastilha , entao pode mudar um pouco as medidas , ai precisa confirmar essas medidas"
+  if (novaEtapa === "galga") {
+    abrirModalConfirmarGalga();
+    return;
+  }
+
+  if (novaEtapa === "desenho_tecnico") {
+    const ok = await PapaSysDialog.confirm({
+      title: "Avançar para Desenho Técnico",
+      message: "Deseja avançar este orçamento para a etapa de Desenho Técnico (Venda)? Nesta etapa a documentação executiva e memorial descritivo serão finalizados.",
+      confirmText: "Avançar para Desenho Técnico",
+      cancelText: "Cancelar",
+      type: "info"
+    });
+    if (!ok) return;
+    await mudarEtapa("desenho_tecnico");
+    return;
+  }
+
+  if (novaEtapa === "previa") {
+    const ok = await PapaSysDialog.confirm({
+      title: "Retornar para Prévia",
+      message: "Deseja retornar o orçamento para a etapa de Prévia? A margem de +5% será reaplicada sobre os valores base.",
+      confirmText: "Retornar para Prévia",
+      cancelText: "Cancelar",
+      type: "warning"
+    });
+    if (!ok) return;
+    await mudarEtapa("previa");
+    return;
+  }
+
+  await mudarEtapa(novaEtapa);
+}
+
+// Muda efetivamente a etapa do orçamento
+async function mudarEtapa(novaEtapa) {
+  currentBudget.stage = novaEtapa;
+  atualizarBotoesEtapa(novaEtapa);
+
+  const secDesenho = document.getElementById("secaoDesenhoTecnico");
+  if (secDesenho) {
+    secDesenho.style.display = novaEtapa === "desenho_tecnico" ? "block" : "none";
+  }
+
+  recalcularTotais();
+  showToast(`Etapa alterada para ${novaEtapa.replace('_', ' ').toUpperCase()}!`, "info");
+}
+
+// ==============================================================================
+// MODAL DE CONFIRMAÇÃO DE GALGA TÉCNICA COM A FÁBRICA
+// ==============================================================================
+function abrirModalConfirmarGalga() {
+  const modal = document.getElementById("modalConfirmarGalga");
+  const container = document.getElementById("galgaPoolsFormContainer");
+  const chk = document.getElementById("chkConfirmacaoGalgaFabrica");
+  const btn = document.getElementById("btnConfirmarAvancoGalga");
+
+  if (!modal || !container) return;
+
+  if (chk) chk.checked = false;
+  if (btn) btn.disabled = true;
+
+  // Renderiza as medidas técnicas de cada modelo de piscina
+  container.innerHTML = currentBudgetPools.map((p, idx) => {
+    const comp = parseFloat(p.comprimento_m) || 6.00;
+    const larg = parseFloat(p.largura_m) || 3.00;
+    const prof = parseFloat(p.profundidade_m) || 1.40;
+    const rev = parseFloat(p.internal_area_m2) || 28.00;
+    const lam = parseFloat(p.lamination_area_m2) || 38.99;
+    const vol = parseFloat(p.internal_volume_m3) || 21.00;
+
+    return `
+      <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px solid #f1f5f9; padding-bottom: 6px;">
+          <strong style="color: #0f172a; font-size: 13.5px;">Modelo #${idx + 1}: ${p.model_name}</strong>
+          <span style="font-size: 12px; color: #0284c7; font-weight: 600;">Revestimento: ${p.coating_type.replace('_', ' ')}</span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px;">
+          <div class="form-group">
+            <label class="form-label" style="font-size: 12px;">Comprimento Final (m):</label>
+            <input type="number" step="0.01" class="form-control" id="galgaComp_${idx}" value="${comp.toFixed(2)}" onchange="aoAjustarMedidaGalga(${idx})">
+          </div>
+          <div class="form-group">
+            <label class="form-label" style="font-size: 12px;">Largura Final (m):</label>
+            <input type="number" step="0.01" class="form-control" id="galgaLarg_${idx}" value="${larg.toFixed(2)}" onchange="aoAjustarMedidaGalga(${idx})">
+          </div>
+          <div class="form-group">
+            <label class="form-label" style="font-size: 12px;">Profundidade Final (m):</label>
+            <input type="number" step="0.01" class="form-control" id="galgaProf_${idx}" value="${prof.toFixed(2)}" onchange="aoAjustarMedidaGalga(${idx})">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; background: #f8fafc; padding: 8px; border-radius: 6px;">
+          <div class="form-group">
+            <label class="form-label" style="font-size: 11px; color: #64748b;">Área Revestimento (m²):</label>
+            <input type="number" step="0.01" class="form-control" id="galgaRev_${idx}" value="${rev.toFixed(2)}">
+          </div>
+          <div class="form-group">
+            <label class="form-label" style="font-size: 11px; color: #64748b;">Área Laminação (m²):</label>
+            <input type="number" step="0.01" class="form-control" id="galgaLam_${idx}" value="${lam.toFixed(2)}">
+          </div>
+          <div class="form-group">
+            <label class="form-label" style="font-size: 11px; color: #64748b;">Volume Interno (m³):</label>
+            <input type="number" step="0.01" class="form-control" id="galgaVol_${idx}" value="${vol.toFixed(2)}">
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  modal.style.display = "flex";
+}
+
+function aoAlternarCheckboxGalga(isChecked) {
+  const btn = document.getElementById("btnConfirmarAvancoGalga");
+  if (btn) btn.disabled = !isChecked;
+}
+
+function fecharModalConfirmarGalga() {
+  const modal = document.getElementById("modalConfirmarGalga");
+  if (modal) modal.style.display = "none";
+}
+
+// Ao alterar comprimento, largura ou profundidade no modal de galga, recalcula as áreas sugeridas
+function aoAjustarMedidaGalga(idx) {
+  const comp = parseFloat(document.getElementById(`galgaComp_${idx}`)?.value) || 0;
+  const larg = parseFloat(document.getElementById(`galgaLarg_${idx}`)?.value) || 0;
+  const prof = parseFloat(document.getElementById(`galgaProf_${idx}`)?.value) || 0;
+
+  if (comp > 0 && larg > 0 && prof > 0) {
+    const areaFundo = comp * larg;
+    const areaParedes = 2 * (comp + larg) * prof;
+    const areaRevest = areaFundo + areaParedes;
+    const areaLamina = parseFloat((areaRevest * 1.15).toFixed(2)); // casco exterior + bordas
+    const volM3 = parseFloat((comp * larg * prof).toFixed(2));
+
+    const elRev = document.getElementById(`galgaRev_${idx}`);
+    const elLam = document.getElementById(`galgaLam_${idx}`);
+    const elVol = document.getElementById(`galgaVol_${idx}`);
+
+    if (elRev) elRev.value = areaRevest.toFixed(2);
+    if (elLam) elLam.value = areaLamina.toFixed(2);
+    if (elVol) elVol.value = volM3.toFixed(2);
+  }
+}
+
+// Executa a confirmação da galga técnica e avança a etapa
+async function executarConfirmacaoGalga() {
+  // Salva as medidas conferidas em cada piscina
+  currentBudgetPools.forEach((p, idx) => {
+    const comp = parseFloat(document.getElementById(`galgaComp_${idx}`)?.value);
+    const larg = parseFloat(document.getElementById(`galgaLarg_${idx}`)?.value);
+    const prof = parseFloat(document.getElementById(`galgaProf_${idx}`)?.value);
+    const rev = parseFloat(document.getElementById(`galgaRev_${idx}`)?.value);
+    const lam = parseFloat(document.getElementById(`galgaLam_${idx}`)?.value);
+    const vol = parseFloat(document.getElementById(`galgaVol_${idx}`)?.value);
+
+    if (!isNaN(comp) && comp > 0) p.comprimento_m = comp;
+    if (!isNaN(larg) && larg > 0) p.largura_m = larg;
+    if (!isNaN(prof) && prof > 0) p.profundidade_m = prof;
+    if (!isNaN(rev) && rev > 0) p.internal_area_m2 = rev;
+    if (!isNaN(lam) && lam > 0) p.lamination_area_m2 = lam;
+    if (!isNaN(vol) && vol > 0) {
+      p.internal_volume_m3 = vol;
+      p.internal_volume_liters = vol * 1000;
+    }
+  });
+
+  fecharModalConfirmarGalga();
+
+  // Avança para Galga (0% de margem)
+  currentBudget.stage = "galga";
+  atualizarBotoesEtapa("galga");
+
+  renderizarModelosPiscina();
+  recalcularTotais();
+
+  // Notificação de Sucesso
+  showToast("Galga confirmada com sucesso! Margem de 0% aplicada e medidas técnicas validadas.", "success");
+
+  // Salva automaticamente o orçamento atualizado
+  await salvarOrcamento();
+}
+
+// ==============================================================================
+// RENDERIZAÇÃO DOS MODELOS DE PISCINAS DO ORÇAMENTO
+// ==============================================================================
+function renderizarModelosPiscina() {
+  const container = document.getElementById("poolsContainer");
+  if (!container) return;
+
+  const isAdmin = typeof Auth !== "undefined" && Auth.isAdmin();
+  const isSobMedida = currentBudget.division === "sob_medida";
+  const isIncorporadora = currentBudget.division === "incorporadora";
+
+  if (currentBudgetPools.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state-mini">
+        <p>Nenhuma piscina cadastrada neste orçamento.</p>
+        <button class="btn btn-sm btn-primary" onclick="adicionarNovoModelo()">+ Adicionar Piscina</button>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = currentBudgetPools.map((p, idx) => {
+    const calc = PricingEngine.calcularModeloPiscina(p, currentBudget.stage, currentBudget.division, currentBudgetPools);
+    const acab = calc.finishes_details;
+    const comp = parseFloat(p.comprimento_m) || 6.00;
+    const larg = parseFloat(p.largura_m) || 3.00;
+    const prof = parseFloat(p.profundidade_m) || 1.40;
+
+    const isCollapsed = p._collapsed === true;
+    const coatingNome = calc.coating_name || calc.coating_info?.nome || (p.coating_type ? p.coating_type.replace(/_/g, ' ') : 'Pastilha 15x15');
+    const areaRevStr = (parseFloat(p.internal_area_m2) || parseFloat(calc.area_revestimento) || 0).toFixed(2);
+    const areaLamStr = (parseFloat(p.lamination_area_m2) || parseFloat(calc.area_laminacao) || 0).toFixed(2);
+    const volM3Str = (parseFloat(p.internal_volume_m3) || parseFloat(calc.volume_m3) || 0).toFixed(2);
+
+    return `
+      <div class="pool-model-card ${isCollapsed ? 'card-collapsed' : ''}" id="poolCard_${idx}">
+        <div class="pool-card-header" onclick="togglePoolCard(${idx})">
+          <div class="pool-title-group" style="display: flex; align-items: center; gap: 8px;">
+            <button type="button" class="btn-toggle-pool" onclick="event.stopPropagation(); togglePoolCard(${idx});" title="${isCollapsed ? 'Expandir piscina' : 'Recolher piscina'}">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" class="chevron-icon ${isCollapsed ? 'chevron-collapsed' : ''}">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+            <span class="pool-index-badge">#${idx + 1}</span>
+            <input type="text" class="input-pool-title" value="${p.model_name}" onclick="event.stopPropagation()" onchange="atualizarCampoPiscina(${idx}, 'model_name', this.value)">
+            <span class="badge badge-coating-highlight" style="font-size: 11px; padding: 3px 8px; border-radius: 6px; background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; font-weight: 700; white-space: nowrap;">
+              🎨 ${coatingNome}
+            </span>
+            <span class="badge-dimensoes" style="background: #f1f5f9; color: #475569; padding: 3px 8px; border-radius: 6px; font-size: 11.5px; font-weight: 700; border: 1px solid #e2e8f0; white-space: nowrap;">
+              ${comp.toFixed(2)}m × ${larg.toFixed(2)}m × ${prof.toFixed(2)}m
+            </span>
+            <span class="badge-units-summary" style="background: #f1f5f9; color: #334155; padding: 3px 8px; border-radius: 6px; font-size: 11.5px; font-weight: 700; white-space: nowrap;">
+              ${p.units_count} ${p.units_count === 1 ? 'un' : 'unidades'}
+            </span>
+          </div>
+
+          <div class="pool-header-actions" onclick="event.stopPropagation()">
+            ${(isIncorporadora || p.units_count > 1) ? `
+              <button class="btn-sm btn-split-pool" onclick="abrirModalDividirUnidades(${idx})" title="Dividir unidades">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 3px;"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg>
+                Dividir Unidades
+              </button>
+            ` : ''}
+
+            ${!isSobMedida && currentBudgetPools.length > 1 ? `
+              <button class="btn-sm btn-remove-pool" onclick="removerModelo(${idx})" title="Remover este modelo">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 3px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                Excluir
+              </button>
+            ` : ''}
+          </div>
+        </div>
+
+        <!-- Barra de Resumo quando Recolhido -->
+        <div class="pool-card-summary-bar" style="display: ${isCollapsed ? 'flex' : 'none'};" onclick="togglePoolCard(${idx})">
+          <div class="summary-pill"><strong>Revestimento:</strong> ${coatingNome}</div>
+          <div class="summary-pill"><strong>Estrutura:</strong> ${p.structure_type === 'autoportante' ? 'Autoportante (+50%)' : 'Padrão'}</div>
+          <div class="summary-pill"><strong>Área Revest.:</strong> ${areaRevStr} m²</div>
+          <div class="summary-pill"><strong>Laminação:</strong> ${areaLamStr} m²</div>
+          <div class="summary-pill"><strong>Volume:</strong> ${volM3Str} m³</div>
+          <div class="summary-pill summary-price"><strong>Subtotal:</strong> ${PricingEngine.formatBRL(calc.preco_total_modelo)}</div>
+          <span class="summary-hint">Clique para abrir detalhes ↓</span>
+        </div>
+
+        <div class="pool-card-grid" style="display: ${isCollapsed ? 'none' : 'grid'};">
+          
+          <!-- Coluna 1: Configuração Técnica -->
+          <div class="pool-col-config">
+            <h4 class="col-section-title">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+              Configuração Técnica
+            </h4>
+
+            <div class="form-row-2">
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">Qtd Unidades${isSobMedida ? ' (Sob Medida)' : ''}:</label>
+                <input type="number" class="form-control form-control-sm" value="${p.units_count}" min="1" ${isSobMedida ? 'disabled title="Sob Medida: 1 orçamento = 1 piscina"' : ''} onchange="atualizarCampoPiscina(${idx}, 'units_count', this.value)">
+              </div>
+
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">Tipo de Piscina:</label>
+                <select class="form-control form-control-sm" onchange="atualizarCampoPiscina(${idx}, 'pool_type', this.value)">
+                  <option value="convencional" ${p.pool_type === 'convencional' ? 'selected' : ''}>Convencional</option>
+                  <option value="especial" ${p.pool_type === 'especial' ? 'selected' : ''}>Especial</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row-2">
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">Estrutura:</label>
+                <select class="form-control form-control-sm" onchange="atualizarCampoPiscina(${idx}, 'structure_type', this.value)">
+                  <option value="nao_autoportante" ${p.structure_type === 'nao_autoportante' ? 'selected' : ''}>Não autoportante</option>
+                  <option value="autoportante" ${p.structure_type === 'autoportante' ? 'selected' : ''}>Autoportante (+50%)</option>
+                </select>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">Revestimento:</label>
+                <select class="form-control form-control-sm" onchange="atualizarCampoPiscina(${idx}, 'coating_type', this.value)">
+                  ${PricingEngine.getCoatingsList().map(c => `
+                    <option value="${c.id}" ${p.coating_type === c.id ? 'selected' : ''}>${c.nome}</option>
+                  `).join("")}
+                </select>
+              </div>
+            </div>
+
+            <!-- Medidas Técnicas da Piscina (Comprimento, Largura, Profundidade) -->
+            <div class="pool-dim-box">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
+                <span class="form-label" style="font-weight: 700; color: #334155; margin-bottom: 0;">Dimensões da Piscina:</span>
+                <span style="font-size: 10px; color: #64748b;">(metros)</span>
+              </div>
+              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px;">
+                <div>
+                  <label class="form-label" style="font-size: 10px; margin-bottom: 1px;">Comp:</label>
+                  <input type="number" step="0.01" class="form-control form-control-sm" value="${comp.toFixed(2)}" onchange="atualizarDimensaoPiscina(${idx}, 'comprimento_m', this.value)">
+                </div>
+                <div>
+                  <label class="form-label" style="font-size: 10px; margin-bottom: 1px;">Larg:</label>
+                  <input type="number" step="0.01" class="form-control form-control-sm" value="${larg.toFixed(2)}" onchange="atualizarDimensaoPiscina(${idx}, 'largura_m', this.value)">
+                </div>
+                <div>
+                  <label class="form-label" style="font-size: 10px; margin-bottom: 1px;">Prof:</label>
+                  <input type="number" step="0.01" class="form-control form-control-sm" value="${prof.toFixed(2)}" onchange="atualizarDimensaoPiscina(${idx}, 'profundidade_m', this.value)">
+                </div>
+              </div>
+              <button type="button" class="btn btn-xs btn-secondary" onclick="recalcularAreasPorDimensoes(${idx})" style="width: 100%; margin-top: 4px; font-size: 10.5px; padding: 2px 6px;" title="Atualizar áreas de revestimento, laminação e volume a partir das dimensões acima">
+                Recalcular Áreas por Dimensões
+              </button>
+            </div>
+
+            <!-- Toggle de Molde (Incorporadora) -->
+            ${isIncorporadora ? `
+              <div class="mold-toggle-row">
+                <label class="switch-toggle" style="transform: scale(0.85); margin-left: -2px;">
+                  <input type="checkbox" ${calc.has_mold ? 'checked' : ''} onchange="alternarMoldeManual(${idx}, this.checked)">
+                  <span class="slider"></span>
+                </label>
+                <div>
+                  <strong style="font-size: 11px;">Preço com Molde:</strong>
+                  <span class="mold-sub" style="font-size: 10px;">${calc.has_mold ? 'Ativado (benefício de molde)' : 'Sem Molde'}</span>
+                </div>
+              </div>
+            ` : ''}
+
+          </div>
+
+          <!-- Coluna 2: Quantitativos Geométricos -->
+          <div class="pool-col-quants">
+            <h4 class="col-section-title">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+              Quantitativos 3D
+            </h4>
+
+            <div class="quants-table-grid">
+              <div class="quant-input-box">
+                <span class="q-label">Área Revestimento (Interna):</span>
+                <div class="q-input-wrap">
+                  <input type="number" step="0.01" value="${(p.internal_area_m2 || 0).toFixed(2)}" onchange="atualizarCampoPiscina(${idx}, 'internal_area_m2', this.value)">
+                  <span>m²</span>
+                </div>
+              </div>
+
+              <div class="quant-input-box">
+                <span class="q-label">Área Laminação (Externa):</span>
+                <div class="q-input-wrap">
+                  <input type="number" step="0.01" value="${(p.lamination_area_m2 || 0).toFixed(2)}" onchange="atualizarCampoPiscina(${idx}, 'lamination_area_m2', this.value)">
+                  <span>m²</span>
+                </div>
+              </div>
+
+              <div class="quant-input-box">
+                <span class="q-label">Volume Interno da Piscina:</span>
+                <div class="q-input-wrap">
+                  <input type="number" step="0.01" value="${(p.internal_volume_m3 || 0).toFixed(2)}" onchange="atualizarCampoPiscina(${idx}, 'internal_volume_m3', this.value)">
+                  <span>m³</span>
+                </div>
+                <div class="q-sub">${Number((p.internal_volume_m3 || 0) * 1000).toLocaleString('pt-BR')} L</div>
+              </div>
+
+              <div class="quant-input-box">
+                <span class="q-label">Cantos Lineares &amp; Quinas:</span>
+                <div class="q-input-wrap">
+                  <input type="number" step="0.01" value="${(p.linear_corners_m || 0).toFixed(2)}" onchange="atualizarCampoPiscina(${idx}, 'linear_corners_m', this.value)">
+                  <span>m</span>
+                </div>
+                <div class="q-sub">${p.alive_corners_count || 4} quinas vivas</div>
+              </div>
+            </div>
+
+            <!-- Peças de Acabamento Calculadas -->
+            <div class="finishes-review-box">
+              <div>
+                <div class="finishes-review-title">
+                  <span>Peças de Acabamento Calculadas:</span>
+                  <span class="badge-fin-tag">${acab.tipo_regra.toUpperCase()}</span>
+                </div>
+                
+                ${acab.is_custom ? `
+                  <div class="custom-coating-alert">
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 3px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    <strong>${acab.observacao}</strong>
+                    <div>Cantos Lineares: ${acab.peca_linear.qtd}m &bull; Quinas Vivas: ${acab.peca_quina.qtd} un.</div>
+                  </div>
+                ` : `
+                  <div class="finishes-review-list">
+                    <div class="fin-item">
+                      <span>${acab.peca_linear.nome}</span>
+                      <strong>${acab.peca_linear.qtd} ${acab.peca_linear.unit} &bull; ${PricingEngine.formatBRL(acab.peca_linear.total_price)}</strong>
+                    </div>
+                    <div class="fin-item">
+                      <span>${acab.peca_quina.nome}</span>
+                      <strong>${acab.peca_quina.qtd} ${acab.peca_quina.unit} &bull; ${PricingEngine.formatBRL(acab.peca_quina.total_price)}</strong>
+                    </div>
+                  </div>
+                `}
+              </div>
+              <div style="font-size: 10px; color: #94a3b8; padding-top: 4px; border-top: 1px dashed #e2e8f0; margin-top: auto;">
+                Quantitativos aferidos via engenharia 3D
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Coluna 3: Composição de Preço -->
+          <div class="pool-col-pricing">
+            <h4 class="col-section-title">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+              Composição de Preço
+            </h4>
+
+            <div class="pricing-step-list">
+              <div class="pricing-steps-top">
+                <div class="pricing-step-item">
+                  <span class="step-label">1. Valor Base Unitário:</span>
+                  <span class="step-val tabular-nums">${PricingEngine.formatBRL(calc.unit_base_value)}</span>
+                </div>
+                <div class="step-sub-details">
+                  Revest: ${PricingEngine.formatBRL(calc.custo_revestimento)} &bull; Acab: ${PricingEngine.formatBRL(calc.custo_acabamentos)} &bull; Lamina: ${PricingEngine.formatBRL(calc.custo_laminacao)}
+                </div>
+
+                ${p.structure_type === 'autoportante' ? `
+                  <div class="pricing-step-item auto">
+                    <span class="step-label">2. + Autoportante (+50%):</span>
+                    <span class="step-val tabular-nums">+ ${PricingEngine.formatBRL(calc.acrescimo_autoportante_unit)}</span>
+                  </div>
+                ` : `
+                  <div class="pricing-step-item">
+                    <span class="step-label">2. Estrutura Padrão:</span>
+                    <span class="step-val tabular-nums">Sem acréscimo</span>
+                  </div>
+                `}
+
+                <div class="pricing-step-item">
+                  <span class="step-label">3. + Margem da Etapa (${currentBudget.stage === 'previa' ? '+5%' : '0%'}):</span>
+                  <span class="step-val tabular-nums">+ ${PricingEngine.formatBRL(calc.margem_etapa_unit || 0)}</span>
+                </div>
+
+                <div class="pricing-step-divider"></div>
+
+                <div class="pricing-step-item final">
+                  <span class="step-label">Valor Unitário Final:</span>
+                  <span class="step-val final tabular-nums">${PricingEngine.formatBRL(calc.preco_final_unitario)}</span>
+                </div>
+              </div>
+
+              <div>
+                <div class="pricing-model-total">
+                  <div class="model-total-label">Subtotal do Modelo (${p.units_count} un):</div>
+                  <div class="model-total-val tabular-nums">${PricingEngine.formatBRL(calc.preco_total_modelo)}</div>
+                </div>
+
+                <div class="pricing-step-item" style="padding-top: 3px; margin-top: 3px; border-top: 1px dashed #e2e8f0;">
+                  <span class="step-label" style="color: #64748b;">Status da Modelagem:</span>
+                  <span class="step-val" style="color: #16a34a; font-weight: 700;">Conferido</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+// ==============================================================================
+// CONTROLE DE ACCORDION (ABRE E FECHA DAS PISCINAS)
+// ==============================================================================
+function togglePoolCard(idx) {
+  if (!currentBudgetPools[idx]) return;
+  currentBudgetPools[idx]._collapsed = !currentBudgetPools[idx]._collapsed;
+  renderizarModelosPiscina();
+}
+
+function expandirTodosModelos() {
+  currentBudgetPools.forEach(p => p._collapsed = false);
+  renderizarModelosPiscina();
+  showToast("Todos os modelos de piscinas foram expandidos.", "info");
+}
+
+function recolherTodosModelos() {
+  currentBudgetPools.forEach(p => p._collapsed = true);
+  renderizarModelosPiscina();
+  showToast("Todos os modelos de piscinas foram recolhidos.", "info");
+}
+
+// ==============================================================================
+// MODAL DIVIDIR UNIDADES (INCORPORADORA / MULTI-UNIDADES)
+// ==============================================================================
+function abrirModalDividirUnidades(poolIndex) {
+  const p = currentBudgetPools[poolIndex];
+  if (!p) return;
+
+  const currentUnits = parseInt(p.units_count) || 1;
+  if (currentUnits <= 1) {
+    if (typeof PapaSysDialog !== "undefined") {
+      PapaSysDialog.alert({
+        title: "Divisão de Unidades",
+        message: "Para desmembrar unidades, este modelo precisa ter pelo menos 2 unidades cadastradas.",
+        type: "warning"
+      });
+    } else {
+      alert("Para desmembrar unidades, este modelo precisa ter pelo menos 2 unidades cadastradas.");
+    }
+    return;
+  }
+
+  const modal = document.getElementById("modalDividirUnidades");
+  const container = document.getElementById("conteudoDividirUnidades");
+  if (!modal || !container) return;
+
+  const maxMove = currentUnits - 1;
+
+  container.innerHTML = `
+    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 14px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+        <strong style="color: #0f172a; font-size: 14px;">${p.model_name}</strong>
+        <span style="background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 4px; font-size: 11.5px; font-weight: 700;">
+          Total Atual: ${currentUnits} unidades
+        </span>
+      </div>
+      <p style="font-size: 12px; color: #64748b; margin: 0;">
+        Dimensões: ${parseFloat(p.comprimento_m || 6).toFixed(2)}m × ${parseFloat(p.largura_m || 3).toFixed(2)}m • Revestimento: ${p.coating_type.replace('_', ' ')}
+      </p>
+    </div>
+
+    <div class="form-group" style="margin-bottom: 14px;">
+      <label class="form-label" style="font-weight: 700; color: #1e293b;">Quantas unidades deseja desmembrar deste orçamento?</label>
+      <div style="display: flex; align-items: center; gap: 10px; margin-top: 6px;">
+        <input type="number" id="inputQtdDividir" class="form-control" style="width: 90px; font-size: 16px; font-weight: 800; text-align: center;" value="1" min="1" max="${maxMove}" oninput="aoMudarQtdDivisao(${currentUnits}, this.value)">
+        <span style="font-size: 12.5px; color: #475569;" id="txtHintDivisao">
+          Permanecerão <strong>${currentUnits - 1} un</strong> neste orçamento e <strong>1 un</strong> irá para o novo orçamento.
+        </span>
+      </div>
+    </div>
+
+    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px 12px; font-size: 12px; color: #1e40af; line-height: 1.45; margin-bottom: 16px;">
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="16" x2="12" y2="12"></line>
+        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+      </svg>
+      Um novo orçamento filho será criado automaticamente com as unidades desmembradas, preservando as medidas técnicas, especificações de pastilhas e estrutura.
+    </div>
+
+    <div style="display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid #f1f5f9; padding-top: 12px;">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="fecharModalDividirUnidades()">Cancelar</button>
+      <button type="button" class="btn btn-primary btn-sm" onclick="executarDividirUnidades(${poolIndex})">
+        Confirmar e Desmembrar
+      </button>
+    </div>
+  `;
+
+  modal.style.display = "flex";
+}
+
+function aoMudarQtdDivisao(total, val) {
+  const v = Math.min(Math.max(1, parseInt(val) || 1), total - 1);
+  const hint = document.getElementById("txtHintDivisao");
+  if (hint) {
+    hint.innerHTML = `Permanecerão <strong>${total - v} un</strong> neste orçamento e <strong>${v} un</strong> irá para o novo orçamento.`;
+  }
+}
+
+function fecharModalDividirUnidades() {
+  const modal = document.getElementById("modalDividirUnidades");
+  if (modal) modal.style.display = "none";
+}
+
+async function executarDividirUnidades(poolIndex) {
+  const p = currentBudgetPools[poolIndex];
+  if (!p) return;
+
+  const input = document.getElementById("inputQtdDividir");
+  const unitsToMove = parseInt(input ? input.value : 1) || 1;
+
+  fecharModalDividirUnidades();
+  showToast("Desmembrando unidades e gerando novo orçamento...", "info");
+
+  // Garante identificador persistente do pool
+  const poolId = p.id || `pool-${currentBudget.id}-${poolIndex + 1}`;
+  p.id = poolId;
+
+  // Garante que o orçamento atual esteja gravado
+  await DB.saveBudget(currentBudget, currentBudgetPools);
+
+  const res = await DB.splitBudgetUnits(currentBudget.id, poolId, unitsToMove);
+  if (res && res.destinationBudget) {
+    currentBudget = res.sourceBudget;
+    currentBudgetPools = currentBudget.pools || [];
+    renderizarOrcamento();
+    recalcularTotais();
     
-    // Atualiza a coluna do total daquela linha
-    const tbody = document.getElementById("itensTbody");
-    const row = tbody.children[index];
-    if (row) {
-      row.children[5].textContent = Calculator.formatBRL(currentItems[index].total_cost);
+    showToast(`Sucesso! ${unitsToMove} un desmembradas para o novo orçamento ${res.destinationBudget.budget_code}.`, "success");
+    
+    if (typeof PapaSysDialog !== "undefined") {
+      const ok = await PapaSysDialog.confirm({
+        title: "Unidades Desmembradas com Sucesso!",
+        message: `As ${unitsToMove} unidades foram desmembradas para o novo orçamento ${res.destinationBudget.budget_code} (${res.destinationBudget.project_name}).\n\nDeseja abrir o novo orçamento agora?`,
+        confirmText: "Abrir Novo Orçamento",
+        cancelText: "Permanecer Neste Orçamento",
+        type: "success"
+      });
+      if (ok) {
+        window.location.href = `orcamento.html?id=${res.destinationBudget.id}`;
+      }
     }
   } else {
-    currentItems[index][campo] = valor;
-  }
-  recalcularTotais();
-}
-
-function removerItem(index) {
-  currentItems.splice(index, 1);
-  renderizarTabelaItens();
-  recalcularTotais();
-}
-
-// Adiciona um item extra customizado (ex: escavação, iluminação, bomba, etc.)
-function adicionarItemExtra() {
-  currentItems.push({
-    category: "extra",
-    description: "Novo Item de Obra (Ex: Iluminação LED, Bomba, Escavação)",
-    quantity: 1,
-    unit: "un",
-    unit_cost: 350.0,
-    waste_percent: 0,
-    total_cost: 350.0
-  });
-  renderizarTabelaItens();
-  recalcularTotais();
-  showToast("Novo item adicionado. Edite a descrição e o valor!", "info");
-
-  const tbody = document.getElementById("itensTbody");
-  if (tbody && tbody.lastElementChild && typeof PapaSysAnimation !== "undefined") {
-    PapaSysAnimation.animateTableRow(tbody.lastElementChild);
+    p.units_count = Math.max(1, p.units_count - unitsToMove);
+    renderizarModelosPiscina();
+    recalcularTotais();
+    registrarEdicaoManual();
+    showToast(`${unitsToMove} unidades reduzidas deste modelo.`, "success");
   }
 }
 
-// Recalcula insumos automaticamente caso o usuário mude a Área ou Borda
-function recalcularPorMedidas() {
-  const area = parseFloat(document.getElementById("inputAreaM2").value) || 0;
-  const borda = parseFloat(document.getElementById("inputBordaM").value) || 0;
-  const spec = document.getElementById("inputTileSpec").value || "15x15 cm";
-  const margem = parseFloat(document.getElementById("inputMargem").value) || 25.0;
+// Atualiza campo geral de uma piscina e notifica alterações manuais
+function atualizarCampoPiscina(index, campo, valor) {
+  if (!currentBudgetPools[index]) return;
 
-  // Preserva itens de categoria "extra" criados pelo usuário
-  const extras = currentItems.filter(it => it.category === "extra");
+  if (campo === "units_count") {
+    currentBudgetPools[index][campo] = Math.max(1, parseInt(valor) || 1);
+  } else if (campo === "internal_area_m2" || campo === "lamination_area_m2" || campo === "internal_volume_m3" || campo === "linear_corners_m") {
+    currentBudgetPools[index][campo] = Math.max(0, parseFloat(valor) || 0);
+    if (campo === "internal_volume_m3") {
+      currentBudgetPools[index].internal_volume_liters = currentBudgetPools[index][campo] * 1000;
+    }
+  } else {
+    currentBudgetPools[index][campo] = valor;
+  }
 
-  const calc = Calculator.calcularOrcamento({
-    internal_area_m2: area,
-    border_perimeter_linear_m: borda,
-    tile_spec: spec,
-    margin_percent: margem,
-    custom_items: extras
-  });
-
-  currentItems = calc.items;
-  renderizarTabelaItens();
+  registrarEdicaoManual();
+  renderizarModelosPiscina();
   recalcularTotais();
-  showToast("Itens e consumos recalculados com base nas novas medidas!", "success");
 }
 
+// Atualiza dimensão da piscina (comprimento, largura, profundidade)
+function atualizarDimensaoPiscina(index, campo, valor) {
+  if (!currentBudgetPools[index]) return;
+  const num = Math.max(0.1, parseFloat(valor) || 0);
+  currentBudgetPools[index][campo] = num;
+
+  registrarEdicaoManual();
+  renderizarModelosPiscina();
+  recalcularTotais();
+}
+
+// Recalcula áreas e volume a partir das dimensões informadas
+function recalcularAreasPorDimensoes(index) {
+  const p = currentBudgetPools[index];
+  if (!p) return;
+
+  const comp = parseFloat(p.comprimento_m) || 6.00;
+  const larg = parseFloat(p.largura_m) || 3.00;
+  const prof = parseFloat(p.profundidade_m) || 1.40;
+
+  const areaFundo = comp * larg;
+  const areaParedes = 2 * (comp + larg) * prof;
+  const areaRevest = areaFundo + areaParedes;
+  const areaLamina = parseFloat((areaRevest * 1.15).toFixed(2));
+  const volM3 = parseFloat((comp * larg * prof).toFixed(2));
+  const cantosM = parseFloat((2 * (comp + larg) + 4 * prof).toFixed(2));
+
+  p.internal_area_m2 = parseFloat(areaRevest.toFixed(2));
+  p.lamination_area_m2 = areaLamina;
+  p.internal_volume_m3 = volM3;
+  p.internal_volume_liters = volM3 * 1000;
+  p.linear_corners_m = cantosM;
+
+  registrarEdicaoManual();
+  renderizarModelosPiscina();
+  recalcularTotais();
+
+  showToast(`Áreas recalculadas: Revestimento ${p.internal_area_m2}m² | Laminação ${p.lamination_area_m2}m²`, "info");
+}
+
+// Ativa o banner de aviso de edição manual
+function registrarEdicaoManual() {
+  hasUnsavedManualEdits = true;
+  const alerta = document.getElementById("alertaEdicaoManual");
+  if (alerta) {
+    alerta.style.display = "flex";
+  }
+}
+
+function alternarMoldeManual(index, isChecked) {
+  if (!currentBudgetPools[index]) return;
+  currentBudgetPools[index].has_mold = isChecked;
+  currentBudgetPools[index].mold_auto = false; // marca como manual
+  registrarEdicaoManual();
+  renderizarModelosPiscina();
+  recalcularTotais();
+}
+
+function adicionarNovoModelo() {
+  currentBudgetPools.push({
+    model_name: `Modelo ${String.fromCharCode(65 + currentBudgetPools.length)} iGUi Prime`,
+    units_count: 1,
+    pool_type: "convencional",
+    structure_type: "nao_autoportante",
+    coating_type: "pastilha_15x15",
+    has_mold: false,
+    comprimento_m: 6.00,
+    largura_m: 3.00,
+    profundidade_m: 1.40,
+    internal_area_m2: 24.0,
+    lamination_area_m2: 30.0,
+    internal_volume_m3: 16.0,
+    internal_volume_liters: 16000,
+    linear_corners_m: 20.0,
+    alive_corners_count: 4
+  });
+  registrarEdicaoManual();
+  renderizarModelosPiscina();
+  recalcularTotais();
+}
+
+async function removerModelo(index) {
+  const ok = await PapaSysDialog.confirm({
+    title: "Remover Modelo",
+    message: "Deseja realmente remover este modelo de piscina do orçamento?",
+    confirmText: "Sim, Remover",
+    cancelText: "Cancelar",
+    type: "danger"
+  });
+  if (!ok) return;
+
+  currentBudgetPools.splice(index, 1);
+  registrarEdicaoManual();
+  renderizarModelosPiscina();
+  recalcularTotais();
+}
+
+// Recalcula totais consolidados do orçamento
 function recalcularTotais() {
-  const margem = parseFloat(document.getElementById("inputMargem").value) || 0;
-  const custoTotal = parseFloat(currentItems.reduce((acc, it) => acc + (Number(it.total_cost) || 0), 0).toFixed(2));
-  const precoVenda = parseFloat((custoTotal * (1 + margem / 100)).toFixed(2));
-  const lucro = parseFloat((precoVenda - custoTotal).toFixed(2));
+  const calc = PricingEngine.calcularOrcamentoCompleto(currentBudget, currentBudgetPools);
+  const isAdmin = typeof Auth !== "undefined" && Auth.isAdmin();
 
-  if (typeof PapaSysAnimation !== "undefined") {
-    PapaSysAnimation.animateCounter("txtCustoTotal", custoTotal, { format: "currency", duration: 0.5 });
-    PapaSysAnimation.animateCounter("txtPrecoVenda", precoVenda, { format: "currency", duration: 0.5 });
-    PapaSysAnimation.animateCounter("txtLucro", lucro, { format: "currency", duration: 0.5 });
-  } else {
-    document.getElementById("txtCustoTotal").textContent = Calculator.formatBRL(custoTotal);
-    document.getElementById("txtPrecoVenda").textContent = Calculator.formatBRL(precoVenda);
-    document.getElementById("txtLucro").textContent = Calculator.formatBRL(lucro);
+  const tileValor = document.getElementById("statTileValor");
+  if (tileValor) {
+    tileValor.style.display = "flex";
   }
-  document.getElementById("txtMargemDisplay").textContent = margem.toFixed(1) + "%";
+
+  const elValor = document.getElementById("statTotalValor");
+  if (elValor) elValor.textContent = PricingEngine.formatBRL(calc.total_price);
+  document.getElementById("statTotalRevest").textContent = `${calc.total_area_revestimento} m²`;
+  document.getElementById("statTotalLamina").textContent = `${calc.total_area_laminacao} m²`;
+  document.getElementById("statTotalVolume").textContent = `${calc.total_volume_m3} m³ (${Number(calc.total_volume_liters).toLocaleString('pt-BR')} L)`;
+
+  const totalUnidades = currentBudgetPools.reduce((acc, p) => acc + (parseInt(p.units_count) || 1), 0);
+  document.getElementById("statTotalUnidades").textContent = `${totalUnidades} ${totalUnidades === 1 ? 'unidade' : 'unidades'}`;
 }
 
-function atualizarResumoMedidas() {
-  // Apenas atualização suave de feedback
-}
-
-// Salva todas as alterações no Supabase
+// Salva o orçamento no banco de dados
 async function salvarOrcamento() {
-  const nomeProjeto = document.getElementById("inputNomeProjeto").value || "Projeto Sem Nome";
-  const cliente = document.getElementById("inputCliente").value || "Cliente Geral";
-  const areaM2 = parseFloat(document.getElementById("inputAreaM2").value) || 0;
-  const bordaM = parseFloat(document.getElementById("inputBordaM").value) || 0;
-  const tileSpec = document.getElementById("inputTileSpec").value || "15x15 cm";
-  const status = document.getElementById("selStatus").value;
-  const margem = parseFloat(document.getElementById("inputMargem").value) || 0;
-  const notas = document.getElementById("txtNotas").value;
+  const inputCodHeader = document.getElementById("inputCodigoOrcamento");
+  const inputCodForm = document.getElementById("inputBudgetCode");
+  const novoCodigo = (inputCodHeader?.value || inputCodForm?.value || currentBudget.budget_code || "").trim();
+  if (novoCodigo) {
+    currentBudget.budget_code = novoCodigo;
+  }
 
-  const custoTotal = parseFloat(currentItems.reduce((acc, it) => acc + (Number(it.total_cost) || 0), 0).toFixed(2));
-  const precoVenda = parseFloat((custoTotal * (1 + margem / 100)).toFixed(2));
+  currentBudget.project_name = document.getElementById("inputProjNome").value.trim();
+  currentBudget.client_name = document.getElementById("inputCliNome").value.trim();
+  currentBudget.division = document.getElementById("selectDivisao").value;
+  currentBudget.notes = document.getElementById("txtNotas").value;
+  
+  const selUser = document.getElementById("selectResponsavel");
+  if (selUser && selUser.selectedOptions[0]) {
+    currentBudget.assigned_user_id = selUser.value;
+    currentBudget.assigned_user_name = selUser.selectedOptions[0].text.split("(")[0].trim();
+  }
 
-  const dadosAtualizados = {
-    project_name: nomeProjeto,
-    client_name: cliente,
-    internal_area_m2: areaM2,
-    border_perimeter_linear_m: bordaM,
-    tile_spec: tileSpec,
-    status: status,
-    margin_percent: margem,
-    total_cost: custoTotal,
-    total_price: precoVenda,
-    notes: notas
-  };
+  showToast("Gravando alterações no banco de dados...", "info");
+  const saved = await DB.saveBudget(currentBudget, currentBudgetPools);
 
-  const ok = await DB.updateProject(currentProject.id, dadosAtualizados, currentItems);
-  if (ok) {
-    document.getElementById("txtHeaderTitulo").textContent = "Orçamento: " + nomeProjeto;
-    showToast("Orçamento, medidas e itens salvos com sucesso no Supabase.", "success");
-  } else {
-    showToast("Erro ao salvar dados no servidor.", "error");
+  if (saved) {
+    currentBudget = saved;
+    currentBudgetPools = saved.pools;
+    hasUnsavedManualEdits = false;
+    
+    const alerta = document.getElementById("alertaEdicaoManual");
+    if (alerta) alerta.style.display = "none";
+
+    renderizarOrcamento();
+    showToast("Orçamento salvo com sucesso!", "success");
   }
 }
 
-async function abrirPropostaExecutiva() {
-  await salvarOrcamento();
-  window.location.href = `proposta.html?id=${currentProject.id}`;
+function abrirPropostaExecutiva() {
+  window.location.href = `proposta.html?id=${currentBudget.id}`;
 }
 
-function showToast(msg, tipo = "info") {
-  const box = document.getElementById("toastBox");
-  if (!box) return;
+function showToast(msg, type = "info") {
+  const container = document.getElementById("toastContainer");
+  if (!container) return;
   const t = document.createElement("div");
-  t.className = `toast toast-${tipo}`;
+  t.className = `toast ${type}`;
   t.textContent = msg;
-  box.appendChild(t);
-
-  if (typeof PapaSysAnimation !== "undefined") {
-    PapaSysAnimation.animateToastIn(t);
-    setTimeout(() => {
-      PapaSysAnimation.animateToastOut(t, () => t.remove());
-    }, 3500);
-  } else {
-    setTimeout(() => {
-      t.style.opacity = "0";
-      setTimeout(() => t.remove(), 300);
-    }, 3500);
-  }
-}
-
-function escapeHtml(str) {
-  if (!str) return "";
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+  container.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
 }

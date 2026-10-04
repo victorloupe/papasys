@@ -1,6 +1,6 @@
 ﻿{
     "download_url":  "plugin/papasys_paginacao.rbz",
-    "changelog":  "Versao PapaSys v1.1.0: snap de centro sem recortes, calculo de m2 e borda linear, e auto-atualizacao integrada.",
+    "changelog":  "Versao iGUi v2.0.0: Reestruturacao por paginas (Previa, Galga, Desenho Tecnico), 3 divisoes independentes, autenticacao e permissoes de usuario, quantitativos de materiais e acabamentos BP11/C3/Boleadas/Quebra-cantos.",
     "mandatory":  false,
-    "version":  "1.1.0"
+    "version":  "2.0.0"
 }

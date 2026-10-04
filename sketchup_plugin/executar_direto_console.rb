@@ -116,13 +116,15 @@ else
 
     if is_face_sel
       area_revestimento_m2 = faces_sel.inject(0.0) { |sum, f| sum + f.area } * 0.00064516
+      faces_map = {}
+      faces_sel.each { |f| faces_map[f] = true }
       boundary_edges = []
       faces_sel.each do |f|
-        f.edges.each { |e| boundary_edges << e if (e.faces & faces_sel).length == 1 }
+        f.edges.each { |e| boundary_edges << e if e.faces.count { |cf| faces_map[cf] } == 1 }
       end
       boundary_edges.uniq!
 
-      max_z = faces_sel.map { |f| f.vertices.map { |v| v.position.z }.max }.max
+      max_z = faces_sel.map { |f| f.bounds.max.z }.max
       top_edges = boundary_edges.select { |e| (e.bounds.center.z - max_z).abs < 5.0.cm }
       top_edges = boundary_edges if top_edges.empty?
       perimetro_linear_m = top_edges.inject(0.0) { |sum, e| sum + e.length.to_m }
@@ -139,9 +141,11 @@ else
       faces_revestimento = all_faces - faces_borda_topo
       area_revestimento_m2 = faces_revestimento.inject(0.0) { |sum, f| sum + f.area } * 0.00064516
 
+      rev_map = {}
+      faces_revestimento.each { |f| rev_map[f] = true }
       revestimento_boundary_edges = []
       faces_revestimento.each do |f|
-        f.edges.each { |e| revestimento_boundary_edges << e if (e.faces & faces_revestimento).length == 1 }
+        f.edges.each { |e| revestimento_boundary_edges << e if e.faces.count { |cf| rev_map[cf] } == 1 }
       end
       revestimento_boundary_edges.uniq!
 

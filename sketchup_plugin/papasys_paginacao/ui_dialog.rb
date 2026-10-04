@@ -2,40 +2,73 @@
 module PapaSys
   module Paginacao
     module UiDialog
-      @dialog = nil
-      @ultimo_resultado = nil
-      @observer = nil
+      @dialog ||= nil
+      @ultimo_resultado ||= nil
+      @observer ||= nil
 
       class SelectionObserver < Sketchup::SelectionObserver
         def initialize(dialog)
           @dialog = dialog
+          @pending = false
         end
 
         def onSelectionBulkChange(_selection)
-          notificar
-        end
-
-        def onSelectionAdded(_selection, _entity)
-          notificar
-        end
-
-        def onSelectionRemoved(_selection, _entity)
-          notificar
+          agendar_notificacao
         end
 
         def onSelectionCleared(_selection)
-          notificar
+          agendar_notificacao
         end
 
         private
+
+        def agendar_notificacao
+          return if @pending
+          @pending = true
+          UI.start_timer(0.1, false) do
+            @pending = false
+            notificar
+          end
+        end
 
         def notificar
           return unless @dialog && @dialog.visible?
           info = UiDialog.obter_info_selecao
           @dialog.execute_script("atualizarInfoSelecao(#{info.to_json});")
-        rescue => e
+        rescue => _e
           # Silencioso se o diálogo já fechou
         end
+      end
+
+      # Detecção ultrarrápida de curvas com limite de segurança (evita travar em blocos 3D pesados)
+      def self.detectar_curvas_rapido(entidade, visitados = {}, contador = [0], limite = 1500)
+        return false if contador[0] >= limite
+        ents = entidade.is_a?(Sketchup::Group) ? entidade.entities : (entidade.respond_to?(:definition) ? entidade.definition.entities : nil)
+        return false unless ents
+
+        return false if visitados[ents.object_id]
+        visitados[ents.object_id] = true
+
+        ents.each do |e|
+          next unless e.valid?
+          if e.is_a?(Sketchup::Edge)
+            contador[0] += 1
+            return true if e.curve != nil || e.smooth? || e.soft?
+            return false if contador[0] >= limite
+          end
+        end
+
+        ents.each do |e|
+          next unless e.valid?
+          if e.is_a?(Sketchup::Group) || e.is_a?(Sketchup::ComponentInstance)
+            return true if detectar_curvas_rapido(e, visitados, contador, limite)
+            return false if contador[0] >= limite
+          end
+        end
+
+        false
+      rescue => _e
+        false
       end
 
       def self.obter_info_selecao
@@ -43,22 +76,55 @@ module PapaSys
         return { has_selection: false, message: 'Nenhum modelo aberto' } unless modelo
 
         selecao = modelo.selection
-        if selecao.empty?
+        tem_contexto_aberto = (modelo.active_path && !modelo.active_path.empty?) rescue false
+
+        if selecao.empty? && !tem_contexto_aberto
           return { has_selection: false, message: 'Nenhuma piscina selecionada no SketchUp' }
         end
 
-        faces = selecao.grep(Sketchup::Face)
-        grupos = selecao.grep(Sketchup::Group) + selecao.grep(Sketchup::ComponentInstance)
+        faces = []
+        grupos = []
+        selecao.each do |ent|
+          next unless ent.valid?
+          if ent.is_a?(Sketchup::Face)
+            faces << ent
+          elsif ent.is_a?(Sketchup::Group) || ent.is_a?(Sketchup::ComponentInstance)
+            grupos << ent
+          end
+        end
 
         bb = Geom::BoundingBox.new
         nome_sugerido = ''
+        if tem_contexto_aberto
+          grp_aberto = modelo.active_path.first rescue nil
+          if grp_aberto
+            n_ab = grp_aberto.name.to_s.strip rescue ''
+            n_ab = grp_aberto.definition.name.to_s.strip if n_ab.empty? && grp_aberto.respond_to?(:definition) rescue ''
+            nome_sugerido = n_ab unless n_ab.empty?
+          end
+        end
 
         if !faces.empty?
-          faces.each { |f| bb.add(f.bounds) if f.valid? }
+          faces_para_bb = faces
+          mats_sel = faces.flat_map { |f| [f.material, f.back_material] }.compact
+          mat_u = mats_sel.find { |m| m.texture != nil } || mats_sel.first
+          f_u = faces.first
+          if mat_u
+            pool_faces = if tem_contexto_aberto
+                           modelo.active_entities.grep(Sketchup::Face).select { |f| f.valid? }
+                         else
+                           (f_u.all_connected rescue []).grep(Sketchup::Face).select { |f| f.valid? }
+                         end
+            mesmo_mat = pool_faces.select do |f|
+              [f.material, f.back_material].compact.any? { |m| m == mat_u || m.name == mat_u.name }
+            end
+            faces_para_bb = mesmo_mat if mesmo_mat.length > faces.length
+          end
+          faces_para_bb.first(500).each { |f| bb.add(f.bounds) if f.valid? }
           tipo = 'faces'
-          desc = "#{faces.length} faces selecionadas"
+          desc = faces_para_bb.length > faces.length ? "Revestimento (#{faces_para_bb.length} faces)" : "#{faces.length} faces selecionadas"
         elsif !grupos.empty?
-          grupos.each do |g|
+          grupos.first(50).each do |g|
             bb.add(g.bounds) if g.valid?
             if nome_sugerido.empty?
               nome = g.name.to_s.strip
@@ -68,8 +134,17 @@ module PapaSys
           end
           tipo = 'grupo'
           desc = grupos.length == 1 ? 'Piscina 3D Selecionada' : "#{grupos.length} grupos selecionados"
+        elsif tem_contexto_aberto
+          grp_aberto = modelo.active_path.last rescue nil
+          if grp_aberto && grp_aberto.respond_to?(:bounds)
+            bb.add(grp_aberto.bounds)
+          else
+            modelo.active_entities.first(300).each { |e| bb.add(e.bounds) if e.valid? && e.respond_to?(:bounds) }
+          end
+          tipo = 'grupo'
+          desc = 'Grupo da Piscina Aberto'
         else
-          selecao.each { |e| bb.add(e.bounds) if e.valid? && e.respond_to?(:bounds) }
+          selecao.first(200).each { |e| bb.add(e.bounds) if e.valid? && e.respond_to?(:bounds) }
           tipo = 'elementos'
           desc = "#{selecao.length} elementos selecionados"
         end
@@ -83,29 +158,21 @@ module PapaSys
         larg = [w_m, h_m].min
         prof = d_m
 
-        # Detecta curvas/arcos na geometria selecionada (incluindo sub-grupos aninhados)
+        # Detecta curvas/arcos com limite de segurança para não bloquear a UI
         tem_curvas = false
         if !grupos.empty?
-          g = grupos.first
-          colecoes = GeomEngine.coletar_sub_entidades(g) rescue []
-          all_edges = colecoes.map { |c| c[:edges] }.flatten.uniq
-          tem_curvas = all_edges.any? { |e| e.curve != nil || e.smooth? || e.soft? }
-          if !tem_curvas
-            ents = g.is_a?(Sketchup::Group) ? g.entities : g.definition.entities rescue nil
-            tem_curvas = ents.grep(Sketchup::Edge).any? { |e| e.curve != nil || e.smooth? } if ents
-          end
+          tem_curvas = detectar_curvas_rapido(grupos.first)
+        elsif tem_contexto_aberto
+          grp_ab = modelo.active_path.last rescue nil
+          tem_curvas = grp_ab ? detectar_curvas_rapido(grp_ab) : false
         elsif !faces.empty?
-          tem_curvas = faces.any? { |f| f.edges.any? { |e| e.curve != nil || e.smooth? } }
-        else
-          tem_curvas = selecao.grep(Sketchup::Edge).any? { |e| e.curve != nil || e.smooth? }
+          tem_curvas = faces.first(300).any? { |f| f.edges.any? { |e| e.curve != nil || e.smooth? } }
         end
 
         desc_final = desc
-        if tem_curvas && grupos.length == 1
+        if tem_curvas && (grupos.length == 1 || tem_contexto_aberto)
           desc_final = "Piscina Mista (Retas + Curva)"
         end
-
-        puts "[PapaSys] Seleção detectada: #{desc_final} (#{comp}m x #{larg}m x #{prof}m) | Curvas: #{tem_curvas}"
 
         return {
           has_selection: true,
@@ -124,6 +191,10 @@ module PapaSys
       end
 
       def self.close
+        if @observer && Sketchup.active_model
+          Sketchup.active_model.selection.remove_observer(@observer) rescue nil
+          @observer = nil
+        end
         if @dialog
           @dialog.close rescue nil
           @dialog = nil
@@ -148,14 +219,14 @@ module PapaSys
         end
 
         options = {
-          dialog_title: "#{PLUGIN_NAME} v#{VERSION}",
-          preferences_key: 'PapaSysPaginacaoDialog',
+          dialog_title: "iGUi Orçamentos 3D v#{VERSION}",
+          preferences_key: 'iGUiOrcamentosDialog',
           scrollable: true,
           resizable: true,
-          width: 440,
-          height: 600,
-          min_width: 380,
-          min_height: 500
+          width: 470,
+          height: 700,
+          min_width: 420,
+          min_height: 580
         }
 
         @dialog = UI::HtmlDialog.new(options)
@@ -169,6 +240,9 @@ module PapaSys
         end
 
         if Sketchup.active_model
+          if @observer
+            Sketchup.active_model.selection.remove_observer(@observer) rescue nil
+          end
           @observer = SelectionObserver.new(@dialog)
           Sketchup.active_model.selection.add_observer(@observer) rescue nil
         end
@@ -180,10 +254,42 @@ module PapaSys
 
       def self.registrar_callbacks(dialog)
         dialog.add_action_callback('ready') do |_action_context|
+          user_id = Config.current_user_id
+          user_name = Config.current_user_name
+          user_email = Config.current_user_email
+          user_role = Config.current_user_role
+          allowed_divisions = Config.allowed_divisions
+          selected_division = Config.selected_division
+
+          # Usuário padrão caso não haja sessão gravada
+          if user_name.empty?
+            user_id = 'usr-victor'
+            user_name = 'Victor Lourenço'
+            user_email = 'victor@igui.com'
+            user_role = 'user'
+            allowed_divisions = ['sob_medida']
+            selected_division = 'sob_medida'
+            Config.current_user_id = user_id
+            Config.current_user_name = user_name
+            Config.current_user_email = user_email
+            Config.current_user_role = user_role
+            Config.allowed_divisions = allowed_divisions
+            Config.selected_division = selected_division
+          end
+
           dados_iniciais = {
             version: VERSION,
             server_url: Config.server_url,
             auto_update: Config.auto_update?,
+            user: {
+              id: user_id,
+              name: user_name,
+              email: user_email,
+              role: user_role,
+              allowed_divisions: allowed_divisions
+            },
+            users: ApiClient.usuarios_padroes,
+            selected_division: selected_division,
             largura_cm: Config.largura_cm,
             altura_cm: Config.altura_cm,
             rejunte_cm: Config.rejunte_cm,
@@ -193,76 +299,164 @@ module PapaSys
         end
 
         dialog.add_action_callback('inspecionar_selecao') do |_action_context|
-          load File.join(File.dirname(__FILE__), 'geom_engine.rb') rescue nil
+          begin
+            load File.join(File.dirname(__FILE__), 'geom_engine.rb')
+          rescue => _e
+          end
           info = obter_info_selecao
           dialog.execute_script("atualizarInfoSelecao(#{info.to_json});")
         end
 
-        dialog.add_action_callback('salvar_config') do |_action_context, data|
-          if data['server_url']
-            Config.server_url = data['server_url']
+        dialog.add_action_callback('buscar_usuarios') do |_action_context|
+          ApiClient.buscar_usuarios do |sucesso, usuarios|
+            dialog.execute_script("onUsuariosCarregados(#{usuarios.to_json});")
           end
-          if data.key?('auto_update')
-            Config.auto_update = data['auto_update']
+        end
+
+        dialog.add_action_callback('login') do |_action_context, user_data|
+          if user_data && user_data.is_a?(Hash)
+            Config.current_user_id = user_data['id'] || ''
+            Config.current_user_name = user_data['name'] || ''
+            Config.current_user_email = user_data['email'] || ''
+            Config.current_user_role = user_data['role'] || 'user'
+            divs = user_data['allowed_divisions'] || ['sob_medida']
+            if Config.current_user_role == 'admin'
+              divs = ['sob_medida', 'incorporadora', 'internacional']
+            end
+            Config.allowed_divisions = divs
+            
+            # Ajusta divisão selecionada caso a atual não seja permitida
+            sel = Config.selected_division
+            unless divs.include?(sel)
+              sel = divs.first || 'sob_medida'
+              Config.selected_division = sel
+            end
+
+            res_user = {
+              id: Config.current_user_id,
+              name: Config.current_user_name,
+              email: Config.current_user_email,
+              role: Config.current_user_role,
+              allowed_divisions: Config.allowed_divisions,
+              selected_division: Config.selected_division
+            }
+            dialog.execute_script("onLoginSucesso(#{res_user.to_json});")
           end
-          dialog.execute_script("showToast('Configurações salvas!', 'success');")
+        end
+
+        dialog.add_action_callback('logout') do |_action_context|
+          Config.current_user_id = ''
+          Config.current_user_name = ''
+          Config.current_user_email = ''
+          Config.current_user_role = 'user'
+          Config.allowed_divisions = ['sob_medida']
+          dialog.execute_script("onLogoutSucesso();")
+        end
+
+        dialog.add_action_callback('selecionar_divisao') do |_action_context, divisao|
+          Config.selected_division = divisao.to_s
+        end
+
+        dialog.add_action_callback('listar_orcamentos') do |_action_context, divisao|
+          ApiClient.listar_orcamentos_divisao(divisao) do |_sucesso, orcamentos|
+            dialog.execute_script("onOrcamentosCarregados(#{orcamentos.to_json});")
+          end
+        end
+
+        dialog.add_action_callback('buscar_orcamento_codigo') do |_action_context, params|
+          codigo = params.is_a?(Hash) ? (params['codigo'] || params['budget_code']) : params.to_s
+          divisao = params.is_a?(Hash) ? params['divisao'] : nil
+          ApiClient.buscar_orcamento_por_codigo(codigo, divisao) do |sucesso, resultados|
+            dialog.execute_script("onResultadoBuscaOrcamento(#{sucesso.to_json}, #{resultados.to_json});")
+          end
+        end
+
+        dialog.add_action_callback('aplicar_laminacao') do |_action_context|
+          res = GeomEngine.aplicar_laminacao_total
+          if res[:success]
+            dialog.execute_script("showToast('#{res[:message]}', 'success');")
+            info = obter_info_selecao
+            dialog.execute_script("atualizarInfoSelecao(#{info.to_json});")
+          else
+            dialog.execute_script("showToast('#{res[:error]}', 'error');")
+          end
+        end
+
+        dialog.add_action_callback('aplicar_materiais_padrao') do |_action_context|
+          res = GeomEngine.aplicar_laminacao_total
+          if res[:success]
+            dialog.execute_script("showToast('#{res[:message]}', 'success');")
+            # Reinspeciona seleção
+            info = obter_info_selecao
+            dialog.execute_script("atualizarInfoSelecao(#{info.to_json});")
+          else
+            dialog.execute_script("showToast('#{res[:error]}', 'error');")
+          end
+        end
+
+        dialog.add_action_callback('selecionar_faces_laminacao') do |_action_context|
+          res = GeomEngine.selecionar_faces_laminacao_3d
+          if res[:success]
+            dialog.execute_script("showToast('#{res[:message]}', 'info');")
+          else
+            dialog.execute_script("showToast('#{res[:error]}', 'error');")
+          end
+        end
+
+        dialog.add_action_callback('selecionar_faces_revestimento') do |_action_context|
+          res = GeomEngine.selecionar_faces_revestimento_3d
+          if res[:success]
+            dialog.execute_script("showToast('#{res[:message]}', 'info');")
+          else
+            dialog.execute_script("showToast('#{res[:error]}', 'error');")
+          end
         end
 
         dialog.add_action_callback('executar_ajuste') do |_action_context, params|
-          # Carrega a versão mais recente do motor geométrico
-          load File.join(File.dirname(__FILE__), 'geom_engine.rb') rescue nil
+          begin
+            load File.join(File.dirname(__FILE__), 'geom_engine.rb') rescue nil
+            largura = params['largura'].to_f
+            altura = params['altura'].to_f
+            rejunte = params['rejunte'].to_f
+            origem = params['origem'] || 'centro'
+            canto_ref = params['canto_ref'] || 'inf_esq'
+            projeto = params['projeto'] || 'Piscina Sem Nome'
+            cliente = params['cliente'] || 'Cliente Geral'
+            notas = params['notas'] || ''
+            modificar_3d = params.key?('modificar_3d') ? !!params['modificar_3d'] : true
 
-          largura = params['largura'].to_f
-          altura = params['altura'].to_f
-          rejunte = params['rejunte'].to_f
-          origem = params['origem'] || 'centro'
-          canto_ref = params['canto_ref'] || 'inf_esq'
-          projeto = params['projeto'] || 'Piscina Sem Nome'
-          cliente = params['cliente'] || 'Cliente Geral'
-          notas = params['notas'] || ''
+            Config.largura_cm = largura
+            Config.altura_cm = altura
+            Config.rejunte_cm = rejunte
 
-          Config.largura_cm = largura
-          Config.altura_cm = altura
-          Config.rejunte_cm = rejunte
+            resultado = GeomEngine.ajustar_piscina(largura, altura, rejunte, {
+              origem: origem,
+              canto_ref: canto_ref,
+              projeto: projeto,
+              cliente: cliente,
+              notas: notas,
+              modificar_3d: modificar_3d,
+              revestimento: params['coating_type'] || params['revestimento'] || 'pastilha_15x15',
+              estrutura: params['structure_type'] || 'nao_autoportante',
+              etapa: params['stage'] || 'previa'
+            })
 
-          resultado = GeomEngine.ajustar_piscina(largura, altura, rejunte, {
-            origem: origem,
-            canto_ref: canto_ref,
-            projeto: projeto,
-            cliente: cliente,
-            notas: notas
-          })
-
-          @ultimo_resultado = resultado
-
-          if resultado[:success]
-            dialog.execute_script("onAjusteSucesso(#{resultado.to_json});")
-          else
-            dialog.execute_script("onAjusteErro(#{resultado[:error].to_json});")
+            if resultado && resultado[:success]
+              @ultimo_resultado = resultado
+              dialog.execute_script("onAjusteSucesso(#{resultado.to_json});")
+            else
+              erro_msg = (resultado && resultado[:error]) ? resultado[:error] : "Erro ao quantificar piscina"
+              puts "[PapaSys] Erro em ajustar_piscina: #{erro_msg}"
+              dialog.execute_script("onAjusteErro(#{erro_msg.to_json});")
+            end
+          rescue => e
+            puts "[PapaSys] Erro no callback executar_ajuste: #{e.message}\n#{e.backtrace.first(5).join("\n") rescue ''}"
+            dialog.execute_script("onAjusteErro(#{e.message.to_json});")
           end
         end
 
-        dialog.add_action_callback('notificar_envio_concluido') do |_action_context, info|
-          puts "\n[PapaSys] ==============================================="
-          puts "[PapaSys] ✅ PROJETO GRAVADO NO SUPABASE COM SUCESSO!"
-          puts "[PapaSys] ID: #{info['id']} | Projeto: #{info['nome']}"
-          puts "[PapaSys] ===============================================\n"
-        end
-
-        dialog.add_action_callback('enviar_web') do |_action_context, params|
-          dados = @ultimo_resultado || {
-            projeto: params['project_name'] || params['projeto'],
-            cliente: params['client_name'] || params['cliente'],
-            notas: params['notes'] || params['notas'],
-            largura_peca_cm: params['tile_width_cm'] || params['largura'].to_f,
-            altura_peca_cm: params['tile_height_cm'] || params['altura'].to_f,
-            rejunte_cm: params['grout_cm'] || params['rejunte'].to_f,
-            area_interna_m2: params['internal_area_m2'] || params['area_m2'].to_f,
-            borda_perimetro_linear_m: params['border_perimeter_linear_m'] || params['borda_m'].to_f,
-            dimensoes: {}
-          }
-
-          ApiClient.enviar_projeto(dados) do |sucesso, resposta|
+        dialog.add_action_callback('enviar_orcamento') do |_action_context, params|
+          ApiClient.enviar_piscina_orcamento(params) do |sucesso, resposta|
             if sucesso
               dialog.execute_script("onEnvioSucesso(#{resposta.to_json});")
             else
@@ -275,22 +469,32 @@ module PapaSys
           if url && !url.empty?
             caminho_final = url
             if !url.start_with?('http://') && !url.start_with?('https://') && !url.start_with?('file:///')
-              # Resolve o caminho do sistema web PapaSys local
               base_web = File.expand_path('../../sistema_web', File.dirname(__FILE__))
               base_web = 'd:/COISAS/SISTEMAS/PapaSys/sistema_web' unless File.directory?(base_web)
               caminho_final = "file:///#{File.join(base_web, url).gsub('\\', '/')}"
             end
-            puts "[PapaSys] Abrindo página web: #{caminho_final}"
+            puts "[iGUi] Abrindo página web: #{caminho_final}"
             UI.openURL(caminho_final)
           end
         end
 
+        dialog.add_action_callback('salvar_config') do |_action_context, data|
+          if data['server_url']
+            Config.server_url = data['server_url']
+          end
+          if data.key?('auto_update')
+            Config.auto_update = data['auto_update']
+          end
+          dialog.execute_script("showToast('Configurações salvas!', 'success');")
+        end
+
         dialog.add_action_callback('verificar_atualizacao') do |_action_context|
+          Updater.recarregar_modulos rescue nil
           Updater.check(silent: false, auto_install: true) do |atualizou, nova_versao, info|
             if atualizou
               dialog.execute_script("showToast('Plugin atualizado para v#{nova_versao}!', 'success'); setTimeout(function(){ window.location.reload(); }, 1200);")
             else
-              dialog.execute_script("showToast('#{info}', 'info');")
+              dialog.execute_script("showToast('#{info}', 'info'); setTimeout(function(){ window.location.reload(); }, 600);")
             end
           end
         end

@@ -1,656 +1,630 @@
 // ==============================================================================
-// CONTROLLER DA MATRIZ DE PREÇOS & INSUMOS - PAPASYS
-// Edição inline e via modal com lápis, filtros de categoria, busca e restauração padrão
+// CONTROLADOR DA CENTRAL DE CONFIGURAÇÕES & USUÁRIOS (SOMENTE ADMIN)
+// Gestão de Preços, Molde, Acréscimos e Equipe
 // ==============================================================================
 
-let priceItems = [];
-let currentCategoryFilter = "todos";
-let searchTerm = "";
-let currentPage = 1;
-let pageSize = 9; // Padrão de 9 itens para encaixe perfeito no layout sem rolagem
+let currentActiveTab = "precos"; // 'precos' | 'usuarios'
+let selectedAvatarColor = "#0284c7";
+
+const AVATAR_COLORS = [
+  "#0284c7", // Azul iGUi
+  "#10b981", // Verde Esmeralda
+  "#f97316", // Laranja Primário
+  "#8b5cf6", // Roxo Royal
+  "#ef4444", // Vermelho Coral
+  "#06b6d4", // Ciano Mar
+  "#6366f1", // Índigo
+  "#d97706"  // Âmbar
+];
 
 document.addEventListener("DOMContentLoaded", async () => {
-  await carregarPrecos();
-});
-
-async function carregarPrecos() {
-  priceItems = await DB.getPriceTable();
-
-  // Garante IDs únicos para todos os itens
-  priceItems.forEach((p, idx) => {
-    if (!p.id) p.id = "p_" + idx;
-  });
-
-  renderizarTabela();
-  atualizarEstatisticas();
-  atualizarContadoresCategorias();
-
-  if (typeof PapaSysAnimation !== "undefined") {
-    PapaSysAnimation.initFormPage();
-  }
-}
-
-// Atualiza os 4 cards executivos superiores (KPIs)
-function atualizarEstatisticas() {
-  const total = priceItems.length;
-  const mats = priceItems.filter(it => it.category === "material").length;
-  const insumos = priceItems.filter(it => it.category === "insumo").length;
-  const servicos = priceItems.filter(it => it.category === "mao_de_obra" || it.category === "borda").length;
-
-  if (typeof PapaSysAnimation !== "undefined") {
-    PapaSysAnimation.animateCounter("statPrecosTotal", total, { integer: true, duration: 0.6 });
-    PapaSysAnimation.animateCounter("statPrecosRevestimentos", mats, { integer: true, duration: 0.7 });
-    PapaSysAnimation.animateCounter("statPrecosInsumos", insumos, { integer: true, duration: 0.7 });
-    PapaSysAnimation.animateCounter("statPrecosMaoObra", servicos, { integer: true, duration: 0.7 });
-  } else {
-    const elTot = document.getElementById("statPrecosTotal");
-    const elMat = document.getElementById("statPrecosRevestimentos");
-    const elIns = document.getElementById("statPrecosInsumos");
-    const elMao = document.getElementById("statPrecosMaoObra");
-    if (elTot) elTot.textContent = total;
-    if (elMat) elMat.textContent = mats;
-    if (elIns) elIns.textContent = insumos;
-    if (elMao) elMao.textContent = servicos;
-  }
-}
-
-// Atualiza contadores numéricos nas abas de categoria
-function atualizarContadoresCategorias() {
-  const counts = {
-    todos: priceItems.length,
-    material: 0,
-    insumo: 0,
-    borda: 0,
-    mao_de_obra: 0
-  };
-
-  priceItems.forEach(it => {
-    const cat = it.category || "material";
-    if (counts[cat] !== undefined) counts[cat]++;
-  });
-
-  Object.keys(counts).forEach(k => {
-    const el = document.getElementById(`tab-cat-${k}`);
-    if (el) el.textContent = counts[k];
-  });
-}
-
-function filtrarCategoria(cat, btn) {
-  currentCategoryFilter = cat;
-  currentPage = 1;
-  document.querySelectorAll(".segmented-tabs-container .tab-pill").forEach(p => p.classList.remove("active"));
-  if (btn) btn.classList.add("active");
-  renderizarTabela();
-}
-
-function filtrarTabela() {
-  const inp = document.getElementById("searchPrices");
-  searchTerm = inp ? inp.value.trim().toLowerCase() : "";
-  currentPage = 1;
-  const clearBtn = document.getElementById("btnClearPriceSearch");
-  if (clearBtn) {
-    clearBtn.classList.toggle("hidden", searchTerm === "");
-  }
-  renderizarTabela();
-}
-
-function limparBuscaPrecos() {
-  const inp = document.getElementById("searchPrices");
-  if (inp) {
-    inp.value = "";
-    inp.focus();
-  }
-  searchTerm = "";
-  currentPage = 1;
-  const clearBtn = document.getElementById("btnClearPriceSearch");
-  if (clearBtn) clearBtn.classList.add("hidden");
-  renderizarTabela();
-}
-
-// Renderiza a lista de materiais e serviços na tabela com suporte à paginação
-function renderizarTabela() {
-  const tbody = document.getElementById("tabelaPrecosTbody");
-  const pagContainer = document.getElementById("tablePagination");
-  if (!tbody) return;
-  tbody.innerHTML = "";
-
-  let itensFiltrados = priceItems;
-
-  // Filtro de categoria
-  if (currentCategoryFilter !== "todos") {
-    itensFiltrados = itensFiltrados.filter(it => it.category === currentCategoryFilter);
-  }
-
-  // Filtro de pesquisa
-  if (searchTerm !== "") {
-    itensFiltrados = itensFiltrados.filter(it => {
-      const nome = (it.name || "").toLowerCase();
-      const cat = (it.category || "").toLowerCase();
-      const unit = (it.unit || "").toLowerCase();
-      return nome.includes(searchTerm) || cat.includes(searchTerm) || unit.includes(searchTerm);
-    });
-  }
-
-  const totalItens = itensFiltrados.length;
-  const totalPaginas = Math.max(1, Math.ceil(totalItens / pageSize));
-
-  // Ajusta a página atual se estiver fora dos limites
-  if (currentPage > totalPaginas) currentPage = totalPaginas;
-  if (currentPage < 1) currentPage = 1;
-
-  if (totalItens === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="7" style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
-          <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-dim); margin-bottom: 8px;">
-            <circle cx="11" cy="11" r="8"></circle>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-          </svg>
-          <div style="font-size: 14px; font-weight: 700; color: var(--text-secondary);">Nenhum material ou serviço encontrado</div>
-          <div style="font-size: 12px; color: var(--text-dim); margin-top: 4px;">Tente outro termo de busca ou altere a categoria de filtro selecionada.</div>
-        </td>
-      </tr>
-    `;
-    if (pagContainer) {
-      pagContainer.innerHTML = `
-        <div class="pagination-left">
-          <span class="pagination-info">Nenhum item cadastrado ou encontrado</span>
-        </div>
-      `;
+  // 1. Verifica se o usuário ativo é administrador
+  if (!Auth.isAdmin()) {
+    if (typeof PapaSysDialog !== "undefined") {
+      await PapaSysDialog.alert({
+        title: "Acesso Restrito",
+        message: "Apenas Administradores e a Diretoria têm acesso à Central de Configurações.",
+        type: "warning"
+      });
     }
+    window.location.href = "index.html";
     return;
   }
 
-  // Slice para exibir estritamente os itens da página corrente
-  const inicio = (currentPage - 1) * pageSize;
-  const fim = Math.min(inicio + pageSize, totalItens);
-  const itensPagina = itensFiltrados.slice(inicio, fim);
+  // 2. Monta o seletor de cores do avatar
+  renderAvatarColorPicker();
 
-  itensPagina.forEach((p) => {
-    const tr = document.createElement("tr");
-    tr.setAttribute("data-item-id", p.id);
+  // 3. Carrega valores de preços
+  carregarConfiguracoesNaTela();
 
-    const unitSuffix = (p.category === "borda") ? "m" : "m²";
+  // 4. Carrega a tabela de usuários
+  carregarTabelaUsuarios();
 
-    tr.innerHTML = `
-      <td>${getCatBadge(p.category)}</td>
-      <td>
-        <div style="font-weight: 700; color: var(--text-primary); font-size: 13.5px;">${escapeHtml(p.name)}</div>
-        <div style="font-size: 11px; color: var(--text-dim); margin-top: 1px;">Referência para cálculo automático 3D</div>
-      </td>
-      <td style="text-align: center;">
-        <span class="table-unit-tag">${escapeHtml(p.unit)}</span>
-      </td>
-      <td style="text-align: right;">
-        <div class="input-with-affix" title="Custo Direto Unitário em Reais">
-          <span class="input-affix-prefix">R$</span>
-          <input type="number" step="0.5" class="input-affix-control" value="${Number(p.unit_cost).toFixed(2)}" onchange="atualizarPreco('${p.id}', 'unit_cost', this.value)">
-        </div>
-      </td>
-      <td style="text-align: right;">
-        <div class="input-with-affix" title="Margem de Quebra/Perda Técnica Padrão">
-          <input type="number" step="0.5" class="input-affix-control" value="${p.default_waste_percent || 0}" onchange="atualizarPreco('${p.id}', 'default_waste_percent', this.value)">
-          <span class="input-affix-suffix">%</span>
-        </div>
-      </td>
-      <td style="text-align: right;">
-        <div class="input-with-affix" title="Rendimento por unidade do insumo/serviço">
-          <input type="number" step="0.5" class="input-affix-control" value="${p.coverage_per_unit || 1}" onchange="atualizarPreco('${p.id}', 'coverage_per_unit', this.value)">
-          <span class="input-affix-suffix">${unitSuffix}</span>
-        </div>
-      </td>
-      <td style="text-align: center;">
-        <div class="table-actions-cell">
-          <button class="btn-action-edit" onclick="editarPreco('${p.id}')" title="Editar Material / Serviço">
-            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-            </svg>
-          </button>
-          <button class="btn-action-delete" onclick="removerPreco('${p.id}')" title="Excluir da Tabela">
-            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="3 6 5 6 21 6"></polyline>
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-            </svg>
-          </button>
-        </div>
-      </td>
-    `;
-
-    tbody.appendChild(tr);
-  });
-
-  renderizarControlesPaginacao(totalItens, totalPaginas, inicio, fim);
-}
-
-// Renderiza a barra inferior com status de itens e botões de página
-function renderizarControlesPaginacao(totalItens, totalPaginas, inicio, fim) {
-  const pagContainer = document.getElementById("tablePagination");
-  if (!pagContainer) return;
-
-  let botoesPaginasHtml = "";
-  for (let i = 1; i <= totalPaginas; i++) {
-    botoesPaginasHtml += `
-      <button class="pagination-btn ${i === currentPage ? 'active' : ''}" onclick="mudarPagina(${i})" title="Página ${i}">
-        ${i}
-      </button>
-    `;
+  // 5. Verifica se a URL veio com ?tab=usuarios
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("tab") === "usuarios") {
+    alternarAbaConfig("usuarios");
   }
 
-  const prevDisabled = currentPage <= 1 ? "disabled" : "";
-  const nextDisabled = currentPage >= totalPaginas ? "disabled" : "";
+  // 6. Atualiza dados do usuário no header
+  if (typeof Auth !== "undefined" && Auth.updateUserUI) {
+    Auth.updateUserUI();
+  }
+});
 
-  pagContainer.innerHTML = `
-    <div class="pagination-left">
-      <div class="pagination-info">
-        Exibindo <strong>${inicio + 1}</strong> a <strong>${fim}</strong> de <strong>${totalItens}</strong> ${totalItens === 1 ? 'item' : 'materiais'}
-      </div>
-      <div class="pagination-pagesize">
-        <label for="selectPageSize">Por página:</label>
-        <select id="selectPageSize" onchange="mudarPageSize(this.value)">
-          <option value="9" ${pageSize === 9 ? 'selected' : ''}>9</option>
-          <option value="18" ${pageSize === 18 ? 'selected' : ''}>18</option>
-          <option value="27" ${pageSize === 27 ? 'selected' : ''}>27</option>
-          <option value="999" ${pageSize >= 999 ? 'selected' : ''}>Todos</option>
-        </select>
-      </div>
-    </div>
+// Alterna entre a aba de Preços e a aba de Usuários
+function alternarAbaConfig(aba) {
+  currentActiveTab = aba;
 
-    <div class="pagination-controls">
-      <button class="pagination-btn pagination-btn-nav" ${prevDisabled} onclick="mudarPagina(${currentPage - 1})" title="Página Anterior">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="15 18 9 12 15 6"></polyline>
-        </svg>
-        Anterior
-      </button>
+  const btnPrecos = document.getElementById("tabBtnPrecos");
+  const btnUsuarios = document.getElementById("tabBtnUsuarios");
+  const painelPrecos = document.getElementById("painelPrecos");
+  const painelUsuarios = document.getElementById("painelUsuarios");
+  const acoesPrecos = document.getElementById("acoesAbaPrecos");
+  const acoesUsuarios = document.getElementById("acoesAbaUsuarios");
 
-      <div class="pagination-pages">
-        ${botoesPaginasHtml}
-      </div>
-
-      <button class="pagination-btn pagination-btn-nav" ${nextDisabled} onclick="mudarPagina(${currentPage + 1})" title="Próxima Página">
-        Próximo
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="9 18 15 12 9 6"></polyline>
-        </svg>
-      </button>
-    </div>
-  `;
+  if (aba === "precos") {
+    btnPrecos.classList.add("active");
+    btnUsuarios.classList.remove("active");
+    painelPrecos.style.display = "grid";
+    painelUsuarios.style.display = "none";
+    if (acoesPrecos) acoesPrecos.style.display = "inline-flex";
+    if (acoesUsuarios) acoesUsuarios.style.display = "none";
+  } else {
+    btnPrecos.classList.remove("active");
+    btnUsuarios.classList.add("active");
+    painelPrecos.style.display = "none";
+    painelUsuarios.style.display = "block";
+    if (acoesPrecos) acoesPrecos.style.display = "none";
+    if (acoesUsuarios) acoesUsuarios.style.display = "inline-flex";
+    carregarTabelaUsuarios();
+  }
 }
 
-function mudarPagina(novaPagina) {
-  currentPage = novaPagina;
-  renderizarTabela();
-  if (typeof gsap !== "undefined") {
-    gsap.from("#tabelaPrecosTbody tr", {
-      opacity: 0,
-      y: 6,
-      stagger: 0.03,
-      duration: 0.18,
-      ease: "power1.out"
+// ==============================================================================
+// ==============================================================================
+// SEÇÃO A: PREÇOS & REGRAS DE CÁLCULO (SEÇÕES 9, 10, 11)
+// ==============================================================================
+
+function carregarConfiguracoesNaTela() {
+  const settings = PricingEngine.getSettings();
+
+  // 1. Renderiza a tabela dinâmica de Revestimentos / Pastilhas
+  renderizarTabelaRevestimentos();
+
+  // 2. Peças de Acabamento (R$/unidade)
+  document.getElementById("preco_acab_bp11").value = settings.acabamento.bp11 || 18.50;
+  document.getElementById("preco_acab_c3").value = settings.acabamento.c3 || 14.00;
+  document.getElementById("preco_acab_boleada_7_5").value = settings.acabamento.boleada_7_5 || 8.50;
+  document.getElementById("preco_acab_boleada_15").value = settings.acabamento.boleada_15 || 12.00;
+  document.getElementById("preco_acab_quebra_canto").value = settings.acabamento.quebra_canto || 15.00;
+
+  // 3. Laminação (R$/m² fixo - sem distinção de molde na laminação)
+  const elLam = document.getElementById("preco_lam_m2");
+  if (elLam) {
+    elLam.value = (settings.laminacao.preco_m2 !== undefined) ? settings.laminacao.preco_m2 : (settings.laminacao.sem_molde || 95.00);
+  }
+
+  // 4. Parâmetros e Regras (Seção 9, 10, 11)
+  document.getElementById("regra_min_molde").value = settings.regras.min_unidades_molde || 10;
+  document.getElementById("regra_pct_autoportante").value = settings.regras.acrescimo_autoportante_pct || 50.0;
+  document.getElementById("regra_pct_previa").value = settings.regras.margem_previa_pct || 5.0;
+  document.getElementById("regra_pct_galga").value = settings.regras.margem_galga_pct || 0.0;
+  document.getElementById("regra_pct_desenho").value = settings.regras.margem_desenho_tecnico_pct || 0.0;
+
+  // 5. Insumos complementares
+  const elArg = document.getElementById("preco_insumo_argamassa");
+  const elRej = document.getElementById("preco_insumo_rejunte");
+  if (elArg) elArg.value = settings.insumos.argamassa_m2 || 10.50;
+  if (elRej) elRej.value = settings.insumos.rejunte_m2 || 6.80;
+}
+
+// Renderiza a lista de pastilhas com visual moderno em cards (Sem Molde & Com Molde)
+function renderizarTabelaRevestimentos() {
+  const container = document.getElementById("listaRevestimentosContainer");
+  const tbody = document.getElementById("listaRevestimentosTabela");
+  if (!container && !tbody) return;
+
+  const coatings = PricingEngine.getCoatingsList();
+  const finishLabels = {
+    bp11_c3: "Cantoneira BP11 + C3",
+    boleada_7_5: "Boleada 7,5 + Quebra-canto",
+    boleada_15: "Boleada 15 + Quebra-canto",
+    personalizado: "Personalizado"
+  };
+
+  if (container) {
+    container.innerHTML = coatings.map((c) => {
+      const precoSem = (c.preco_sem_molde !== undefined ? c.preco_sem_molde : 0).toFixed(2);
+      const precoCom = (c.preco_com_molde !== undefined ? c.preco_com_molde : 0).toFixed(2);
+      const finishText = finishLabels[c.acabamento] || c.acabamento;
+
+      return `
+        <div class="coating-item-card" id="card_coating_${c.id}">
+          <div class="coating-item-header">
+            <div class="coating-item-info">
+              <div class="coating-item-icon">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="7" height="7"></rect>
+                  <rect x="14" y="3" width="7" height="7"></rect>
+                  <rect x="14" y="14" width="7" height="7"></rect>
+                  <rect x="3" y="14" width="7" height="7"></rect>
+                </svg>
+              </div>
+              <span class="coating-item-title">${c.nome}</span>
+              ${c.is_custom ? '<span class="coating-custom-badge">Personalizado</span>' : ''}
+            </div>
+            
+            <div class="coating-item-header-right">
+              <span class="coating-finish-pill" title="Regra de acabamento">${finishText}</span>
+              ${c.is_custom ? `
+                <button type="button" class="btn-del-coating" onclick="excluirRevestimento('${c.id}', '${c.nome}')" title="Excluir esta pastilha">
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
+              ` : ''}
+            </div>
+          </div>
+
+          <div class="coating-item-prices-grid">
+            <div class="coating-price-field sem-molde">
+              <span class="coating-price-tag">Sem Molde:</span>
+              <div class="config-input-group price-field-group">
+                <span class="config-prefix">R$</span>
+                <input type="number" id="preco_sem_molde_${c.id}" class="config-input price-card-input" step="0.50" min="0" value="${precoSem}" placeholder="0.00">
+                <span class="config-suffix">/m²</span>
+              </div>
+            </div>
+
+            <div class="coating-price-field com-molde">
+              <span class="coating-price-tag">Com Molde:</span>
+              <div class="config-input-group price-field-group">
+                <span class="config-prefix">R$</span>
+                <input type="number" id="preco_com_molde_${c.id}" class="config-input price-card-input" step="0.50" min="0" value="${precoCom}" placeholder="0.00">
+                <span class="config-suffix">/m²</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+}
+
+// Salva todos os preços configurados
+function salvarConfiguracoesPreco() {
+  const coatings = PricingEngine.getCoatingsList().map(c => {
+    const elSem = document.getElementById(`preco_sem_molde_${c.id}`);
+    const elCom = document.getElementById(`preco_com_molde_${c.id}`);
+    const sem = elSem ? (parseFloat(elSem.value) || 0) : c.preco_sem_molde;
+    const com = elCom ? (parseFloat(elCom.value) || 0) : c.preco_com_molde;
+    return {
+      ...c,
+      preco_sem_molde: sem,
+      preco_com_molde: com
+    };
+  });
+
+  const elLam = document.getElementById("preco_lam_m2");
+  const precoLam = elLam ? (parseFloat(elLam.value) || 95.00) : 95.00;
+
+  const elArg = document.getElementById("preco_insumo_argamassa");
+  const elRej = document.getElementById("preco_insumo_rejunte");
+
+  const updated = {
+    revestimentos: coatings,
+    revestimento: coatings.reduce((acc, c) => { acc[c.id] = c.preco_sem_molde; return acc; }, {}),
+    acabamento: {
+      bp11: parseFloat(document.getElementById("preco_acab_bp11").value) || 18.50,
+      c3: parseFloat(document.getElementById("preco_acab_c3").value) || 14.00,
+      boleada_7_5: parseFloat(document.getElementById("preco_acab_boleada_7_5").value) || 8.50,
+      boleada_15: parseFloat(document.getElementById("preco_acab_boleada_15").value) || 12.00,
+      quebra_canto: parseFloat(document.getElementById("preco_acab_quebra_canto").value) || 15.00
+    },
+    laminacao: {
+      preco_m2: precoLam,
+      sem_molde: precoLam,
+      com_molde: precoLam
+    },
+    insumos: {
+      argamassa_m2: elArg ? (parseFloat(elArg.value) || 10.50) : 10.50,
+      rejunte_m2: elRej ? (parseFloat(elRej.value) || 6.80) : 6.80
+    },
+    regras: {
+      min_unidades_molde: parseInt(document.getElementById("regra_min_molde").value) || 10,
+      acrescimo_autoportante_pct: parseFloat(document.getElementById("regra_pct_autoportante").value) || 50.0,
+      margem_previa_pct: parseFloat(document.getElementById("regra_pct_previa").value) || 5.0,
+      margem_galga_pct: parseFloat(document.getElementById("regra_pct_galga").value) || 0.0,
+      margem_desenho_tecnico_pct: parseFloat(document.getElementById("regra_pct_desenho").value) || 0.0
+    }
+  };
+
+  const ok = PricingEngine.saveSettings(updated);
+  if (ok) {
+    showToast("Todas as tabelas de preços e regras foram salvas com sucesso!", "success");
+    carregarConfiguracoesNaTela();
+  } else {
+    showToast("Falha ao salvar configurações de preço.", "error");
+  }
+}
+
+// Modal de Adicionar Nova Pastilha / Revestimento
+function abrirModalNovoRevestimento() {
+  const m = document.getElementById("modalNovoRevestimento");
+  if (!m) return;
+  document.getElementById("inputNovoRevNome").value = "";
+  document.getElementById("inputNovoRevPrecoSemMolde").value = "";
+  document.getElementById("inputNovoRevPrecoComMolde").value = "";
+  document.getElementById("selectNovoRevAcabamento").value = "bp11_c3";
+  m.style.display = "flex";
+}
+
+function fecharModalNovoRevestimento() {
+  const m = document.getElementById("modalNovoRevestimento");
+  if (m) m.style.display = "none";
+}
+
+function confirmarAdicionarNovoRevestimento() {
+  const nome = (document.getElementById("inputNovoRevNome").value || "").trim();
+  const acabamento = document.getElementById("selectNovoRevAcabamento").value;
+  const precoSem = parseFloat(document.getElementById("inputNovoRevPrecoSemMolde").value);
+  const precoCom = parseFloat(document.getElementById("inputNovoRevPrecoComMolde").value);
+
+  if (!nome) {
+    showToast("Digite o nome da nova pastilha / revestimento.", "error");
+    document.getElementById("inputNovoRevNome").focus();
+    return;
+  }
+
+  if (isNaN(precoSem) || isNaN(precoCom)) {
+    showToast("Informe os preços por m² (Sem Molde e Com Molde).", "error");
+    return;
+  }
+
+  PricingEngine.addCoating({
+    nome: nome,
+    acabamento: acabamento,
+    preco_sem_molde: precoSem,
+    preco_com_molde: precoCom
+  });
+
+  fecharModalNovoRevestimento();
+  carregarConfiguracoesNaTela();
+  showToast(`Nova pastilha "${nome}" adicionada com sucesso!`, "success");
+}
+
+async function excluirRevestimento(id, nome) {
+  const ok = await PapaSysDialog.confirm({
+    title: "Excluir Pastilha",
+    message: `Deseja realmente remover o revestimento "${nome}" das configurações?`,
+    confirmText: "Sim, Excluir",
+    cancelText: "Cancelar",
+    type: "danger"
+  });
+  if (!ok) return;
+
+  PricingEngine.removeCoating(id);
+  carregarConfiguracoesNaTela();
+  showToast(`Revestimento "${nome}" removido.`, "info");
+}
+
+async function restaurarPadroes() {
+  const ok = await PapaSysDialog.confirm({
+    title: "Restaurar Padrões de Preço",
+    message: "Deseja restaurar todos os valores unitários de pastilhas, insumos e percentuais para a tabela padrão original?",
+    confirmText: "Sim, Restaurar",
+    cancelText: "Cancelar",
+    type: "warning"
+  });
+  if (!ok) return;
+
+  PricingEngine.saveSettings(PricingEngine.DEFAULT_SETTINGS);
+  carregarConfiguracoesNaTela();
+  showToast("Valores e percentuais restaurados para os padrões de fábrica!", "success");
+}
+
+// ==============================================================================
+// SEÇÃO B: GESTÃO DE USUÁRIOS & PERMISSÕES (SEÇÃO 3)
+// ==============================================================================
+
+function carregarTabelaUsuarios() {
+  const tbody = document.getElementById("tbodyUsuarios");
+  const lblTotal = document.getElementById("lblTotalUsuarios");
+  if (!tbody) return;
+
+  const users = Auth.getAllUsers();
+  const current = Auth.getCurrentUser();
+
+  if (lblTotal) {
+    lblTotal.textContent = `${users.length} ${users.length === 1 ? 'colaborador' : 'colaboradores'}`;
+  }
+
+  const divNames = {
+    sob_medida: "Sob Medida",
+    incorporadora: "Incorporadora",
+    internacional: "Internacional"
+  };
+
+  const stageNames = {
+    previa: "1. Prévia",
+    galga: "2. Galga",
+    desenho_tecnico: "3. Desenho Técnico"
+  };
+
+  tbody.innerHTML = users.map(u => {
+    const isCurrent = u.id === current.id;
+    const parts = (u.name || "U").trim().split(" ");
+    const initials = parts.length > 1
+      ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+      : parts[0].slice(0, 2).toUpperCase();
+
+    const roleBadge = u.role === "admin"
+      ? '<span class="badge-role admin">Administrador (Total)</span>'
+      : '<span class="badge-role">Projetista / Usuário</span>';
+
+    const divsPills = (u.allowed_divisions || []).map(d => {
+      const cls = d === "sob_medida" ? "sob-medida" : d;
+      return `<span class="badge-perm-pill ${cls}">${divNames[d] || d}</span>`;
+    }).join("");
+
+    const stagesPills = (u.allowed_stages || []).map(s => {
+      return `<span class="badge-stage-pill">${stageNames[s] || s}</span>`;
+    }).join("");
+
+    const statusPill = u.active !== false
+      ? '<span class="status-indicator-pill active">● Ativo</span>'
+      : '<span class="status-indicator-pill inactive">○ Inativo</span>';
+
+    return `
+      <tr>
+        <td>
+          <div class="user-cell-wrap">
+            <div class="user-circle-avatar" style="background: ${u.avatar_color || '#0284c7'};">
+              ${initials}
+            </div>
+            <div>
+              <div class="user-name-title">${u.name} ${isCurrent ? '<span style="font-size: 10px; color: var(--igui-blue); font-weight: 800;">(Você)</span>' : ''}</div>
+              <div class="user-email-subtitle">${u.email}</div>
+            </div>
+          </div>
+        </td>
+        <td>${roleBadge}</td>
+        <td>
+          <div style="display: flex; flex-wrap: wrap; max-width: 280px;">
+            ${divsPills || '<span style="color: #94a3b8; font-size: 11px;">Nenhuma</span>'}
+          </div>
+        </td>
+        <td>
+          <div style="display: flex; flex-wrap: wrap; max-width: 250px;">
+            ${stagesPills || '<span style="color: #94a3b8; font-size: 11px;">Nenhuma</span>'}
+          </div>
+        </td>
+        <td>${statusPill}</td>
+        <td style="text-align: right;">
+          <div class="users-actions-cell" style="justify-content: flex-end;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="abrirModalEditarUsuario('${u.id}')" title="Editar permissões">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+              </svg>
+              Editar
+            </button>
+
+            ${!isCurrent ? `
+              <button type="button" class="btn btn-secondary btn-sm" onclick="alternarSessaoPara('${u.id}')" title="Conectar como este usuário para testar">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+                  <polyline points="10 17 15 12 10 7"></polyline>
+                  <line x1="15" y1="12" x2="3" y2="12"></line>
+                </svg>
+                Entrar
+              </button>
+
+              <button type="button" class="btn btn-danger-ghost" onclick="excluirUsuario('${u.id}')" title="Remover usuário">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </button>
+            ` : ''}
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function renderAvatarColorPicker() {
+  const wrap = document.getElementById("avatarColorPickerWrap");
+  if (!wrap) return;
+
+  wrap.innerHTML = AVATAR_COLORS.map(color => `
+    <button type="button" class="color-picker-dot ${color === selectedAvatarColor ? 'selected' : ''}" 
+      style="width: 24px; height: 24px; border-radius: 50%; border: 2px solid ${color === selectedAvatarColor ? '#0f172a' : 'transparent'}; background: ${color}; cursor: pointer; padding: 0;"
+      onclick="selecionarCorAvatar('${color}')" title="${color}">
+    </button>
+  `).join("");
+}
+
+function selecionarCorAvatar(color) {
+  selectedAvatarColor = color;
+  renderAvatarColorPicker();
+}
+
+function abrirModalNovoUsuario() {
+  document.getElementById("editUserId").value = "";
+  document.getElementById("editUserName").value = "";
+  document.getElementById("editUserEmail").value = "";
+  document.getElementById("editUserRole").value = "user";
+  document.getElementById("chkUserAtivo").checked = true;
+
+  document.getElementById("chkDivSobMedida").checked = true;
+  document.getElementById("chkDivIncorporadora").checked = false;
+  document.getElementById("chkDivInternacional").checked = false;
+
+  document.getElementById("chkStagePrevia").checked = true;
+  document.getElementById("chkStageGalga").checked = true;
+  document.getElementById("chkStageDesenho").checked = true;
+
+  selectedAvatarColor = "#f97316";
+  renderAvatarColorPicker();
+
+  document.getElementById("lblModalUserTitulo").textContent = "Adicionar Novo Usuário à Equipe";
+  document.getElementById("btnSalvarUsuario").textContent = "Criar Usuário";
+  document.getElementById("modalUserForm").style.display = "flex";
+}
+
+function abrirModalEditarUsuario(id) {
+  const user = Auth.getUserById(id);
+  if (!user) return;
+
+  document.getElementById("editUserId").value = user.id;
+  document.getElementById("editUserName").value = user.name;
+  document.getElementById("editUserEmail").value = user.email;
+  document.getElementById("editUserRole").value = user.role || "user";
+  document.getElementById("chkUserAtivo").checked = user.active !== false;
+
+  const divs = user.allowed_divisions || [];
+  document.getElementById("chkDivSobMedida").checked = divs.includes("sob_medida");
+  document.getElementById("chkDivIncorporadora").checked = divs.includes("incorporadora");
+  document.getElementById("chkDivInternacional").checked = divs.includes("internacional");
+
+  const stages = user.allowed_stages || [];
+  document.getElementById("chkStagePrevia").checked = stages.includes("previa");
+  document.getElementById("chkStageGalga").checked = stages.includes("galga");
+  document.getElementById("chkStageDesenho").checked = stages.includes("desenho_tecnico");
+
+  selectedAvatarColor = user.avatar_color || "#0284c7";
+  renderAvatarColorPicker();
+
+  document.getElementById("lblModalUserTitulo").textContent = `Editar Permissões: ${user.name}`;
+  document.getElementById("btnSalvarUsuario").textContent = "Salvar Permissões";
+  document.getElementById("modalUserForm").style.display = "flex";
+}
+
+function fecharModalUserForm() {
+  document.getElementById("modalUserForm").style.display = "none";
+}
+
+function aoMudarRoleUsuario(role) {
+  if (role === "admin") {
+    // Admin tem acesso a todas as divisões e etapas
+    document.getElementById("chkDivSobMedida").checked = true;
+    document.getElementById("chkDivIncorporadora").checked = true;
+    document.getElementById("chkDivInternacional").checked = true;
+    document.getElementById("chkStagePrevia").checked = true;
+    document.getElementById("chkStageGalga").checked = true;
+    document.getElementById("chkStageDesenho").checked = true;
+  }
+}
+
+async function salvarUsuario(event) {
+  event.preventDefault();
+
+  const id = document.getElementById("editUserId").value;
+  const name = document.getElementById("editUserName").value.trim();
+  const email = document.getElementById("editUserEmail").value.trim().toLowerCase();
+  const role = document.getElementById("editUserRole").value;
+  const active = document.getElementById("chkUserAtivo").checked;
+
+  const allowed_divisions = [];
+  if (document.getElementById("chkDivSobMedida").checked) allowed_divisions.push("sob_medida");
+  if (document.getElementById("chkDivIncorporadora").checked) allowed_divisions.push("incorporadora");
+  if (document.getElementById("chkDivInternacional").checked) allowed_divisions.push("internacional");
+
+  const allowed_stages = [];
+  if (document.getElementById("chkStagePrevia").checked) allowed_stages.push("previa");
+  if (document.getElementById("chkStageGalga").checked) allowed_stages.push("galga");
+  if (document.getElementById("chkStageDesenho").checked) allowed_stages.push("desenho_tecnico");
+
+  if (allowed_divisions.length === 0) {
+    await PapaSysDialog.alert({
+      title: "Selecione ao menos 1 Divisão",
+      message: "O colaborador precisa ter acesso liberado a pelo menos uma divisão do sistema.",
+      type: "warning"
     });
+    return;
   }
-}
 
-function mudarPageSize(novoTamanho) {
-  pageSize = parseInt(novoTamanho, 10) || 5;
-  currentPage = 1;
-  renderizarTabela();
-}
-
-// Atualização inline direta via inputs da tabela
-function atualizarPreco(id, campo, valor) {
-  const item = priceItems.find(it => it.id === id);
-  if (item) {
-    item[campo] = parseFloat(valor) || 0;
-    showToast(`Parâmetro de "${item.name}" atualizado. Clique em Salvar Alterações ao concluir!`, "info");
+  if (allowed_stages.length === 0) {
+    await PapaSysDialog.alert({
+      title: "Selecione ao menos 1 Etapa",
+      message: "O colaborador precisa ter acesso liberado a pelo menos uma página de fluxo (Prévia, Galga ou Desenho Técnico).",
+      type: "warning"
+    });
+    return;
   }
+
+  const userData = {
+    id: id || undefined,
+    name,
+    email,
+    role,
+    allowed_divisions,
+    allowed_stages,
+    avatar_color: selectedAvatarColor,
+    active
+  };
+
+  Auth.saveUser(userData);
+  fecharModalUserForm();
+  carregarTabelaUsuarios();
+  showToast(`Usuário "${name}" salvo com sucesso!`, "success");
 }
 
-// Modal completo de Edição ao clicar no Lápis (✏️)
-function editarPreco(id) {
-  const item = priceItems.find(it => it.id === id);
-  if (!item) return;
+async function excluirUsuario(userId) {
+  const user = Auth.getUserById(userId);
+  if (!user) return;
 
-  PapaSysDialog._createModal({
-    title: "Editar Material ou Serviço",
-    message: "Altere o nome, categoria, unidade, custo direto ou parâmetros de rendimento deste item.",
-    customBody: `
-      <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
-        <div class="form-group">
-          <label class="form-label">Nome / Descrição do Material ou Serviço</label>
-          <input type="text" id="dlgEditNome" class="form-input" value="${escapeHtml(item.name)}" />
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">Categoria</label>
-            <select id="dlgEditCat" class="form-select">
-              <option value="material" ${item.category === "material" ? "selected" : ""}>Revestimento / Pastilha</option>
-              <option value="insumo" ${item.category === "insumo" ? "selected" : ""}>Insumo / Argamassa / Rejunte</option>
-              <option value="borda" ${item.category === "borda" ? "selected" : ""}>Borda Atérmica / Peito de Pombo</option>
-              <option value="mao_de_obra" ${item.category === "mao_de_obra" ? "selected" : ""}>Mão de Obra Especializada</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Unidade de Medida</label>
-            <select id="dlgEditUnidade" class="form-select">
-              <option value="m²" ${item.unit === "m²" ? "selected" : ""}>m² (metro quadrado)</option>
-              <option value="m" ${item.unit === "m" ? "selected" : ""}>m (metro linear)</option>
-              <option value="saco 20kg" ${item.unit === "saco 20kg" ? "selected" : ""}>saco 20kg</option>
-              <option value="balde 5kg" ${item.unit === "balde 5kg" ? "selected" : ""}>balde 5kg</option>
-              <option value="un" ${item.unit === "un" ? "selected" : ""}>un (unidade)</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">Custo Direto (R$)</label>
-            <input type="number" id="dlgEditPreco" class="form-input" step="0.5" value="${item.unit_cost}" />
-          </div>
-          <div class="form-group">
-            <label class="form-label">Quebra Padrão (%)</label>
-            <input type="number" id="dlgEditQuebra" class="form-input" step="0.5" value="${item.default_waste_percent || 0}" />
-          </div>
-          <div class="form-group">
-            <label class="form-label">Rendimento (m² / Un)</label>
-            <input type="number" id="dlgEditRendimento" class="form-input" step="0.5" value="${item.coverage_per_unit || 1}" />
-          </div>
-        </div>
-      </div>
-    `,
-    confirmText: "Salvar Alterações",
-    cancelText: "Cancelar",
-    type: "info",
-    onConfirm: () => {
-      const nome = document.getElementById("dlgEditNome")?.value?.trim();
-      if (!nome) {
-        showToast("O nome do material/serviço não pode ficar vazio.", "error");
-        return;
-      }
-      const cat = document.getElementById("dlgEditCat")?.value || "material";
-      const unidade = document.getElementById("dlgEditUnidade")?.value || "m²";
-      const preco = parseFloat(document.getElementById("dlgEditPreco")?.value) || 0;
-      const quebra = parseFloat(document.getElementById("dlgEditQuebra")?.value) || 0;
-      const rendimento = parseFloat(document.getElementById("dlgEditRendimento")?.value) || 1;
-
-      item.name = nome;
-      item.category = cat;
-      item.unit = unidade;
-      item.unit_cost = preco;
-      item.default_waste_percent = quebra;
-      item.coverage_per_unit = rendimento;
-
-      renderizarTabela();
-      atualizarEstatisticas();
-      atualizarContadoresCategorias();
-
-      const row = document.querySelector(`tr[data-item-id="${id}"]`);
-      if (row && typeof PapaSysAnimation !== "undefined") {
-        PapaSysAnimation.animateTableRow(row);
-      }
-
-      showToast(`Item "${nome}" atualizado com sucesso!`, "success");
-    }
-  });
-
-  setTimeout(() => {
-    document.getElementById("dlgEditNome")?.focus();
-    document.getElementById("dlgEditNome")?.select();
-  }, 60);
-}
-
-// Modal de Criação de Novo Item
-function adicionarNovoPreco() {
-  PapaSysDialog._createModal({
-    title: "Novo Material ou Serviço",
-    message: "Cadastre um novo item na matriz de custos de referência do PapaSys.",
-    customBody: `
-      <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
-        <div class="form-group">
-          <label class="form-label">Nome / Descrição do Material ou Serviço</label>
-          <input type="text" id="dlgItemNome" class="form-input" placeholder="Ex: Pastilha Porcelanizada 15x15 cm" />
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">Categoria</label>
-            <select id="dlgItemCat" class="form-select">
-              <option value="material">Revestimento / Pastilha</option>
-              <option value="insumo">Insumo / Argamassa / Rejunte</option>
-              <option value="borda">Borda Atérmica / Peito de Pombo</option>
-              <option value="mao_de_obra">Mão de Obra Especializada</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Unidade de Medida</label>
-            <select id="dlgItemUnidade" class="form-select">
-              <option value="m²">m² (metro quadrado)</option>
-              <option value="m">m (metro linear)</option>
-              <option value="saco 20kg">saco 20kg</option>
-              <option value="balde 5kg">balde 5kg</option>
-              <option value="un">un (unidade)</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">Custo Direto Unitário (R$)</label>
-            <input type="number" id="dlgItemPreco" class="form-input" step="0.5" value="50.00" />
-          </div>
-          <div class="form-group">
-            <label class="form-label">Quebra Padrão (%)</label>
-            <input type="number" id="dlgItemQuebra" class="form-input" step="0.5" value="5.0" />
-          </div>
-          <div class="form-group">
-            <label class="form-label">Rendimento (m² / Un)</label>
-            <input type="number" id="dlgItemRendimento" class="form-input" step="0.5" value="1.0" />
-          </div>
-        </div>
-      </div>
-    `,
-    confirmText: "Adicionar Item",
-    cancelText: "Cancelar",
-    type: "info",
-    onConfirm: () => {
-      const nome = document.getElementById("dlgItemNome")?.value?.trim();
-      if (!nome) {
-        showToast("O nome do material/serviço é obrigatório.", "error");
-        return;
-      }
-      const categoria = document.getElementById("dlgItemCat")?.value || "material";
-      const unidade = document.getElementById("dlgItemUnidade")?.value || "m²";
-      const preco = parseFloat(document.getElementById("dlgItemPreco")?.value) || 0.0;
-      const quebra = parseFloat(document.getElementById("dlgItemQuebra")?.value) || 0.0;
-      const rendimento = parseFloat(document.getElementById("dlgItemRendimento")?.value) || 1.0;
-
-      const novoId = "p_" + Date.now();
-      priceItems.unshift({
-        id: novoId,
-        category: categoria,
-        name: nome,
-        unit: unidade,
-        unit_cost: preco,
-        default_waste_percent: quebra,
-        coverage_per_unit: rendimento,
-        active: true
-      });
-
-      currentPage = 1;
-      renderizarTabela();
-      atualizarEstatisticas();
-      atualizarContadoresCategorias();
-
-      const row = document.querySelector(`tr[data-item-id="${novoId}"]`);
-      if (row && typeof PapaSysAnimation !== "undefined") {
-        PapaSysAnimation.animateTableRow(row);
-      }
-      showToast(`Item "${nome}" adicionado com sucesso!`, "success");
-    }
-  });
-
-  setTimeout(() => {
-    document.getElementById("dlgItemNome")?.focus();
-  }, 60);
-}
-
-// Exclusão de item com confirmação e animação suave
-async function removerPreco(id) {
-  const item = priceItems.find(it => it.id === id);
-  const nome = item ? item.name : "este item";
-
-  const confirmou = await PapaSysDialog.confirm({
-    title: "Remover Item da Tabela",
-    message: `Tem certeza que deseja remover "${nome}" da tabela padrão de custos? Esta ação não pode ser desfeita após salvar.`,
-    confirmText: "Remover Item",
+  const ok = await PapaSysDialog.confirm({
+    title: "Excluir Usuário",
+    message: `Tem certeza que deseja remover o usuário "${user.name}" (${user.email}) do sistema?`,
+    confirmText: "Sim, Excluir",
     cancelText: "Cancelar",
     type: "danger"
   });
 
-  if (confirmou) {
-    const row = document.querySelector(`tr[data-item-id="${id}"]`);
-    if (row && typeof gsap !== "undefined") {
-      await new Promise(r => {
-        gsap.to(row, { opacity: 0, x: 30, duration: 0.22, ease: "power2.in", onComplete: r });
-      });
-    }
+  if (!ok) return;
 
-    priceItems = priceItems.filter(it => it.id !== id);
-
-    // Ajusta a página atual se a página anterior tiver ficado vazia
-    const totalItens = priceItems.length;
-    const totalPaginas = Math.max(1, Math.ceil(totalItens / pageSize));
-    if (currentPage > totalPaginas) currentPage = totalPaginas;
-
-    renderizarTabela();
-    atualizarEstatisticas();
-    atualizarContadoresCategorias();
-    showToast(`"${nome}" removido da tabela.`, "info");
+  const deleted = Auth.deleteUser(userId);
+  if (deleted) {
+    carregarTabelaUsuarios();
+    showToast(`Usuário "${user.name}" removido com sucesso.`, "info");
   }
 }
 
-// Restaura os 9 itens padrão originais
-async function restaurarPadroesPrecos() {
-  const confirmou = await PapaSysDialog.confirm({
-    title: "Restaurar Padrões de Fábrica",
-    message: "Deseja restaurar todos os materiais e serviços para os valores e rendimentos originais do PapaSys? Suas edições atuais serão substituídas.",
-    confirmText: "Restaurar Padrão",
+function alternarSessaoPara(userId) {
+  const user = Auth.getUserById(userId);
+  if (!user) return;
+
+  Auth.setCurrentUser(user);
+  showToast(`Sessão alterada para ${user.name}. Redirecionando para o painel...`, "info");
+  setTimeout(() => {
+    window.location.href = "index.html";
+  }, 700);
+}
+
+async function restaurarUsuariosPadrao() {
+  const ok = await PapaSysDialog.confirm({
+    title: "Restaurar Contas Padrão",
+    message: "Deseja restaurar as contas de demonstração (Administrador e Victor Lourenço) para as permissões originais?",
+    confirmText: "Sim, Restaurar",
     cancelText: "Cancelar",
     type: "warning"
   });
 
-  if (confirmou) {
-    const defaultPrices = [
-      { id: "1", category: "material", name: "Pastilha Cerâmica 15x15 cm", unit: "m²", unit_cost: 98.0, default_waste_percent: 5.0, coverage_per_unit: 1.0 },
-      { id: "2", category: "material", name: "Pastilha Porcelana 10x10 cm", unit: "m²", unit_cost: 85.0, default_waste_percent: 5.0, coverage_per_unit: 1.0 },
-      { id: "3", category: "material", name: "Porcelanato 20x20 cm", unit: "m²", unit_cost: 78.0, default_waste_percent: 7.0, coverage_per_unit: 1.0 },
-      { id: "4", category: "insumo", name: "Argamassa AC-III Piscina (Saco 20kg)", unit: "saco 20kg", unit_cost: 42.0, default_waste_percent: 5.0, coverage_per_unit: 4.0 },
-      { id: "5", category: "insumo", name: "Rejunte Especial Piscina (Balde 5kg)", unit: "balde 5kg", unit_cost: 68.0, default_waste_percent: 5.0, coverage_per_unit: 10.0 },
-      { id: "6", category: "borda", name: "Pedra Atérmica Boleada para Borda", unit: "m", unit_cost: 130.0, default_waste_percent: 3.0, coverage_per_unit: 1.0 },
-      { id: "7", category: "mao_de_obra", name: "Assentamento de Pastilhas / Revestimento", unit: "m²", unit_cost: 75.0, default_waste_percent: 0.0, coverage_per_unit: 1.0 },
-      { id: "8", category: "mao_de_obra", name: "Instalação de Borda Atérmica", unit: "m", unit_cost: 45.0, default_waste_percent: 0.0, coverage_per_unit: 1.0 },
-      { id: "9", category: "mao_de_obra", name: "Impermeabilização com Membrana Polimérica", unit: "m²", unit_cost: 55.0, default_waste_percent: 0.0, coverage_per_unit: 1.0 }
-    ];
+  if (!ok) return;
 
-    priceItems = JSON.parse(JSON.stringify(defaultPrices));
-    localStorage.setItem(DB.STORAGE_KEY_PRICES, JSON.stringify(priceItems));
-
-    currentPage = 1;
-    renderizarTabela();
-    atualizarEstatisticas();
-    atualizarContadoresCategorias();
-
-    showToast("Tabela de preços restaurada para o padrão de fábrica!", "success");
-  }
+  Auth.resetDefaultUsers();
+  carregarTabelaUsuarios();
+  showToast("Usuários padrão restaurados com sucesso!", "success");
 }
 
-// Salva alterações no Supabase e no LocalStorage
-async function salvarTabelaPrecos() {
-  if (supabaseClient) {
-    try {
-      const { error } = await supabaseClient.from("price_table").upsert(priceItems);
-      if (error) throw error;
-    } catch (e) {
-      console.warn("[DB Precos] Erro no Supabase, salvando localmente:", e);
-    }
-  }
-
-  localStorage.setItem(DB.STORAGE_KEY_PRICES, JSON.stringify(priceItems));
-  showToast("Tabela de preços e rendimentos salva com sucesso!", "success");
-}
-
-// Badges elegantes com ícones SVG
-function getCatBadge(cat) {
-  switch (cat) {
-    case "material":
-      return `
-        <span class="badge badge-cat-material" title="Revestimento modular para piscina">
-          <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2"></rect>
-            <path d="M3 9h18"></path><path d="M3 15h18"></path><path d="M9 3v18"></path><path d="M15 3v18"></path>
-          </svg>
-          Revestimento
-        </span>
-      `;
-    case "insumo":
-      return `
-        <span class="badge badge-cat-insumo" title="Insumo técnico de assentamento ou rejunte">
-          <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-          </svg>
-          Insumo
-        </span>
-      `;
-    case "borda":
-      return `
-        <span class="badge badge-cat-borda" title="Pedras e acabamentos de borda perimetral">
-          <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="3"></rect>
-            <path d="M7 7h10v10H7z" stroke-dasharray="2 2"></path>
-          </svg>
-          Borda
-        </span>
-      `;
-    case "mao_de_obra":
-      return `
-        <span class="badge badge-cat-mao_de_obra" title="Serviço especializado de mão de obra">
-          <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
-          </svg>
-          Mão de Obra
-        </span>
-      `;
-    default:
-      return `<span class="badge badge-cat-insumo">${escapeHtml(cat)}</span>`;
-  }
-}
-
-function showToast(msg, tipo = "info") {
-  const box = document.getElementById("toastBox");
-  if (!box) return;
+function showToast(msg, type = "info") {
+  const container = document.getElementById("toastContainer");
+  if (!container) return;
   const t = document.createElement("div");
-  t.className = `toast toast-${tipo}`;
+  t.className = `toast ${type}`;
   t.textContent = msg;
-  box.appendChild(t);
-
-  if (typeof PapaSysAnimation !== "undefined") {
-    PapaSysAnimation.animateToastIn(t);
-    setTimeout(() => {
-      PapaSysAnimation.animateToastOut(t, () => t.remove());
-    }, 3500);
-  } else {
-    setTimeout(() => {
-      t.style.opacity = "0";
-      setTimeout(() => t.remove(), 300);
-    }, 3500);
-  }
-}
-
-function escapeHtml(str) {
-  if (!str) return "";
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+  container.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
 }

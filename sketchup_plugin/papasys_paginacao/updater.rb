@@ -52,167 +52,138 @@ module PapaSys
         end
       end
 
-      def self.instalar_rbz_local(pacote_local, callback)
+      def self.instalar_rbz_local(pacote_local, silent: false, &callback)
         puts "[PapaSys Updater] Instalando pacote local: #{pacote_local[:rbz]} (v#{pacote_local[:version]})"
         sucesso = Sketchup.install_from_archive(pacote_local[:rbz])
         recarregar_modulos if sucesso
 
-        UI.start_timer(0, false) do
+        UI.start_timer(0.1, false) do
           if sucesso
-            msg = "O #{PLUGIN_NAME} foi atualizado com sucesso para v#{pacote_local[:version]}!\n\n#{pacote_local[:changelog]}"
-            UI.messagebox(msg, MB_OK)
+            unless silent
+              msg = "O #{PLUGIN_NAME} foi atualizado com sucesso para v#{pacote_local[:version]}!\n\n#{pacote_local[:changelog]}"
+              UI.messagebox(msg, MB_OK)
+            end
             callback.call(true, pacote_local[:version], pacote_local[:changelog]) if callback
           else
-            UI.messagebox("Falha ao instalar atualização a partir do pacote local.", MB_OK)
+            UI.messagebox("Falha ao instalar atualização a partir do pacote local.", MB_OK) unless silent
             callback.call(false, nil, "Falha na instalação local") if callback
           end
         end
         sucesso
+      rescue => e
+        puts "[PapaSys Updater] Erro ao instalar RBZ local: #{e.message}"
+        callback.call(false, nil, e.message) if callback
+        false
       end
 
-      # Verifica se há atualizações disponíveis no servidor web, Supabase ou pacote local
+      # Verifica se há atualizações disponíveis sem bloquear a thread principal do SketchUp
       def self.check(silent: false, auto_install: true, &callback)
-        Thread.new do
+        # 1. Verifica se existe pacote local com versão ESTRITAMENTE maior que a atual
+        pacote_local = verificar_pacote_local
+        versao_local_maior = false
+        if pacote_local
+          versao_local_maior = (Gem::Version.new(pacote_local[:version]) > Gem::Version.new(VERSION) rescue false)
+        end
+
+        if pacote_local && versao_local_maior && auto_install
+          puts "[PapaSys Updater] Pacote local mais novo detectado: v#{pacote_local[:version]} (Atual: v#{VERSION})"
+          instalar_rbz_local(pacote_local, silent: silent, &callback)
+          return
+        end
+
+        # 2. Verifica online usando Sketchup::Http::Request (assíncrono nativo, zero travamento)
+        base_url = Config.server_url.to_s.strip.chomp('/')
+        if base_url.empty?
+          finalizar_sem_atualizacao(silent, callback)
+          return
+        end
+
+        url_check = base_url.include?('supabase.co') ? "#{base_url}/storage/v1/object/public/plugin/version.json" : "#{base_url}/api/plugin/latest?current=#{VERSION}&ts=#{Time.now.to_i}"
+
+        if defined?(Sketchup::Http::Request)
           begin
-            # 1. Verifica se existe pacote local atualizado
-            pacote_local = verificar_pacote_local
-            versao_local_maior = false
-            if pacote_local
-              versao_local_maior = (Gem::Version.new(pacote_local[:version]) > Gem::Version.new(VERSION) rescue (pacote_local[:version] != VERSION))
-            end
-
-            # Se há pacote local mais recente, instala diretamente sem depender de internet
-            if pacote_local && versao_local_maior
-              puts "[PapaSys Updater] Pacote local mais novo detectado: v#{pacote_local[:version]}"
-              instalar_rbz_local(pacote_local, callback)
-              next
-            end
-
-            # 2. Tenta verificar online
-            base_url = Config.server_url
-            houve_sucesso_remoto = false
-
-            if base_url && !base_url.empty?
-              url_check = base_url.include?('supabase.co') ? "#{base_url}/storage/v1/object/public/plugin/version.json" : "#{base_url}/api/plugin/latest?current=#{VERSION}&ts=#{Time.now.to_i}"
+            req = Sketchup::Http::Request.new(url_check, Sketchup::Http::GET)
+            req.headers = {
+              'User-Agent' => "SketchUp-PapaSysPlugin/#{VERSION}",
+              'Accept' => 'application/json'
+            }
+            req.start do |_request, response|
               begin
-                uri = URI.parse(url_check)
-                http = Net::HTTP.new(uri.host, uri.port)
-                http.use_ssl = (uri.scheme == 'https')
-                http.verify_mode = OpenSSL::SSL::VERIFY_NONE if http.use_ssl?
-                http.open_timeout = 4
-                http.read_timeout = 8
-
-                request = Net::HTTP::Get.new(uri.request_uri)
-                request['User-Agent'] = "SketchUp-PapaSysPlugin/#{VERSION}"
-                request['Accept'] = 'application/json'
-
-                response = http.request(request)
-
-                if response.code.to_i == 200
-                  data = JSON.parse(response.body)
-                  remote_ver = data['version']
-                  download_url = data['download_url']
+                if response && response.status_code == 200
+                  data = JSON.parse(response.body) rescue {}
+                  remote_ver = data['version'].to_s.strip
+                  download_url = data['download_url'].to_s.strip
                   changelog = data['changelog'] || 'Melhorias de desempenho e correções.'
 
-                  has_update = Gem::Version.new(remote_ver) > Gem::Version.new(VERSION) rescue (remote_ver != VERSION)
+                  has_update = !remote_ver.empty? && (Gem::Version.new(remote_ver) > Gem::Version.new(VERSION) rescue false)
 
-                  if has_update
-                    houve_sucesso_remoto = true
+                  if has_update && auto_install && !download_url.empty?
                     puts "[PapaSys Updater] Nova versão remota disponível: v#{remote_ver} (Atual: v#{VERSION})"
-                    sucesso = baixar_e_instalar(download_url, remote_ver)
-                    recarregar_modulos if sucesso
-                    UI.start_timer(0, false) do
-                      if sucesso
-                        msg = "O #{PLUGIN_NAME} foi atualizado automaticamente para a versão v#{remote_ver}!\n\nNovidades:\n#{changelog}"
-                        UI.messagebox(msg, MB_OK)
-                        callback.call(true, remote_ver, changelog) if callback
-                      else
-                        UI.messagebox("Tentativa de atualizar para v#{remote_ver} falhou. Verifique sua conexão.", MB_OK) unless silent
-                        callback.call(false, nil, "Falha na instalação") if callback
-                      end
-                    end
-                    next
+                    baixar_e_instalar_async(download_url, remote_ver, changelog, silent, callback)
                   else
-                    houve_sucesso_remoto = true
                     puts "[PapaSys Updater] Plugin já está na versão mais recente (v#{VERSION})."
-                    UI.start_timer(0, false) do
-                      UI.messagebox("#{PLUGIN_NAME} já está atualizado (v#{VERSION}).", MB_OK) unless silent
-                      callback.call(false, VERSION, "Versão atual (v#{VERSION}) já é a mais recente.") if callback
-                    end
-                    next
+                    UI.messagebox("#{PLUGIN_NAME} já está na versão mais recente (v#{VERSION}).", MB_OK) unless silent
+                    callback.call(false, VERSION, "Versão atual (v#{VERSION}) já é a mais recente.") if callback
                   end
+                else
+                  finalizar_sem_atualizacao(silent, callback)
                 end
-              rescue => net_err
-                puts "[PapaSys Updater] Aviso na verificação remota: #{net_err.message}"
-              end
-            end
-
-            # 3. Fallback: Se o servidor remoto não tem bucket/falhou, mas existe pacote local:
-            if pacote_local
-              puts "[PapaSys Updater] Aplicando atualização do pacote local..."
-              instalar_rbz_local(pacote_local, callback)
-            else
-              UI.start_timer(0, false) do
-                UI.messagebox("#{PLUGIN_NAME} (v#{VERSION}): Servidor de atualização não configurado e nenhum arquivo .rbz local encontrado.", MB_OK) unless silent
-                callback.call(false, nil, "Nenhuma atualização encontrada") if callback
+              rescue => e
+                puts "[PapaSys Updater] Aviso ao processar resposta: #{e.message}"
+                finalizar_sem_atualizacao(silent, callback)
               end
             end
           rescue => e
-            puts "[PapaSys Updater] Erro geral ao verificar atualizações: #{e.message}"
-            UI.start_timer(0, false) do
-              UI.messagebox("Erro ao verificar atualizações: #{e.message}", MB_OK) unless silent
-              callback.call(false, nil, e.message) if callback
-            end
+            puts "[PapaSys Updater] Erro ao iniciar requisição HTTP: #{e.message}"
+            finalizar_sem_atualizacao(silent, callback)
           end
+        else
+          finalizar_sem_atualizacao(silent, callback)
         end
+      rescue => e
+        puts "[PapaSys Updater] Erro geral ao verificar atualizações: #{e.message}"
+        callback.call(false, nil, e.message) if callback
       end
 
-      def self.baixar_e_instalar(url_str, version_str)
+      def self.finalizar_sem_atualizacao(silent, callback)
+        puts "[PapaSys Updater] Plugin já está atualizado (v#{VERSION})."
+        UI.messagebox("#{PLUGIN_NAME} já está atualizado (v#{VERSION}).", MB_OK) unless silent
+        callback.call(false, VERSION, "Plugin já está na versão mais recente (v#{VERSION}).") if callback
+      end
+
+      def self.baixar_e_instalar_async(url_str, version_str, changelog, silent, callback)
+        return unless defined?(Sketchup::Http::Request)
+
         puts "[PapaSys Updater] Baixando atualização de: #{url_str}"
-        uri = URI.parse(url_str)
-        temp_dir = Sketchup.temp_dir rescue (ENV['TEMP'] || '/tmp')
-        temp_file = File.join(temp_dir, "papasys_paginacao_v#{version_str}_#{Time.now.to_i}.rbz")
+        req = Sketchup::Http::Request.new(url_str, Sketchup::Http::GET)
+        req.headers = { 'User-Agent' => "SketchUp-PapaSysPlugin/#{VERSION}" }
+        req.start do |_request, response|
+          begin
+            if response && response.status_code == 200 && response.body && response.body.bytesize > 100
+              temp_dir = Sketchup.temp_dir rescue (ENV['TEMP'] || '/tmp')
+              temp_file = File.join(temp_dir, "papasys_paginacao_v#{version_str}_#{Time.now.to_i}.rbz")
+              File.open(temp_file, 'wb') { |io| io.write(response.body) }
 
-        http = Net::HTTP.new(uri.host, uri.port)
-        http.use_ssl = (uri.scheme == 'https')
-        http.verify_mode = OpenSSL::SSL::VERIFY_NONE if http.use_ssl?
-        http.open_timeout = 10
-        http.read_timeout = 30
+              sucesso = Sketchup.install_from_archive(temp_file)
+              File.delete(temp_file) rescue nil
 
-        request = Net::HTTP::Get.new(uri.request_uri)
-        request['User-Agent'] = "SketchUp-PapaSysPlugin/#{VERSION}"
-
-        http.request(request) do |response|
-          if response.code.to_i == 200 || response.code.to_i == 302
-            if response.code.to_i == 302 && response['location']
-              return baixar_e_instalar(response['location'], version_str)
-            end
-
-            File.open(temp_file, 'wb') do |io|
-              response.read_body do |chunk|
-                io.write(chunk)
+              if sucesso
+                recarregar_modulos
+                UI.messagebox("O #{PLUGIN_NAME} foi atualizado para v#{version_str}!\n\nNovidades:\n#{changelog}", MB_OK) unless silent
+                callback.call(true, version_str, changelog) if callback
+              else
+                UI.messagebox("Não foi possível instalar a atualização v#{version_str}.", MB_OK) unless silent
+                callback.call(false, nil, "Falha na instalação") if callback
               end
+            else
+              UI.messagebox("Falha ao baixar pacote de atualização v#{version_str}.", MB_OK) unless silent
+              callback.call(false, nil, "Falha no download") if callback
             end
-          else
-            puts "[PapaSys Updater] Erro no download: HTTP #{response.code}"
-            return false
+          rescue => e
+            puts "[PapaSys Updater] Erro no download assíncrono: #{e.message}"
+            callback.call(false, nil, e.message) if callback
           end
         end
-
-        unless File.exist?(temp_file) && File.size(temp_file) > 100
-          puts "[PapaSys Updater] Arquivo baixado é inválido ou vazio."
-          return false
-        end
-
-        puts "[PapaSys Updater] Instalando extensão de: #{temp_file}"
-        sucesso = Sketchup.install_from_archive(temp_file)
-        puts "[PapaSys Updater] Instalação concluída com status: #{sucesso}"
-
-        File.delete(temp_file) rescue nil
-        sucesso
-      rescue => e
-        puts "[PapaSys Updater] Falha crítica no download/instalação: #{e.message}"
-        false
       end
 
       def self.start_auto_check
@@ -220,9 +191,9 @@ module PapaSys
 
         agora = Time.now.to_i
         ultimo = Config.last_check_time
-        if (agora - ultimo) > 7200
+        if (agora - ultimo) > 86400
           Config.last_check_time = agora
-          UI.start_timer(3, false) do
+          UI.start_timer(8, false) do
             check(silent: true, auto_install: true)
           end
         end

@@ -27,6 +27,56 @@ module PapaSys
         Sketchup.write_default(PREFS_KEY, 'supabase_key', key.to_s.strip)
       end
 
+      # Sessão do Usuário Logado
+      def self.current_user_id
+        Sketchup.read_default(PREFS_KEY, 'current_user_id', '')
+      end
+
+      def self.current_user_id=(id)
+        Sketchup.write_default(PREFS_KEY, 'current_user_id', id.to_s)
+      end
+
+      def self.current_user_name
+        Sketchup.read_default(PREFS_KEY, 'current_user_name', '')
+      end
+
+      def self.current_user_name=(nome)
+        Sketchup.write_default(PREFS_KEY, 'current_user_name', nome.to_s)
+      end
+
+      def self.current_user_email
+        Sketchup.read_default(PREFS_KEY, 'current_user_email', '')
+      end
+
+      def self.current_user_email=(email)
+        Sketchup.write_default(PREFS_KEY, 'current_user_email', email.to_s)
+      end
+
+      def self.current_user_role
+        Sketchup.read_default(PREFS_KEY, 'current_user_role', 'user')
+      end
+
+      def self.current_user_role=(role)
+        Sketchup.write_default(PREFS_KEY, 'current_user_role', role.to_s)
+      end
+
+      def self.allowed_divisions
+        raw = Sketchup.read_default(PREFS_KEY, 'allowed_divisions', '["sob_medida"]')
+        JSON.parse(raw) rescue ['sob_medida']
+      end
+
+      def self.allowed_divisions=(divs)
+        Sketchup.write_default(PREFS_KEY, 'allowed_divisions', divs.is_a?(Array) ? divs.to_json : divs.to_s)
+      end
+
+      def self.selected_division
+        Sketchup.read_default(PREFS_KEY, 'selected_division', 'sob_medida')
+      end
+
+      def self.selected_division=(div)
+        Sketchup.write_default(PREFS_KEY, 'selected_division', div.to_s)
+      end
+
       def self.auto_update?
         val = Sketchup.read_default(PREFS_KEY, 'auto_update', true)
         val == true || val == 'true' || val == 1

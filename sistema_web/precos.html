@@ -3,221 +3,598 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PapaSys - Tabela de Preços Base & Insumos</title>
+  <title>iGUi - Configurações Gerais & Usuários (Admin)</title>
   <link rel="icon" type="image/png" href="img/Icone.png">
   <link rel="shortcut icon" href="favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-  <!-- Navbar -->
+  
+  <!-- 1. Top Navbar -->
   <nav class="navbar">
-    <a href="index.html" class="brand">
-      <img src="img/Icone.png" alt="PapaSys Icon" class="brand-logo-img">
-      <div>
-        <span class="brand-title"><span class="brand-dark">PAPA</span><span class="brand-orange">SYS</span></span>
-        <span class="brand-sub">Sistema de Orçamento</span>
-      </div>
-    </a>
-
-    <div class="nav-links">
-      <a href="index.html" class="nav-item">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="3" width="7" height="9" rx="1"></rect>
-          <rect x="14" y="3" width="7" height="5" rx="1"></rect>
-          <rect x="14" y="12" width="7" height="9" rx="1"></rect>
-          <rect x="3" y="16" width="7" height="5" rx="1"></rect>
-        </svg>
-        Dashboard Kanban
-      </a>
-      <a href="precos.html" class="nav-item active">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
-          <line x1="7" y1="7" x2="7.01" y2="7"></line>
-        </svg>
-        Tabela de Preços
-      </a>
-      <a href="plugin/papasys_paginacao.rbz" class="nav-item" download>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-          <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-          <line x1="12" y1="22.08" x2="12" y2="12"></line>
-        </svg>
-        Plugin SketchUp (.rbz)
+    <div class="nav-left">
+      <a href="index.html" class="brand">
+        <img src="img/Logo_Oficial_iGUi.png" alt="iGUi" class="brand-logo-img">
+        <div class="brand-text">
+          <span class="brand-title">CONFIGURAÇÕES DO SISTEMA</span>
+          <span class="brand-sub">Painel Administrativo da Diretoria</span>
+        </div>
       </a>
     </div>
 
-    <div class="nav-actions">
-      <a href="index.html" class="btn btn-secondary btn-sm">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <div class="nav-right">
+      <a href="index.html" class="nav-link-btn" title="Retornar ao Painel Principal">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="19" y1="12" x2="5" y2="12"></line>
           <polyline points="12 19 5 12 12 5"></polyline>
         </svg>
         Voltar ao Painel
       </a>
-    </div>
-  </nav>
 
-  <!-- Main Content -->
-  <main class="main-content">
-    <div class="page-header">
-      <div>
-        <h1 class="page-title">Matriz de Preços & Insumos Base</h1>
-        <p class="page-subtitle">Parâmetros de custos diretos, perdas e rendimentos aplicados nos orçamentos gerados pelo SketchUp</p>
+      <!-- Ações da Aba Preços -->
+      <div id="acoesAbaPrecos" style="display: inline-flex; align-items: center; gap: 6px;">
+        <button type="button" class="btn-new-budget" onclick="salvarConfiguracoesPreco()" title="Gravar alterações na base">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+            <polyline points="7 3 7 8 15 8"></polyline>
+          </svg>
+          Salvar Preços
+        </button>
       </div>
 
-      <div class="nav-actions">
-        <button class="btn btn-secondary" onclick="adicionarNovoPreco()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <!-- Ações da Aba Usuários -->
+      <div id="acoesAbaUsuarios" style="display: none; align-items: center; gap: 6px;">
+        <button type="button" class="btn-new-budget" onclick="abrirModalNovoUsuario()" title="Adicionar um novo usuário ao sistema">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5">
             <line x1="12" y1="5" x2="12" y2="19"></line>
             <line x1="5" y1="12" x2="19" y2="12"></line>
           </svg>
-          Novo Material / Serviço
+          Novo Usuário
         </button>
-        <button class="btn btn-primary" onclick="salvarTabelaPrecos()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="20 6 9 17 4 12"></polyline>
+      </div>
+
+      <div class="nav-divider"></div>
+
+      <!-- Perfil do Usuário Ativo com Sair Integrado -->
+      <div class="user-profile-menu">
+        <div class="user-profile-info" onclick="alternarAbaConfig('usuarios')" title="Administrador Logado - Gerenciar Equipe">
+          <div class="user-profile-avatar" id="precosUserAvatar">AD</div>
+          <div class="user-profile-meta">
+            <span class="user-profile-name" id="precosUserName">Administrador</span>
+            <span class="badge-user-role admin" id="precosUserRole">Diretoria / Admin</span>
+          </div>
+          <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" class="user-profile-chevron">
+            <polyline points="6 9 12 15 18 9"></polyline>
           </svg>
-          Salvar Alterações
-        </button>
-      </div>
-    </div>
-
-    <!-- Estatísticas Executivas de Preços -->
-    <div class="stats-overview" style="margin-bottom: 12px;">
-      <div class="stat-tile">
-        <div class="stat-tile-header">
-          <span class="stat-tile-label">Total de Cadastros</span>
-          <div class="stat-tile-icon stat-icon-blue">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="3" width="7" height="9" rx="1"></rect>
-              <rect x="14" y="3" width="7" height="5" rx="1"></rect>
-              <rect x="14" y="12" width="7" height="9" rx="1"></rect>
-              <rect x="3" y="16" width="7" height="5" rx="1"></rect>
-            </svg>
-          </div>
         </div>
-        <div id="statPrecosTotal" class="stat-tile-value tabular-nums">0</div>
-        <div class="stat-tile-sub">Itens no catálogo base</div>
-      </div>
 
-      <div class="stat-tile">
-        <div class="stat-tile-header">
-          <span class="stat-tile-label">Revestimentos</span>
-          <div class="stat-tile-icon stat-icon-orange">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2"></rect>
-              <path d="M3 9h18"></path><path d="M3 15h18"></path><path d="M9 3v18"></path><path d="M15 3v18"></path>
-            </svg>
-          </div>
-        </div>
-        <div id="statPrecosRevestimentos" class="stat-tile-value tabular-nums" style="color: var(--orange-600);">0</div>
-        <div class="stat-tile-sub">Pastilhas e porcelanatos</div>
-      </div>
+        <div class="user-profile-divider"></div>
 
-      <div class="stat-tile">
-        <div class="stat-tile-header">
-          <span class="stat-tile-label">Insumos Técnicos</span>
-          <div class="stat-tile-icon stat-icon-green">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-              <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-              <line x1="12" y1="22.08" x2="12" y2="12"></line>
-            </svg>
-          </div>
-        </div>
-        <div id="statPrecosInsumos" class="stat-tile-value tabular-nums" style="color: var(--status-aprovado);">0</div>
-        <div class="stat-tile-sub">Argamassas e rejuntes</div>
-      </div>
-
-      <div class="stat-tile">
-        <div class="stat-tile-header">
-          <span class="stat-tile-label">Mão de Obra</span>
-          <div class="stat-tile-icon stat-icon-purple">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
-            </svg>
-          </div>
-        </div>
-        <div id="statPrecosMaoObra" class="stat-tile-value tabular-nums" style="color: var(--status-enviado);">0</div>
-        <div class="stat-tile-sub">Serviços de aplicação</div>
-      </div>
-    </div>
-
-    <!-- Filtros de Categoria e Busca Inteligente -->
-    <div style="display: flex; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap;">
-      <div class="segmented-tabs-container" style="margin-bottom: 0; flex: 1; min-width: 320px;">
-        <button class="tab-pill active" onclick="filtrarCategoria('todos', this)">
-          <span>Todos os Itens</span>
-          <span id="tab-cat-todos" class="tab-count">0</span>
-        </button>
-        <button class="tab-pill" onclick="filtrarCategoria('material', this)">
-          <span class="tab-dot" style="background: #3b82f6;"></span>
-          <span>Revestimentos</span>
-          <span id="tab-cat-material" class="tab-count">0</span>
-        </button>
-        <button class="tab-pill" onclick="filtrarCategoria('insumo', this)">
-          <span class="tab-dot" style="background: #d97706;"></span>
-          <span>Insumos</span>
-          <span id="tab-cat-insumo" class="tab-count">0</span>
-        </button>
-        <button class="tab-pill" onclick="filtrarCategoria('borda', this)">
-          <span class="tab-dot" style="background: #10b981;"></span>
-          <span>Borda</span>
-          <span id="tab-cat-borda" class="tab-count">0</span>
-        </button>
-        <button class="tab-pill" onclick="filtrarCategoria('mao_de_obra', this)">
-          <span class="tab-dot" style="background: #7c3aed;"></span>
-          <span>Mão de Obra</span>
-          <span id="tab-cat-mao_de_obra" class="tab-count">0</span>
-        </button>
-      </div>
-
-      <div class="search-input-wrap" style="width: 280px;">
-        <span class="search-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="11" cy="11" r="8"></circle>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-          </svg>
-        </span>
-        <input type="text" id="searchPrices" class="search-input" style="width: 100%;" placeholder="Buscar material ou serviço..." oninput="filtrarTabela()" autocomplete="off">
-        <button id="btnClearPriceSearch" class="search-clear-btn hidden" onclick="limparBuscaPrecos()" title="Limpar busca">
-          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
+        <button type="button" class="btn-inline-logout" onclick="event.stopPropagation(); Auth.logout();" title="Encerrar Sessão e Sair do Sistema">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
           </svg>
         </button>
       </div>
     </div>
+  </nav>
 
-    <!-- Tabela de Preços -->
-    <div class="table-container">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th style="width: 155px;">Categoria</th>
-            <th>Descrição do Material / Serviço</th>
-            <th style="width: 105px; text-align: center;">Unidade</th>
-            <th style="width: 145px; text-align: right;">Custo Direto (R$)</th>
-            <th style="width: 130px; text-align: right;">Quebra Padrão (%)</th>
-            <th style="width: 135px; text-align: right;">Rendimento</th>
-            <th style="width: 90px; text-align: center;">Ações</th>
-          </tr>
-        </thead>
-        <tbody id="tabelaPrecosTbody"></tbody>
-      </table>
-      <div id="tablePagination" class="table-pagination"></div>
+  <!-- 2. Main Content -->
+  <main class="main-content">
+    
+    <!-- Cabeçalho de Contexto -->
+    <div class="page-context-header" style="margin-bottom: 14px;">
+      <div>
+        <h1 class="page-main-title">Central de Configurações & Parâmetros</h1>
+        <p class="page-main-sub">Defina as tabelas de preços, insumos, regras de molde e as permissões de acesso da equipe.</p>
+      </div>
+
+      <div class="admin-badge-strip">
+        <span class="badge-role admin">Acesso Restrito: Diretoria / Admin</span>
+      </div>
     </div>
+
+    <!-- Barra de Abas da Central de Configurações (Preços vs Usuários) -->
+    <div class="settings-tabs-bar">
+      <button type="button" id="tabBtnPrecos" class="settings-tab-btn active" onclick="alternarAbaConfig('precos')">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="1" x2="12" y2="23"></line>
+          <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+        </svg>
+        Tabela de Preços & Regras de Cálculo
+      </button>
+
+      <button type="button" id="tabBtnUsuarios" class="settings-tab-btn" onclick="alternarAbaConfig('usuarios')">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+          <circle cx="9" cy="7" r="4"></circle>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+        </svg>
+        Gestão de Usuários & Permissões da Equipe
+      </button>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- ABA 1: TABELA DE PREÇOS & REGRAS DE CÁLCULO -->
+    <!-- ========================================================================= -->
+    <div id="painelPrecos" class="config-columns-wrap">
+      
+      <!-- Coluna da Esquerda: Revestimentos & Insumos Complementares -->
+      <div class="config-col">
+        <!-- Card 1: Revestimentos & Pastilhas (R$/m²) -->
+        <div class="config-card">
+          <div class="config-card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <div>
+              <h3 class="config-card-title">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="3" y1="9" x2="21" y2="9"></line>
+                  <line x1="3" y1="15" x2="21" y2="15"></line>
+                  <line x1="9" y1="3" x2="9" y2="21"></line>
+                  <line x1="15" y1="3" x2="15" y2="21"></line>
+                </svg>
+                1. Revestimentos &amp; Pastilhas (R$ por m²)
+              </h3>
+              <p class="config-card-sub">Preço por m² nas regras Sem Molde e Com Molde</p>
+            </div>
+            <button type="button" class="btn-add-coating" onclick="abrirModalNovoRevestimento()" title="Cadastrar nova pastilha ou revestimento personalizado">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              + Adicionar Pastilha
+            </button>
+          </div>
+
+          <!-- Lista Estruturada de Cards de Pastilhas (Sem Molde & Com Molde) -->
+          <div class="coatings-list-wrap" id="listaRevestimentosContainer">
+            <!-- Renderizado dinamicamente por renderizarTabelaRevestimentos() em precos.js -->
+          </div>
+        </div>
+
+        <!-- Card 5: Insumos Complementares & Argamassas -->
+        <div class="config-card">
+          <div class="config-card-header">
+            <div>
+              <h3 class="config-card-title">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polyline points="12 6 12 12 14 14"></polyline>
+                </svg>
+                5. Insumos Complementares &amp; Argamassas
+              </h3>
+              <p class="config-card-sub">Valores médios por m² para composições orçamentárias</p>
+            </div>
+          </div>
+
+          <div class="config-fields-list">
+            <div class="config-field-row">
+              <span class="config-field-label">Argamassa Especial de Assentamento:</span>
+              <div class="config-input-group">
+                <span class="config-prefix">R$</span>
+                <input type="number" id="preco_insumo_argamassa" class="config-input" step="0.50" min="0">
+                <span class="config-suffix">/m²</span>
+              </div>
+            </div>
+
+            <div class="config-field-row">
+              <span class="config-field-label">Rejunte Epóxi Impermeável:</span>
+              <div class="config-input-group">
+                <span class="config-prefix">R$</span>
+                <input type="number" id="preco_insumo_rejunte" class="config-input" step="0.50" min="0">
+                <span class="config-suffix">/m²</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Coluna da Direita: Peças de Acabamento + Laminação + Regras de Margem -->
+      <div class="config-col">
+        <!-- Card 2: Peças de Acabamento (R$/unidade) -->
+        <div class="config-card">
+          <div class="config-card-header">
+            <div>
+              <h3 class="config-card-title">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                  <polyline points="2 17 12 22 22 17"></polyline>
+                  <polyline points="2 12 12 17 22 12"></polyline>
+                </svg>
+                2. Peças de Acabamento (R$ por Unidade)
+              </h3>
+              <p class="config-card-sub">Cantoneiras BP11, quinas C3 e pastilhas boleadas</p>
+            </div>
+          </div>
+
+          <div class="config-fields-list">
+            <div class="config-field-row">
+              <span class="config-field-label">Cantoneira BP11 (20 cm cada):</span>
+              <div class="config-input-group">
+                <span class="config-prefix">R$</span>
+                <input type="number" id="preco_acab_bp11" class="config-input" step="0.50" min="0">
+                <span class="config-suffix">/un</span>
+              </div>
+            </div>
+
+            <div class="config-field-row">
+              <span class="config-field-label">Peça C3 (Quina viva):</span>
+              <div class="config-input-group">
+                <span class="config-prefix">R$</span>
+                <input type="number" id="preco_acab_c3" class="config-input" step="0.50" min="0">
+                <span class="config-suffix">/un</span>
+              </div>
+            </div>
+
+            <div class="config-field-row">
+              <span class="config-field-label">Pastilha Boleada 7,5x7,5 cm:</span>
+              <div class="config-input-group">
+                <span class="config-prefix">R$</span>
+                <input type="number" id="preco_acab_boleada_7_5" class="config-input" step="0.50" min="0">
+                <span class="config-suffix">/un</span>
+              </div>
+            </div>
+
+            <div class="config-field-row">
+              <span class="config-field-label">Pastilha Boleada 15x15 cm:</span>
+              <div class="config-input-group">
+                <span class="config-prefix">R$</span>
+                <input type="number" id="preco_acab_boleada_15" class="config-input" step="0.50" min="0">
+                <span class="config-suffix">/un</span>
+              </div>
+            </div>
+
+            <div class="config-field-row">
+              <span class="config-field-label">Peça Quebra-canto (Quina viva):</span>
+              <div class="config-input-group">
+                <span class="config-prefix">R$</span>
+                <input type="number" id="preco_acab_quebra_canto" class="config-input" step="0.50" min="0">
+                <span class="config-suffix">/un</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 3: Laminação e Molde (Incorporadora) -->
+        <div class="config-card">
+          <div class="config-card-header">
+            <div>
+              <h3 class="config-card-title">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect>
+                  <path d="M9 22v-4h6v4"></path>
+                  <line x1="8" y1="6" x2="10" y2="6"></line>
+                  <line x1="14" y1="6" x2="16" y2="6"></line>
+                </svg>
+                3. Laminação &amp; Regra de Molde (Incorporadora)
+              </h3>
+              <p class="config-card-sub">Preço do m² de laminação externa e volume gatilho para preço com molde</p>
+            </div>
+          </div>
+
+          <div class="config-fields-list">
+            <div class="config-field-row">
+              <div>
+                <span class="config-field-label">Preço da Laminação Externa:</span>
+                <span class="config-field-sub">Preço fixo por m² aplicado nas bordas e casco externo da piscina</span>
+              </div>
+              <div class="config-input-group">
+                <span class="config-prefix">R$</span>
+                <input type="number" id="preco_lam_m2" class="config-input" step="1.00" min="0">
+                <span class="config-suffix">/m²</span>
+              </div>
+            </div>
+
+            <div class="config-field-row">
+              <div>
+                <span class="config-field-label">Mínimo de Unidades para virar Molde:</span>
+                <span class="config-field-sub">Gatilho de lote na divisão Incorporadora</span>
+              </div>
+              <div class="config-input-group">
+                <input type="number" id="regra_min_molde" class="config-input" step="1" min="1">
+                <span class="config-suffix">unidades</span>
+              </div>
+            </div>
+            
+            <div class="mold-explanation-alert">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0; margin-top: 1px;">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+              </svg>
+              <div>
+                <strong>Regra da Incorporadora:</strong> Padrão: 10 un. Se algum modelo do orçamento atingir este volume, 
+                todas as piscinas do orçamento recebem automaticamente o <strong>preço da pastilha COM MOLDE</strong> (o benefício do molde incide sobre a pastilha).
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 4: Regras de Acréscimo e Margem -->
+        <div class="config-card">
+          <div class="config-card-header">
+            <div>
+              <h3 class="config-card-title">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="20" x2="18" y2="10"></line>
+                  <line x1="12" y1="20" x2="12" y2="4"></line>
+                  <line x1="6" y1="20" x2="6" y2="14"></line>
+                </svg>
+                4. Regras de Acréscimo &amp; Margem
+              </h3>
+              <p class="config-card-sub">Acréscimo estrutural e margens por etapa de venda</p>
+            </div>
+          </div>
+
+          <div class="config-fields-list">
+            <div class="config-field-row">
+              <span class="config-field-label">Acréscimo Piscina Autoportante:</span>
+              <div class="config-input-group">
+                <input type="number" id="regra_pct_autoportante" class="config-input" step="1" min="0">
+                <span class="config-suffix">%</span>
+              </div>
+            </div>
+            <p class="config-hint-text">Padrão: +50%. Aplicado sobre o valor base se a estrutura for autoportante.</p>
+
+            <div class="config-field-row" style="margin-top: 6px;">
+              <span class="config-field-label">Margem da Etapa Prévia:</span>
+              <div class="config-input-group">
+                <input type="number" id="regra_pct_previa" class="config-input" step="0.5" min="0">
+                <span class="config-suffix">%</span>
+              </div>
+            </div>
+
+            <div class="config-field-row">
+              <span class="config-field-label">Margem da Etapa Galga (Pré-venda):</span>
+              <div class="config-input-group">
+                <input type="number" id="regra_pct_galga" class="config-input" step="0.5" min="0">
+                <span class="config-suffix">%</span>
+              </div>
+            </div>
+
+            <div class="config-field-row">
+              <span class="config-field-label">Margem da Etapa Desenho Técnico:</span>
+              <div class="config-input-group">
+                <input type="number" id="regra_pct_desenho" class="config-input" step="0.5" min="0">
+                <span class="config-suffix">%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- ABA 2: GESTÃO DE USUÁRIOS & PERMISSÕES (SEÇÃO 3) -->
+    <!-- ========================================================================= -->
+    <div id="painelUsuarios" style="display: none;">
+      
+      <div class="users-table-card">
+        <div class="users-table-header-bar">
+          <div>
+            <strong style="font-size: 15px; color: #0f172a;">Usuários Cadastrados na Equipe</strong>
+            <span class="users-count-tag" id="lblTotalUsuarios">0 usuários</span>
+            <p style="font-size: 11.5px; color: #64748b; margin-top: 3px;">
+              Controle quais divisões (Sob Medida, Incorporadora, Internacional) e etapas cada colaborador pode acessar.
+            </p>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button type="button" class="btn btn-primary btn-sm" onclick="abrirModalNovoUsuario()">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              Novo Usuário
+            </button>
+          </div>
+        </div>
+
+        <div style="overflow-x: auto;">
+          <table class="users-mgmt-table">
+            <thead>
+              <tr>
+                <th>Colaborador</th>
+                <th>Perfil de Acesso</th>
+                <th>Divisões Autorizadas</th>
+                <th>Etapas Liberadas</th>
+                <th>Status</th>
+                <th style="text-align: right;">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyUsuarios">
+              <!-- Injetado dinamicamente -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
   </main>
 
-  <div id="toastBox" class="toast-container"></div>
+  <!-- ========================================================================= -->
+  <!-- MODAL: EDITAR / CRIAR USUÁRIO -->
+  <!-- ========================================================================= -->
+  <div id="modalUserForm" class="papasys-dialog-overlay" style="display: none;" onclick="fecharModalUserForm()">
+    <div class="papasys-dialog-card modal-lg" style="max-width: 620px;" onclick="event.stopPropagation()">
+      
+      <div class="papasys-dialog-header">
+        <div class="papasys-dialog-icon dialog-icon-info">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+        </div>
+        <div class="papasys-dialog-headings">
+          <h3 class="papasys-dialog-title" id="lblModalUserTitulo">Editar Permissões do Usuário</h3>
+          <p class="papasys-dialog-message">Defina os privilégios e escopo de atuação do colaborador.</p>
+        </div>
+        <button type="button" class="btn-close-modal" onclick="fecharModalUserForm()">&times;</button>
+      </div>
 
-  <script src="js/gsap.min.js"></script>
-  <script src="js/animations.js"></script>
+      <div class="papasys-dialog-body" style="padding-top: 6px;">
+        <form id="formUsuario" onsubmit="salvarUsuario(event)">
+          <input type="hidden" id="editUserId">
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+            <div class="form-group">
+              <label class="form-label">Nome Completo:</label>
+              <input type="text" id="editUserName" class="form-control" required placeholder="Ex: Victor Lourenço">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">E-mail de Acesso (Login):</label>
+              <input type="email" id="editUserEmail" class="form-control" required placeholder="Ex: usuario@papa.com">
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+            <div class="form-group">
+              <label class="form-label">Perfil / Papel:</label>
+              <select id="editUserRole" class="form-control" onchange="aoMudarRoleUsuario(this.value)">
+                <option value="user">Usuário Comum / Projetista (Restrito)</option>
+                <option value="admin">Administrador / Diretor (Acesso Total)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Cor do Avatar:</label>
+              <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px;" id="avatarColorPickerWrap">
+                <!-- Injetado dinamicamente -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Divisões Autorizadas -->
+          <div style="margin-bottom: 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
+            <label class="form-label" style="font-weight: 700; margin-bottom: 6px;">1. Divisões Autorizadas:</label>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; cursor: pointer;">
+                <input type="checkbox" id="chkDivSobMedida" value="sob_medida">
+                <span><strong>iGUi Sob Medida</strong> (1 orçamento = 1 piscina personalizada)</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; cursor: pointer;">
+                <input type="checkbox" id="chkDivIncorporadora" value="incorporadora">
+                <span><strong>iGUi Incorporadora</strong> (Multi-modelos, regras de molde e desmembramento)</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; cursor: pointer;">
+                <input type="checkbox" id="chkDivInternacional" value="internacional">
+                <span><strong>iGUi Internacional</strong> (Exportação e cotações globais)</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Etapas Autorizadas -->
+          <div style="margin-bottom: 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
+            <label class="form-label" style="font-weight: 700; margin-bottom: 6px;">2. Páginas / Etapas Autorizadas:</label>
+            <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+              <label style="display: flex; align-items: center; gap: 6px; font-size: 12.5px; cursor: pointer;">
+                <input type="checkbox" id="chkStagePrevia" value="previa">
+                <span>1. Prévia (+5% margem)</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 6px; font-size: 12.5px; cursor: pointer;">
+                <input type="checkbox" id="chkStageGalga" value="galga">
+                <span>2. Galga (0% pré-venda)</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 6px; font-size: 12.5px; cursor: pointer;">
+                <input type="checkbox" id="chkStageDesenho" value="desenho_tecnico">
+                <span>3. Desenho Técnico (Venda)</span>
+              </label>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+            <input type="checkbox" id="chkUserAtivo" checked>
+            <label for="chkUserAtivo" style="font-size: 12.5px; font-weight: 600; cursor: pointer;">
+              Usuário Ativo no Sistema (Permitir Login e Atribuição de Orçamentos)
+            </label>
+          </div>
+
+          <div class="papasys-dialog-footer" style="padding: 12px 0 0 0; margin-top: 14px; background: transparent; border-top: 1px solid #e2e8f0;">
+            <button type="button" class="btn btn-secondary" onclick="fecharModalUserForm()">Cancelar</button>
+            <button type="submit" class="btn btn-primary" id="btnSalvarUsuario">Salvar Permissões</button>
+          </div>
+        </form>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Modal: Adicionar Nova Pastilha / Revestimento -->
+  <div id="modalNovoRevestimento" class="modal-overlay" style="display: none;" onclick="fecharModalNovoRevestimento()">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="3" y1="9" x2="21" y2="9"></line>
+            <line x1="9" y1="3" x2="9" y2="21"></line>
+          </svg>
+          Adicionar Nova Pastilha / Revestimento
+        </h3>
+        <button class="btn-close-modal" onclick="fecharModalNovoRevestimento()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group" style="margin-bottom: 10px;">
+          <label class="form-label">Nome da Pastilha / Revestimento:</label>
+          <input type="text" id="inputNovoRevNome" class="form-control" placeholder="Ex: Pastilha Cristal 2,5x2,5 cm ou Porcelanato Portobello">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 10px;">
+          <label class="form-label">Regra de Acabamento Vinculada:</label>
+          <select id="selectNovoRevAcabamento" class="form-control">
+            <option value="bp11_c3">Cantoneira BP11 (20 cm) + Peça C3 (quina viva)</option>
+            <option value="boleada_7_5">Pastilha Boleada Reta 7,5x7,5 cm + Quebra-canto</option>
+            <option value="boleada_15">Pastilha Boleada Reta 15x15 cm + Quebra-canto</option>
+            <option value="personalizado">Personalizado (apenas metragens sem peças de acabamento)</option>
+          </select>
+        </div>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Preço Sem Molde (R$/m²):</label>
+            <div class="config-input-group">
+              <span class="config-prefix">R$</span>
+              <input type="number" id="inputNovoRevPrecoSemMolde" class="config-input" step="0.50" min="0" placeholder="0.00">
+              <span class="config-suffix">/m²</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Preço Com Molde (R$/m²):</label>
+            <div class="config-input-group">
+              <span class="config-prefix">R$</span>
+              <input type="number" id="inputNovoRevPrecoComMolde" class="config-input" step="0.50" min="0" placeholder="0.00">
+              <span class="config-suffix">/m²</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 8px; padding-top: 10px;">
+        <button type="button" class="btn btn-secondary" onclick="fecharModalNovoRevestimento()">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="confirmarAdicionarNovoRevestimento()">Salvar Pastilha</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Scripts -->
   <script src="js/config.js"></script>
-  <script src="js/supabase.js"></script>
-  <script src="js/calculator.js"></script>
   <script src="js/dialog.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/pricing.js"></script>
+  <script src="js/supabase.js"></script>
   <script src="js/precos.js"></script>
 </body>
 </html>

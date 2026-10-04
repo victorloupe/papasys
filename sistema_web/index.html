@@ -3,309 +3,415 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PapaSys - Sistema de Orçamentos e Paginação de Piscinas</title>
+  <title>iGUi Orçamentos - Sistema de Gestão Comercial e Engenharia</title>
   <link rel="icon" type="image/png" href="img/Icone.png">
   <link rel="shortcut icon" href="favicon.ico">
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css?v=1.4.1">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-  <!-- Top Navbar -->
+  
+  <!-- 1. TOP NAVBAR COM DIVISÕES E USUÁRIO ATIVO -->
   <nav class="navbar">
-    <a href="index.html" class="brand">
-      <img src="img/Icone.png" alt="PapaSys Icon" class="brand-logo-img">
-      <div>
-        <span class="brand-title"><span class="brand-dark">PAPA</span><span class="brand-orange">SYS</span></span>
-        <span class="brand-sub">Sistema de Orçamento</span>
-      </div>
-    </a>
-
-    <div class="nav-links">
-      <a href="index.html" class="nav-item active">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="3" width="7" height="9" rx="1"></rect>
-          <rect x="14" y="3" width="7" height="5" rx="1"></rect>
-          <rect x="14" y="12" width="7" height="9" rx="1"></rect>
-          <rect x="3" y="16" width="7" height="5" rx="1"></rect>
-        </svg>
-        Dashboard Kanban
-      </a>
-      <a href="precos.html" class="nav-item">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
-          <line x1="7" y1="7" x2="7.01" y2="7"></line>
-        </svg>
-        Tabela de Preços
-      </a>
-      <a href="plugin/papasys_paginacao.rbz" class="nav-item" download title="Download do arquivo (.rbz) para instalar no SketchUp">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-          <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-          <line x1="12" y1="22.08" x2="12" y2="12"></line>
-        </svg>
-        Plugin SketchUp (.rbz)
-      </a>
-    </div>
-
-    <div class="nav-actions">
-      <button class="btn btn-secondary btn-sm" onclick="abrirModalSimulacao()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-        </svg>
-        Simular Envio 3D
-      </button>
-      <button class="btn btn-primary btn-sm" onclick="abrirModalSimulacao()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="12" y1="5" x2="12" y2="19"></line>
-          <line x1="5" y1="12" x2="19" y2="12"></line>
-        </svg>
-        Novo Orçamento
-      </button>
-    </div>
-  </nav>
-
-  <!-- Main Content -->
-  <main class="main-content">
-    <!-- Header & Search -->
-    <div class="page-header">
-      <div>
-        <h1 class="page-title">Painel de Orçamentos & Obras</h1>
-        <p class="page-subtitle">Projetos recebidos do SketchUp com paginação modular e quantitativos automáticos</p>
-      </div>
-
-      <div class="filter-bar">
-        <div class="search-input-wrap">
-          <span class="search-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-          </span>
-          <input type="text" id="searchProjects" class="search-input" placeholder="Pesquisa Inteligente: projeto, cliente, pastilha, valor (>10k)..." autocomplete="off">
-          <button id="btnClearSearch" class="search-clear-btn hidden" onclick="limparBusca()" title="Limpar busca (Esc)">
-            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-          <span class="search-shortcut">/</span>
+    <div class="nav-left">
+      <a href="index.html" class="brand">
+        <img src="img/Logo_Oficial_iGUi.png" alt="iGUi" class="brand-logo-img">
+        <div class="brand-text">
+          <span class="brand-title">SISTEMA DE ORÇAMENTOS</span>
+          <span class="brand-subtitle-tag">Engenharia 3D & Comercial</span>
         </div>
-        <div id="searchFeedback" class="search-feedback-badge hidden"></div>
-        <button id="btnToggleAllCards" class="btn-toggle-all" onclick="toggleTodosCards()" title="Recolher ou Expandir todos os orçamentos">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="7 13 12 18 17 13"></polyline>
-            <polyline points="7 6 12 11 17 6"></polyline>
+      </a>
+
+      <div class="nav-divider"></div>
+
+      <!-- Seletor das 3 Divisões Independentes (Seção 2) -->
+      <div class="division-nav-tabs">
+        <button type="button" id="tabDivSobMedida" class="division-tab-btn active" data-division="sob_medida" onclick="App.selectDivision('sob_medida')" title="Divisão iGUi Sob Medida">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" class="div-icon-svg">
+            <path d="M2 12c2.5-3 5.5-3 8 0s5.5 3 8 0 3-1.5 4-1.5"></path>
+            <path d="M2 17c2.5-3 5.5-3 8 0s5.5 3 8 0 3-1.5 4-1.5"></path>
           </svg>
-          <span id="txtToggleAll">Recolher Todos</span>
+          <span class="div-label">Sob Medida</span>
+        </button>
+
+        <button type="button" id="tabDivIncorporadora" class="division-tab-btn" data-division="incorporadora" onclick="App.selectDivision('incorporadora')" title="Divisão Incorporadora (B2B)">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" class="div-icon-svg">
+            <rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect>
+            <path d="M9 22v-4h6v4"></path>
+            <line x1="8" y1="6" x2="10" y2="6"></line>
+            <line x1="14" y1="6" x2="16" y2="6"></line>
+            <line x1="8" y1="10" x2="10" y2="10"></line>
+            <line x1="14" y1="10" x2="16" y2="10"></line>
+            <line x1="8" y1="14" x2="10" y2="14"></line>
+            <line x1="14" y1="14" x2="16" y2="14"></line>
+          </svg>
+          <span class="div-label">Incorporadora</span>
+        </button>
+
+        <button type="button" id="tabDivInternacional" class="division-tab-btn" data-division="internacional" onclick="App.selectDivision('internacional')" title="Divisão Internacional (Exportação)">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" class="div-icon-svg">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="2" y1="12" x2="22" y2="12"></line>
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+          </svg>
+          <span class="div-label">Internacional</span>
+        </button>
+
+        <!-- Apenas Admin vê Dashboard Geral (Seção 3) -->
+        <button type="button" id="tabDivDashboardGeral" class="division-tab-btn admin-only" data-division="dashboard_geral" onclick="App.selectDivision('dashboard_geral')" title="Dashboard Geral de Desempenho (Admin)" style="display: none;">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" class="div-icon-svg">
+            <line x1="18" y1="20" x2="18" y2="10"></line>
+            <line x1="12" y1="20" x2="12" y2="4"></line>
+            <line x1="6" y1="20" x2="6" y2="14"></line>
+          </svg>
+          <span class="div-label">Dashboard Geral</span>
         </button>
       </div>
     </div>
 
-    <!-- Estatísticas Executivas (Stat Tiles) -->
-    <div class="stats-overview">
-      <div class="stat-tile">
-        <div class="stat-tile-header">
-          <span class="stat-tile-label">Total de Projetos</span>
-          <div class="stat-tile-icon stat-icon-blue">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="3" width="7" height="9" rx="1"></rect>
-              <rect x="14" y="3" width="7" height="5" rx="1"></rect>
-              <rect x="14" y="12" width="7" height="9" rx="1"></rect>
-              <rect x="3" y="16" width="7" height="5" rx="1"></rect>
-            </svg>
+    <!-- Ações e Perfil do Usuário no Canto Direito -->
+    <div class="nav-right">
+      <a href="plugin/papasys_paginacao.rbz" class="nav-link-btn btn-plugin" download title="Baixar Plugin para SketchUp (.rbz)">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        <span class="nav-btn-text">Plugin SketchUp</span>
+      </a>
+
+      <a href="precos.html" id="linkConfigPrecos" class="nav-link-btn admin-only" title="Configurações do Sistema & Gestão de Usuários (Admin)" style="display: none;">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+        <span class="nav-btn-text">Configurações</span>
+      </a>
+
+      <button class="btn btn-primary btn-sm btn-new-budget" onclick="App.abrirModalNovoOrcamento()" title="Criar Novo Orçamento de Piscina">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        <span class="nav-btn-text">Novo Orçamento</span>
+      </button>
+
+      <div class="nav-divider"></div>
+
+      <!-- Perfil do Usuário Ativo com Sair Integrado para Otimização de Espaço -->
+      <div class="user-profile-menu">
+        <div class="user-profile-info" onclick="App.toggleUserModal()" title="Clique para alternar de usuário ou gerenciar permissões da equipe">
+          <div class="user-profile-avatar" id="navUserAvatar">VL</div>
+          <div class="user-profile-meta">
+            <span class="user-profile-name" id="navUserName">Victor Lourenço</span>
+            <span class="badge-user-role" id="navUserRole">Projetista</span>
           </div>
+          <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" class="user-profile-chevron">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
         </div>
-        <div id="statTotalCount" class="stat-tile-value tabular-nums">0</div>
-        <div class="stat-tile-sub">Registrados no PapaSys</div>
+
+        <div class="user-profile-divider"></div>
+
+        <button type="button" class="btn-inline-logout" onclick="event.stopPropagation(); Auth.logout();" title="Encerrar Sessão e Sair do Sistema">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- 2. BARRA DE PÁGINAS / FLUXO DO ORÇAMENTO (SEÇÃO 1) -->
+  <!-- "O sistema deixa de ser um Kanban e passa a ser organizado por páginas: Prévia · Galga · Desenho Técnico" -->
+  <div class="stage-pipeline-bar" id="stageNavigationWrap">
+    <div class="pipeline-container">
+      <div class="pipeline-pills-row">
+        
+        <button type="button" class="stage-pill-btn active" data-stage="previa" onclick="App.selectStage('previa')">
+          <span class="stage-num">1</span>
+          <div class="stage-btn-content">
+            <span class="stage-btn-title">Prévia</span>
+            <span class="stage-btn-sub">Estimativa preliminar (+5% margem)</span>
+          </div>
+          <span class="stage-counter-badge" id="counterStagePrevia">0</span>
+        </button>
+
+        <div class="stage-connector">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </div>
+
+        <button type="button" class="stage-pill-btn" data-stage="galga" onclick="App.selectStage('galga')">
+          <span class="stage-num">2</span>
+          <div class="stage-btn-content">
+            <span class="stage-btn-title">Galga (Pré-venda)</span>
+            <span class="stage-btn-sub">Quadro técnico pré-venda (0% margem)</span>
+          </div>
+          <span class="stage-counter-badge" id="counterStageGalga">0</span>
+        </button>
+
+        <div class="stage-connector">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </div>
+
+        <button type="button" class="stage-pill-btn" data-stage="desenho_tecnico" onclick="App.selectStage('desenho_tecnico')">
+          <span class="stage-num">3</span>
+          <div class="stage-btn-content">
+            <span class="stage-btn-title">Desenho Técnico (Venda)</span>
+            <span class="stage-btn-sub">Documentação técnica executiva (Apenas no Sistema)</span>
+          </div>
+          <span class="stage-counter-badge" id="counterStageDesenho">0</span>
+        </button>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. CONTEÚDO PRINCIPAL -->
+  <main class="main-content">
+    
+    <!-- Header de Contexto da Página & Pesquisa -->
+    <div class="page-context-header">
+      <div>
+        <h1 class="page-main-title" id="pageCurrentTitle">iGUi Sob Medida &bull; Prévia</h1>
+        <p class="page-main-sub" id="pageCurrentSub">Fluxo de orçamentos e aprovações da divisão.</p>
       </div>
 
-      <div class="stat-tile">
-        <div class="stat-tile-header">
-          <span class="stat-tile-label">Volume em Orçamentos</span>
-          <div class="stat-tile-icon stat-icon-orange">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
-              <polyline points="17 6 23 6 23 12"></polyline>
-            </svg>
-          </div>
-        </div>
-        <div id="statTotalValor" class="stat-tile-value tabular-nums" style="color: var(--orange-600);">R$ 0,00</div>
-        <div class="stat-tile-sub">Preço total sugerido</div>
-      </div>
-
-      <div class="stat-tile">
-        <div class="stat-tile-header">
-          <span class="stat-tile-label">Metragem Revestimento</span>
-          <div class="stat-tile-icon stat-icon-green">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2"></rect>
-              <path d="M3 9h18"></path>
-              <path d="M3 15h18"></path>
-              <path d="M9 3v18"></path>
-              <path d="M15 3v18"></path>
-            </svg>
-          </div>
-        </div>
-        <div id="statTotalM2" class="stat-tile-value tabular-nums" style="color: var(--status-aprovado);">0.0 m²</div>
-        <div class="stat-tile-sub">Área líquida acumulada</div>
-      </div>
-
-      <div class="stat-tile">
-        <div class="stat-tile-header">
-          <span class="stat-tile-label">Propostas Aprovadas</span>
-          <div class="stat-tile-icon stat-icon-purple">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-              <polyline points="22 4 12 14.01 9 11.01"></polyline>
-            </svg>
-          </div>
-        </div>
-        <div id="statAprovados" class="stat-tile-value tabular-nums" style="color: var(--status-enviado);">0</div>
-        <div class="stat-tile-sub">Prontas para execução</div>
+      <div class="search-bar-wrap">
+        <span class="search-icon">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+        </span>
+        <input type="text" id="searchBudgets" class="search-input" placeholder="Pesquisar por código, cliente, modelo, responsável (Pressione /)..." autocomplete="off">
+        <span class="search-shortcut-hint">/</span>
       </div>
     </div>
 
-    <!-- Segmented Tabs (Filtros por Status) -->
-    <div class="segmented-tabs-container">
-      <button class="tab-pill active" onclick="filtrarPorAba('todos', this)">
-        <span>Todos os Projetos</span>
-        <span id="tab-count-todos" class="tab-count">0</span>
-      </button>
-      <button class="tab-pill" onclick="filtrarPorAba('novo', this)">
-        <span class="tab-dot" style="background: var(--status-novo);"></span>
-        <span>Novos do 3D</span>
-        <span id="tab-count-novo" class="tab-count">0</span>
-      </button>
-      <button class="tab-pill" onclick="filtrarPorAba('em_analise', this)">
-        <span class="tab-dot" style="background: var(--status-analise);"></span>
-        <span>Em Análise</span>
-        <span id="tab-count-em_analise" class="tab-count">0</span>
-      </button>
-      <button class="tab-pill" onclick="filtrarPorAba('enviado', this)">
-        <span class="tab-dot" style="background: var(--status-enviado);"></span>
-        <span>Propostas Enviadas</span>
-        <span id="tab-count-enviado" class="tab-count">0</span>
-      </button>
-      <button class="tab-pill" onclick="filtrarPorAba('aprovado', this)">
-        <span class="tab-dot" style="background: var(--status-aprovado);"></span>
-        <span>Aprovados / Obra</span>
-        <span id="tab-count-aprovado" class="tab-count">0</span>
-      </button>
-      <button class="tab-pill" onclick="filtrarPorAba('rejeitado', this)">
-        <span class="tab-dot" style="background: var(--status-rejeitado);"></span>
-        <span>Arquivados</span>
-        <span id="tab-count-rejeitado" class="tab-count">0</span>
-      </button>
+    <!-- Container Dinâmico (Renderizado por app.js) -->
+    <div id="mainContentArea" class="content-container">
+      <!-- Injetado via App.renderContent() -->
     </div>
 
-    <!-- Kanban Board -->
-    <div class="kanban-board">
-      <!-- Coluna: Novo -->
-      <div class="kanban-column" ondragover="permitirDrop(event)" ondragleave="dragLeave(event)" ondrop="dropNoStatus(event, 'novo')">
-        <div class="column-header">
-          <div class="column-title">
-            <span class="status-dot" style="background: var(--status-novo);"></span>
-            Novos do SketchUp
-          </div>
-          <span id="count-novo" class="column-count-badge">0</span>
-        </div>
-        <div id="col-novo" class="column-body"></div>
-      </div>
-
-      <!-- Coluna: Em Análise -->
-      <div class="kanban-column" ondragover="permitirDrop(event)" ondragleave="dragLeave(event)" ondrop="dropNoStatus(event, 'em_analise')">
-        <div class="column-header">
-          <div class="column-title">
-            <span class="status-dot" style="background: var(--status-analise);"></span>
-            Em Análise Técnica
-          </div>
-          <span id="count-em_analise" class="column-count-badge">0</span>
-        </div>
-        <div id="col-em_analise" class="column-body"></div>
-      </div>
-
-      <!-- Coluna: Enviado -->
-      <div class="kanban-column" ondragover="permitirDrop(event)" ondragleave="dragLeave(event)" ondrop="dropNoStatus(event, 'enviado')">
-        <div class="column-header">
-          <div class="column-title">
-            <span class="status-dot" style="background: var(--status-enviado);"></span>
-            Proposta Enviada
-          </div>
-          <span id="count-enviado" class="column-count-badge">0</span>
-        </div>
-        <div id="col-enviado" class="column-body"></div>
-      </div>
-
-      <!-- Coluna: Aprovado -->
-      <div class="kanban-column" ondragover="permitirDrop(event)" ondragleave="dragLeave(event)" ondrop="dropNoStatus(event, 'aprovado')">
-        <div class="column-header">
-          <div class="column-title">
-            <span class="status-dot" style="background: var(--status-aprovado);"></span>
-            Aprovados / Obra
-          </div>
-          <span id="count-aprovado" class="column-count-badge">0</span>
-        </div>
-        <div id="col-aprovado" class="column-body"></div>
-      </div>
-
-      <!-- Coluna: Rejeitado -->
-      <div class="kanban-column" ondragover="permitirDrop(event)" ondragleave="dragLeave(event)" ondrop="dropNoStatus(event, 'rejeitado')">
-        <div class="column-header">
-          <div class="column-title">
-            <span class="status-dot" style="background: var(--status-rejeitado);"></span>
-            Arquivados
-          </div>
-          <span id="count-rejeitado" class="column-count-badge">0</span>
-        </div>
-        <div id="col-rejeitado" class="column-body"></div>
-      </div>
-    </div>
   </main>
 
-  <!-- Modal: Simulação de Recebimento do SketchUp -->
-  <div id="modalSimulacao" class="modal-overlay hidden">
-    <div class="modal-content">
+  <!-- ==============================================================================
+       MODAIS DO SISTEMA
+  ============================================================================== -->
+
+  <!-- Modal 1: Troca de Usuário / Sessão Ativa & Gestão de Equipe (Seção 3) -->
+  <div id="modalUserSelect" class="modal-overlay" style="display: none;" onclick="App.closeAllModals()">
+    <div class="modal-card modal-lg" onclick="event.stopPropagation()">
       <div class="modal-header">
-        <h3 class="modal-title">Simular Envio do Plugin SketchUp</h3>
-        <button class="modal-close" onclick="fecharModalSimulacao()">✕</button>
+        <h3 class="modal-title" id="modalUserTitle">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+          Sessão & Gestão de Usuários
+        </h3>
+        <button class="btn-close-modal" onclick="App.closeAllModals()">&times;</button>
+      </div>
+
+      <!-- Tab bar seletora entre Alternar Sessão e Gerenciar Equipe -->
+      <div class="modal-tabs" id="modalUserTabs">
+        <button type="button" class="modal-tab-btn active" id="tabBtnAlternarUsuario" onclick="App.alternarAbaUsuario('switch')">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="17 1 21 5 17 9"></polyline>
+            <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+            <polyline points="7 23 3 19 7 15"></polyline>
+            <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+          </svg>
+          Alternar Sessão
+        </button>
+        <button type="button" class="modal-tab-btn" id="tabBtnGerenciarEquipe" onclick="App.alternarAbaUsuario('manage')">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+          Gerenciar Equipe (Admin)
+        </button>
+      </div>
+
+      <div class="modal-body" id="modalUserBody">
+        <!-- Renderizado dinamicamente por App.renderUserModalContent() -->
+      </div>
+      
+      <div class="modal-footer" id="modalUserFooter">
+        <button class="btn btn-secondary" onclick="App.closeAllModals()">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: Novo Orçamento Direto no Sistema -->
+  <div id="modalNovoOrcamento" class="modal-overlay" style="display: none;" onclick="App.closeAllModals()">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align: -2px; margin-right: 4px;">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Criar Novo Orçamento
+        </h3>
+        <button class="btn-close-modal" onclick="App.closeAllModals()">&times;</button>
       </div>
       <div class="modal-body">
         <div class="form-group">
-          <label class="form-label">Nome do Projeto / Piscina</label>
-          <input type="text" id="simNome" class="form-input" value="Piscina Residência Jardins">
+          <label class="form-label">Número do Orçamento (do E-mail):</label>
+          <input type="text" id="inputNovoCodigo" class="form-control" placeholder="Ex: 84920 ou ORC-2026-0842">
         </div>
         <div class="form-group">
-          <label class="form-label">Nome do Cliente</label>
-          <input type="text" id="simCliente" class="form-input" value="Dr. Carlos Alberto">
+          <label class="form-label">Nome do Projeto / Empreendimento:</label>
+          <input type="text" id="inputNovoProjNome" class="form-control" value="Residencial iGUi Prime">
         </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">Área Interna (m²)</label>
-            <input type="number" id="simArea" class="form-input" value="34.66" step="0.1">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Borda Perímetro (m)</label>
-            <input type="number" id="simBorda" class="form-input" value="17.02" step="0.1">
-          </div>
+        <div class="form-group">
+          <label class="form-label">Cliente / Contratante:</label>
+          <input type="text" id="inputNovoCliNome" class="form-control" value="Cliente Geral">
         </div>
-        <div class="form-row">
+        <div class="grid-2">
           <div class="form-group">
-            <label class="form-label">Especificação Pastilhas</label>
-            <input type="text" id="simSpec" class="form-input" value="15x15">
+            <label class="form-label">Divisão:</label>
+            <select id="selectNovoDivisao" class="form-control">
+              <option value="sob_medida">iGUi Sob Medida</option>
+              <option value="incorporadora">iGUi Incorporadora</option>
+              <option value="internacional">iGUi Internacional</option>
+            </select>
           </div>
           <div class="form-group">
-            <label class="form-label">Dimensões 3D (C x L x P)</label>
-            <input type="text" id="simDim" class="form-input" value="6.7 x 3.0 x 1.5 m">
+            <label class="form-label">Etapa Inicial:</label>
+            <select id="selectNovoEtapa" class="form-control">
+              <option value="previa">1. Prévia (+5%)</option>
+              <option value="galga">2. Galga (0%)</option>
+              <option value="desenho_tecnico">3. Desenho Técnico (Venda)</option>
+            </select>
           </div>
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary btn-sm" onclick="fecharModalSimulacao()">Cancelar</button>
-        <button class="btn btn-primary btn-sm" onclick="executarSimulacao()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;">
-            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+        <button class="btn btn-secondary" onclick="App.closeAllModals()">Cancelar</button>
+        <button class="btn btn-primary" onclick="App.criarNovoOrcamentoManual()">Criar Orçamento</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 3: Dividir Unidades (Incorporadora - Seção 10.1) -->
+  <div id="modalDividirUnidades" class="modal-overlay" style="display: none;" onclick="App.closeAllModals()">
+    <div class="modal-card modal-lg" style="max-width: 720px;" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -3px; margin-right: 6px; color: #0284c7;">
+            <polyline points="17 1 21 5 17 9"></polyline>
+            <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+            <polyline points="7 23 3 19 7 15"></polyline>
+            <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
           </svg>
-          Enviar Projeto
+          Desmembrar Lotes de Unidades (Incorporadora)
+        </h3>
+        <button class="btn-close-modal" onclick="App.closeAllModals()">&times;</button>
+      </div>
+      <div class="modal-body" id="conteudoDividirUnidades" style="max-height: 80vh; overflow-y: auto; padding: 20px 24px;">
+        <!-- Injetado dinamicamente via App.abrirModalDividirOrcamento() -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 4: Reatribuir Responsável ("Quem está fazendo o quê" - Seção 3) -->
+  <div id="modalReatribuir" class="modal-overlay" style="display: none;" onclick="App.closeAllModals()">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          Atribuir Responsável pelo Orçamento
+        </h3>
+        <button class="btn-close-modal" onclick="App.closeAllModals()">&times;</button>
+      </div>
+      <div class="modal-body" id="conteudoReatribuir">
+        <!-- Injetado dinamicamente -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="App.closeAllModals()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 5: Gerenciar Usuários & Permissões (Somente Admin - Seção 3) -->
+  <div id="modalGerenciarUsuarios" class="modal-overlay" style="display: none;" onclick="App.closeAllModals()">
+    <div class="modal-card modal-lg" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -3px; margin-right: 4px;">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+          Gestão de Usuários & Permissões da Equipe (Admin)
+        </h3>
+        <button class="btn-close-modal" onclick="App.closeAllModals()">&times;</button>
+      </div>
+      <div class="modal-body" id="conteudoGerenciarUsuarios">
+        <!-- Injetado dinamicamente -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="App.closeAllModals()">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 6: Confirmação de Galga Técnica com a Fábrica -->
+  <div id="modalConfirmarGalga" class="modal-overlay" style="display: none;" onclick="App.closeAllModals()">
+    <div class="modal-card modal-lg" style="max-width: 680px;" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -3px; margin-right: 4px;">
+            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+            <polyline points="2 17 12 22 22 17"></polyline>
+            <polyline points="2 12 12 17 22 12"></polyline>
+          </svg>
+          Confirmação de Galga Técnica com a Fábrica
+        </h3>
+        <button class="btn-close-modal" onclick="App.closeAllModals()">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding-top: 4px;">
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px; margin-bottom: 14px; font-size: 12.5px; color: #1e40af; line-height: 1.5;">
+          <strong>Atenção para a Validação da Galga:</strong> Na etapa de <strong>Prévia (+5% de margem)</strong>, as medidas são estimativas preliminares de projeto. A etapa de <strong>Galga (0% de margem)</strong> exige a confirmação técnica da fábrica sobre a viabilidade com a modulação real das pastilhas e assentamento, podendo haver pequenas alterações nas medidas da piscina. Confirme ou ajuste as dimensões abaixo:
+        </div>
+
+        <div id="appGalgaPoolsContainer">
+          <!-- Injetado dinamicamente -->
+        </div>
+
+        <div style="margin-top: 14px; padding: 10px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+          <label style="display: flex; align-items: flex-start; gap: 8px; font-size: 13px; cursor: pointer; color: #1e293b;">
+            <input type="checkbox" id="chkAppGalgaConfirm" onchange="App.aoAlternarCheckboxGalga(this.checked)" style="margin-top: 2px;">
+            <span><strong>Confirmo que a galga técnica foi validada junto à fábrica</strong> para este modelo de pastilha e que as medidas acima foram verificadas e são definitivas para a etapa de Galga.</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="App.closeAllModals()">Cancelar / Manter em Prévia</button>
+        <button type="button" id="btnAppConfirmarGalga" class="btn btn-primary btn-sm" onclick="App.executarConfirmacaoGalga()" disabled>
+          Confirmar e Avançar para Galga (0%)
         </button>
       </div>
     </div>
@@ -316,11 +422,12 @@
 
   <!-- Scripts -->
   <script src="js/gsap.min.js"></script>
-  <script src="js/animations.js"></script>
-  <script src="js/config.js"></script>
-  <script src="js/supabase.js"></script>
-  <script src="js/calculator.js"></script>
-  <script src="js/dialog.js"></script>
-  <script src="js/kanban.js"></script>
+  <script src="js/animations.js?v=1.4.0"></script>
+  <script src="js/config.js?v=1.4.0"></script>
+  <script src="js/dialog.js?v=1.4.0"></script>
+  <script src="js/auth.js?v=1.4.0"></script>
+  <script src="js/pricing.js?v=1.4.0"></script>
+  <script src="js/supabase.js?v=1.4.0"></script>
+  <script src="js/app.js?v=1.4.0"></script>
 </body>
 </html>

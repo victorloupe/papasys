@@ -3,245 +3,239 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PapaSys - Proposta Comercial Executiva</title>
+  <title>iGUi - Proposta Comercial Executiva & Ficha Técnica</title>
   <link rel="icon" type="image/png" href="img/Icone.png">
   <link rel="shortcut icon" href="favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body style="background-color: var(--bg-page);">
+<body style="background-color: var(--slate-100);">
+
   <!-- Navbar (Oculta na Impressão) -->
   <nav class="navbar no-print">
-    <a href="index.html" class="brand">
-      <img src="img/Icone.png" alt="PapaSys Icon" class="brand-logo-img">
-      <div>
-        <span class="brand-title"><span class="brand-dark">PAPA</span><span class="brand-orange">SYS</span></span>
-        <span class="brand-sub">Sistema de Orçamento</span>
-      </div>
-    </a>
-
-    <div class="nav-links">
-      <a href="index.html" class="nav-item">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="3" width="7" height="9" rx="1"></rect>
-          <rect x="14" y="3" width="7" height="5" rx="1"></rect>
-          <rect x="14" y="12" width="7" height="9" rx="1"></rect>
-          <rect x="3" y="16" width="7" height="5" rx="1"></rect>
-        </svg>
-        Dashboard Kanban
-      </a>
-      <a href="precos.html" class="nav-item">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
-          <line x1="7" y1="7" x2="7.01" y2="7"></line>
-        </svg>
-        Tabela de Preços
-      </a>
-      <a href="plugin/papasys_paginacao.rbz" class="nav-item" download>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-          <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-          <line x1="12" y1="22.08" x2="12" y2="12"></line>
-        </svg>
-        Plugin SketchUp (.rbz)
+    <div class="nav-left">
+      <a href="index.html" class="brand">
+        <img src="img/Logo_Oficial_iGUi.png" alt="iGUi" class="brand-logo-img">
+        <div class="brand-text">
+          <span class="brand-title">PROPOSTA COMERCIAL</span>
+          <span class="brand-sub">Ficha Técnica e Memorial de Venda</span>
+        </div>
       </a>
     </div>
 
-    <div class="nav-actions">
-      <a href="index.html" class="btn btn-outline btn-sm">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="19" y1="12" x2="5" y2="12"></line>
-          <polyline points="12 19 5 12 12 5"></polyline>
-        </svg>
+    <div class="nav-right">
+      <a href="index.html" class="btn btn-secondary btn-sm">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 3px;"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
         Voltar ao Painel
       </a>
+
+      <button class="btn btn-primary btn-sm" onclick="window.print()">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 4px;"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+        Imprimir / Salvar PDF
+      </button>
+
+      <div class="nav-divider"></div>
+
+      <!-- Perfil do Usuário Ativo com Sair Integrado -->
+      <div class="user-profile-menu">
+        <div class="user-profile-info" onclick="window.location.href='index.html'" title="Usuário Ativo - Voltar ao Painel">
+          <div class="user-profile-avatar" id="propUserAvatar">AD</div>
+          <div class="user-profile-meta">
+            <span class="user-profile-name" id="propUserName">Administrador</span>
+            <span class="badge-user-role admin" id="propUserRole">Diretoria / Admin</span>
+          </div>
+          <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" class="user-profile-chevron">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+
+        <div class="user-profile-divider"></div>
+
+        <button type="button" class="btn-inline-logout" onclick="event.stopPropagation(); Auth.logout();" title="Encerrar Sessão e Sair do Sistema">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+        </button>
+      </div>
     </div>
   </nav>
 
-  <!-- Docks Laterais Fixos na Tela (4 Botões Fixos) -->
-  <aside class="proposal-dock-top no-print" aria-label="Modo de Visualização">
-    <button id="btnModoDetalhado" class="side-dock-btn active" onclick="setModoExibicao(false)" title="Exibir preços unitários e subtotais detalhados">
-      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="8" y1="6" x2="21" y2="6"></line>
-        <line x1="8" y1="12" x2="21" y2="12"></line>
-        <line x1="8" y1="18" x2="21" y2="18"></line>
-        <line x1="3" y1="6" x2="3.01" y2="6"></line>
-        <line x1="3" y1="12" x2="3.01" y2="12"></line>
-        <line x1="3" y1="18" x2="3.01" y2="18"></line>
-      </svg>
-      <span>Preços Detalhados</span>
-    </button>
-
-    <button id="btnModoGlobal" class="side-dock-btn" onclick="setModoExibicao(true)" title="Ocultar valores unitários e apresentar escopo incluso">
-      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="20 6 9 17 4 12"></polyline>
-      </svg>
-      <span>Escopo Incluso</span>
-    </button>
-  </aside>
-
-  <aside class="proposal-dock-bottom no-print" aria-label="Ações da Proposta">
-    <button id="btnEditarOrcamento" class="side-dock-btn" title="Retornar à tela de edição analítica de quantitativos">
-      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 20h9"></path>
-        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
-      </svg>
-      <span>Editar Orçamento</span>
-    </button>
-
-    <button class="side-dock-btn side-dock-primary" onclick="imprimirProposta()" title="Imprimir proposta ou salvar em formato PDF A4">
-      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="6 9 6 2 18 2 18 9"></polyline>
-        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
-        <rect x="6" y="14" width="12" height="8"></rect>
-      </svg>
-      <span>Imprimir / Salvar PDF</span>
-    </button>
-  </aside>
-
-  <!-- Proposta Comercial Executiva (Documento A4) -->
-  <div class="proposal-wrapper">
-
-    <!-- Cabeçalho -->
-    <header class="proposal-header">
-      <div class="proposal-logo-wrap">
-        <img src="img/Icone.png" alt="PapaSys Logo" class="proposal-logo-img">
+  <!-- Folha A4 da Proposta Executiva -->
+  <div class="proposal-paper">
+    
+    <!-- Header do Documento -->
+    <div class="prop-doc-header">
+      <div class="prop-brand">
+        <img src="img/Logo_Oficial_iGUi.png" alt="iGUi" class="brand-logo-img" style="height: 38px; width: auto; object-fit: contain;">
         <div>
-          <div class="proposal-brand-name">
-            <span class="dark">PAPA</span><span class="orange">SYS</span>
-          </div>
-          <p class="proposal-tagline">Engenharia de Paginação Modular & Orçamentos</p>
+          <h1 class="prop-doc-title">PROPOSTA COMERCIAL & FICHA TÉCNICA</h1>
+          <p class="prop-doc-sub">SISTEMA INTEGRADO DE ENGENHARIA E ORÇAMENTOS iGUi</p>
         </div>
       </div>
 
-      <div class="proposal-doc-title">
-        <h2>Proposta Comercial Executiva</h2>
-        <span>Documento Nº <strong id="docNumero" class="tabular-nums">000000</strong></span>
-      </div>
-    </header>
-
-    <!-- Metadados -->
-    <div class="proposal-meta-grid">
-      <div class="proposal-meta-col">
-        <h4>Cliente</h4>
-        <p id="propCliente">Carregando...</p>
-      </div>
-      <div class="proposal-meta-col">
-        <h4>Projeto</h4>
-        <p id="propProjeto">Carregando...</p>
-      </div>
-      <div class="proposal-meta-col">
-        <h4>Data de Emissão</h4>
-        <p id="docData">--</p>
-      </div>
-      <div class="proposal-meta-col">
-        <h4>Validade</h4>
-        <p id="docValidade">15 dias</p>
+      <div class="prop-meta-box">
+        <div class="meta-row"><strong>Código:</strong> <span id="propCodigo" class="code-badge">ORC-0000</span></div>
+        <div class="meta-row"><strong>Data:</strong> <span id="propData">--/--/----</span></div>
+        <div class="meta-row"><strong>Divisão:</strong> <span id="propDivisao" class="tag-div">iGUi Sob Medida</span></div>
+        <div class="meta-row"><strong>Etapa:</strong> <span id="propEtapa" class="stage-tag previa">Prévia</span></div>
       </div>
     </div>
 
-    <!-- Destaque Técnico da Paginação Modular -->
-    <div class="proposal-spec-box">
-      <h3>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
-          <polyline points="2 17 12 22 22 17"></polyline>
-          <polyline points="2 12 12 17 22 12"></polyline>
-        </svg>
-        Tecnologia de Paginação Modular PapaSys (3D Centralizado)
-      </h3>
-      <p>
-        Este projeto foi modulado tridimensionalmente a partir do centro exato da piscina através do motor geométrico <strong>PapaSys</strong>. As faces foram atraídas com precisão milimétrica para a grelha modular da peça especificada (<strong id="propRevestimento">15x15 cm</strong>), eliminando recortes de canto e tiras estreitas, assegurando simetria estética harmoniosa e minimizando o desperdício de material.
-      </p>
-      <div style="display: flex; gap: 28px; margin-top: 12px; font-size: 13px;">
-        <span><strong>Área Total de Revestimento:</strong> <span id="propArea" class="tabular-nums">--</span></span>
-        <span><strong>Perímetro da Borda Atérmica:</strong> <span id="propBorda" class="tabular-nums">--</span></span>
+    <!-- Informações do Cliente e Projeto -->
+    <div class="prop-client-card">
+      <div class="grid-3">
+        <div>
+          <span class="prop-label">Projeto / Empreendimento:</span>
+          <strong id="propProjeto" class="prop-value">Residencial iGUi Prime</strong>
+        </div>
+        <div>
+          <span class="prop-label">Cliente / Contratante:</span>
+          <strong id="propCliente" class="prop-value">Cliente Geral</strong>
+        </div>
+        <div>
+          <span class="prop-label">Responsável Técnico / Comercial:</span>
+          <strong id="propResponsavel" class="prop-value">Victor Lourenço</strong>
+        </div>
       </div>
     </div>
 
-    <!-- Tabela de Itens e Escopo -->
-    <div style="margin-bottom: 20px;">
-      <h3 style="font-size: 14px; font-weight: 700; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px;">
-        1. Discriminação dos Fornecimentos e Serviços
-      </h3>
+    <!-- Resumo dos Quantitativos Totais -->
+    <div class="prop-quant-overview">
+      <div class="prop-quant-tile">
+        <span class="q-label">Área de Revestimento:</span>
+        <span id="propTotalRevest" class="q-val">0.00 m²</span>
+        <span class="q-sub">Pastilhas / Porcelanato</span>
+      </div>
 
-      <table class="proposal-table">
+      <div class="prop-quant-tile">
+        <span class="q-label">Área de Laminação:</span>
+        <span id="propTotalLamina" class="q-val">0.00 m²</span>
+        <span class="q-sub">Casco e Borda</span>
+      </div>
+
+      <div class="prop-quant-tile">
+        <span class="q-label">Volume Interno de Água:</span>
+        <span id="propTotalVolume" class="q-val">0.00 m³</span>
+        <span class="q-sub">Capacidade em Litros</span>
+      </div>
+
+      <div class="prop-quant-tile highlight" id="propTileValor">
+        <span class="q-label">Valor Total do Orçamento:</span>
+        <span id="propTotalValor" class="q-val highlight tabular-nums">R$ 0,00</span>
+        <span class="q-sub">Condição Especial</span>
+      </div>
+    </div>
+
+    <!-- Tabela de Modelos de Piscinas (Seção 5, 6, 7, 8) -->
+    <div class="prop-section" style="margin-top: 20px;">
+      <h3 class="prop-section-title">Composição de Modelos e Quantitativos</h3>
+
+      <table class="prop-table">
         <thead>
           <tr>
-            <th>Especificação do Item / Serviço</th>
-            <th style="width: 140px; text-align: center;">Quantitativo</th>
-            <th style="width: 135px; text-align: right;">Unitário</th>
-            <th style="width: 145px; text-align: right;">Total</th>
+            <th>Modelo da Piscina / Estrutura</th>
+            <th class="text-center">Qtd</th>
+            <th>Revestimento & Acabamentos</th>
+            <th class="text-right">Áreas (m²)</th>
+            <th class="text-right">Volume</th>
+            <th class="text-right" id="propThUnitario">Unitário</th>
+            <th class="text-right" id="propThSubtotal">Subtotal</th>
           </tr>
         </thead>
-        <tbody id="propTbody"></tbody>
+        <tbody id="propModelosTbody">
+          <!-- Injetado via proposta.js -->
+        </tbody>
       </table>
     </div>
 
-    <!-- Totais e Condições -->
-    <div class="proposal-total-card">
-      <div class="proposal-total-row">
-        <span>Subtotal dos Serviços e Materiais:</span>
-        <span id="propTotalSub" style="font-weight: 700; color: var(--text-primary);" class="tabular-nums">R$ 0,00</span>
-      </div>
-      <div class="proposal-total-row">
-        <span>Garantia Técnica de Estanqueidade e Mão de Obra:</span>
-        <span style="font-weight: 700; color: var(--text-primary);">5 Anos</span>
-      </div>
-      <div class="proposal-total-final">
-        <span>Investimento Total do Projeto:</span>
-        <span id="propTotalFinal">R$ 0,00</span>
+    <!-- Degraus e Composição Financeira -->
+    <div class="prop-section" id="propSecaoComposicaoPreco" style="margin-top: 20px;">
+      <h3 class="prop-section-title">Composição de Preço & Descontos / Acréscimos</h3>
+
+      <div class="prop-pricing-breakdown">
+        <div class="breakdown-row">
+          <span>1. Custo Base (Revestimento + Acabamentos BP11/C3 + Laminação com/sem molde + Insumos):</span>
+          <span id="propBaseCost" class="tabular-nums">R$ 0,00</span>
+        </div>
+        <div class="breakdown-row">
+          <span>2. Acréscimo Estrutura Autoportante (+50% se aplicável):</span>
+          <span id="propAutoCost" class="tabular-nums" style="color: var(--amber-600);">+ R$ 0,00</span>
+        </div>
+        <div class="breakdown-row">
+          <span>3. Margem da Etapa:</span>
+          <span id="propStageMargin" class="tabular-nums">+ R$ 0,00</span>
+        </div>
+        <div class="breakdown-row grand-total">
+          <span>VALOR TOTAL PROPOSTA:</span>
+          <span id="propGrandTotal" class="tabular-nums">R$ 0,00</span>
+        </div>
       </div>
     </div>
 
-    <!-- Condições Comerciais e Cronograma de Pagamento -->
-    <div class="proposal-terms">
-      <h4>2. Condições Comerciais e Cronograma de Faturamento</h4>
-      <div class="payment-schedule-grid">
-        <div class="schedule-pill">
-          <span class="pill-label">1. Entrada na Confirmação (40%)</span>
-          <span id="condEntrada" class="pill-val">R$ 0,00</span>
-          <span class="pill-desc">Mobilização técnica e compra de revestimentos</span>
+    <!-- Cronograma Sugerido de Desembolso -->
+    <div class="prop-section" id="propSecaoCronograma" style="margin-top: 20px;">
+      <h3 class="prop-section-title">Cronograma Financeiro Sugerido</h3>
+
+      <div class="schedule-grid">
+        <div class="schedule-card">
+          <div class="schedule-pct">40%</div>
+          <div class="schedule-title">Sinal de Entrada</div>
+          <div class="schedule-sub">Aprovação do projeto e reserva de fábrica</div>
+          <div id="cronoEntrada" class="schedule-val tabular-nums">R$ 0,00</div>
         </div>
-        <div class="schedule-pill">
-          <span class="pill-label">2. Na Impermeabilização (30%)</span>
-          <span id="condParcela1" class="pill-val">R$ 0,00</span>
-          <span class="pill-desc">Liberação de estanqueidade para acabamento</span>
+
+        <div class="schedule-card">
+          <div class="schedule-pct">30%</div>
+          <div class="schedule-title">Prontidão do Casco</div>
+          <div class="schedule-sub">Fabricação concluída e pronta para expedição</div>
+          <div id="cronoCasco" class="schedule-val tabular-nums">R$ 0,00</div>
         </div>
-        <div class="schedule-pill">
-          <span class="pill-label">3. Na Entrega Final (30%)</span>
-          <span id="condParcela2" class="pill-val">R$ 0,00</span>
-          <span class="pill-desc">Conclusão, limpeza técnica e entrega formal</span>
+
+        <div class="schedule-card">
+          <div class="schedule-pct">30%</div>
+          <div class="schedule-title">Entrega Técnica</div>
+          <div class="schedule-sub">Recebimento no local e entrega técnica</div>
+          <div id="cronoEntrega" class="schedule-val tabular-nums">R$ 0,00</div>
         </div>
       </div>
+    </div>
 
-      <h4>3. Termos Gerais de Engenharia</h4>
-      <p>
-        A contratada responsabiliza-se pela execução rigorosamente alinhada ao modelo tridimensional parametrizado no plugin PapaSys. Não estão inclusos serviços estruturais fora do escopo ou reparos no solo, salvo se expressamente descritos na composição analítica acima.
+    <!-- Observações e Memorial Descritivo -->
+    <div class="prop-section" style="margin-top: 20px;">
+      <h3 class="prop-section-title">Observações Técnicas & Memorial</h3>
+      <p id="propNotas" class="prop-notes-box">
+        Piscina com paginação modular centralizada sem recortes finos, cantoneiras arredondadas conforme norma de segurança técnica e laminação estrutural reforçada.
       </p>
     </div>
 
-    <!-- Assinaturas -->
-    <div class="proposal-signatures">
-      <div>
-        <div class="sign-line">PAPASYS PISCINAS & REVESTIMENTOS</div>
-        <span class="sign-sub">Responsável Técnico</span>
+    <!-- Assinaturas de Aceite -->
+    <div class="prop-signatures" style="margin-top: 40px;">
+      <div class="sig-col">
+        <div class="sig-line"></div>
+        <div class="sig-name">iGUi Piscinas</div>
+        <div class="sig-sub">Departamento de Engenharia e Vendas</div>
       </div>
-      <div>
-        <div class="sign-line" id="signCliente">CLIENTE</div>
-        <span class="sign-sub">De Acordo / Aceite Comercial</span>
+
+      <div class="sig-col">
+        <div class="sig-line"></div>
+        <div class="sig-name">De Acordo do Cliente</div>
+        <div class="sig-sub">Assinatura / Carimbo CNPJ</div>
       </div>
     </div>
+
   </div>
 
-  <div id="toastBox" class="toast-container"></div>
-
-  <script src="js/gsap.min.js"></script>
-  <script src="js/animations.js"></script>
+  <!-- Scripts -->
   <script src="js/config.js"></script>
-  <script src="js/supabase.js"></script>
-  <script src="js/calculator.js"></script>
   <script src="js/dialog.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/pricing.js"></script>
+  <script src="js/supabase.js"></script>
   <script src="js/proposta.js"></script>
 </body>
 </html>

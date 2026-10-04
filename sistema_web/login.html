@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>iGUi - Acesso ao Sistema de Orçamentos</title>
+  <link rel="icon" type="image/png" href="img/Icone.png">
+  <link rel="shortcut icon" href="favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    .login-page-wrapper {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at 50% 20%, #f1f5f9 0%, #e2e8f0 100%);
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .login-page-bg-deco {
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(2, 132, 199, 0.08) 0%, rgba(2, 132, 199, 0) 70%);
+      top: -100px;
+      right: -100px;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .login-page-bg-deco-2 {
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(234, 88, 12, 0.06) 0%, rgba(234, 88, 12, 0) 70%);
+      bottom: -80px;
+      left: -80px;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .login-card {
+      background: #ffffff;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      border-radius: 20px;
+      box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.12), 0 0 0 1px rgba(15, 23, 42, 0.04);
+      width: 100%;
+      max-width: 440px;
+      padding: 36px 32px;
+      position: relative;
+      z-index: 10;
+      animation: modalEnter 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .login-brand-header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .login-brand-logo {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      color: #ffffff;
+      font-weight: 900;
+      font-size: 22px;
+      letter-spacing: -0.5px;
+      padding: 6px 20px;
+      border-radius: 12px;
+      margin-bottom: 12px;
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25);
+    }
+
+    .login-title {
+      font-size: 19px;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: -0.3px;
+      margin: 0;
+    }
+
+    .login-subtitle {
+      font-size: 13px;
+      color: #64748b;
+      margin-top: 5px;
+    }
+
+    .login-form-group {
+      margin-bottom: 18px;
+    }
+
+    .login-form-label {
+      display: block;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #334155;
+      margin-bottom: 6px;
+    }
+
+    .login-input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .login-input-icon {
+      position: absolute;
+      left: 12px;
+      color: #94a3b8;
+      display: flex;
+      align-items: center;
+      pointer-events: none;
+    }
+
+    .login-input {
+      width: 100%;
+      padding: 11px 14px 11px 38px;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 10px;
+      font-size: 14px;
+      color: #0f172a;
+      background: #f8fafc;
+      transition: all 0.2s ease;
+      outline: none;
+    }
+
+    .login-input:focus {
+      border-color: #0284c7;
+      background: #ffffff;
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+    }
+
+    .login-btn-submit {
+      width: 100%;
+      padding: 12px 18px;
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      color: #ffffff;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
+      margin-top: 8px;
+    }
+
+    .login-btn-submit:hover {
+      background: linear-gradient(135deg, #0369a1 0%, #075985 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(2, 132, 199, 0.35);
+    }
+
+    .login-btn-submit:active {
+      transform: translateY(0);
+    }
+
+    .login-alert-banner {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #b91c1c;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 12.5px;
+      margin-bottom: 18px;
+      display: none;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .login-divider-line {
+      display: flex;
+      align-items: center;
+      margin: 22px 0 16px;
+      color: #94a3b8;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .login-divider-line::before,
+    .login-divider-line::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: #e2e8f0;
+    }
+
+    .login-divider-line span {
+      padding: 0 10px;
+    }
+
+    .quick-access-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .quick-access-btn {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 14px;
+      border: 1px solid #e2e8f0;
+      background: #f8fafc;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 12.5px;
+      color: #334155;
+      font-weight: 600;
+      transition: all 0.15s ease;
+      text-align: left;
+    }
+
+    .quick-access-btn:hover {
+      background: #ffffff;
+      border-color: #0284c7;
+      color: #0284c7;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+    }
+
+    .quick-role-badge {
+      font-size: 10.5px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-weight: 700;
+    }
+
+    .quick-role-badge.admin {
+      background: #0f172a;
+      color: #38bdf8;
+    }
+
+    .quick-role-badge.user {
+      background: #e2e8f0;
+      color: #475569;
+    }
+
+    .login-footer-meta {
+      text-align: center;
+      margin-top: 24px;
+      font-size: 11.5px;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="login-page-wrapper">
+    <div class="login-page-bg-deco"></div>
+    <div class="login-page-bg-deco-2"></div>
+
+    <div class="login-card">
+      
+      <div class="login-brand-header">
+        <img src="img/Logo_Oficial_iGUi.png" alt="iGUi" style="height: 52px; width: auto; object-fit: contain; margin-bottom: 12px;">
+        <h1 class="login-title">Sistema de Orçamentos</h1>
+        <p class="login-subtitle">Comercial &bull; Engenharia &bull; SketchUp 3D</p>
+      </div>
+
+      <div id="loginAlertBox" class="login-alert-banner">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0;">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <span id="loginAlertMsg">Mensagem de erro</span>
+      </div>
+
+      <form id="loginForm" onsubmit="handleLoginSubmit(event)">
+        
+        <div class="login-form-group">
+          <label class="login-form-label" for="loginEmail">E-mail de Acesso:</label>
+          <div class="login-input-wrap">
+            <span class="login-input-icon">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                <polyline points="22,6 12,13 2,6"></polyline>
+              </svg>
+            </span>
+            <input type="email" id="loginEmail" class="login-input" placeholder="seu-email@papa.com" required autofocus autocomplete="username">
+          </div>
+        </div>
+
+        <div class="login-form-group">
+          <label class="login-form-label" for="loginPassword">Senha:</label>
+          <div class="login-input-wrap">
+            <span class="login-input-icon">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+            </span>
+            <input type="password" id="loginPassword" class="login-input" placeholder="••••••••" autocomplete="current-password" value="123456">
+          </div>
+        </div>
+
+        <button type="submit" class="login-btn-submit" id="btnSubmitLogin">
+          <span>Acessar o Painel</span>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </button>
+      </form>
+
+      <div class="login-divider-line">
+        <span>Acesso Rápido para Demonstração</span>
+      </div>
+
+      <div class="quick-access-list">
+        <button type="button" class="quick-access-btn" onclick="quickFill('admin@papa.com')">
+          <div>
+            <strong>admin@papa.com</strong>
+            <div style="font-size: 11px; color: #64748b;">Administrador / Diretor (Acesso Total)</div>
+          </div>
+          <span class="quick-role-badge admin">ADMIN</span>
+        </button>
+
+        <button type="button" class="quick-access-btn" onclick="quickFill('usuario@papa.com')">
+          <div>
+            <strong>usuario@papa.com</strong>
+            <div style="font-size: 11px; color: #64748b;">Victor Lourenço (iGUi Sob Medida)</div>
+          </div>
+          <span class="quick-role-badge user">PROJETISTA</span>
+        </button>
+      </div>
+
+      <div class="login-footer-meta">
+        iGUi Piscinas &bull; PapaSys v2.0.0
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    // Se já estiver logado, redireciona para index.html
+    document.addEventListener("DOMContentLoaded", () => {
+      const user = Auth.getCurrentUser();
+      if (user) {
+        window.location.href = "index.html";
+      }
+    });
+
+    function quickFill(email) {
+      document.getElementById("loginEmail").value = email;
+      document.getElementById("loginPassword").value = "123456";
+      handleLogin(email, "123456");
+    }
+
+    async function handleLoginSubmit(e) {
+      e.preventDefault();
+      const email = document.getElementById("loginEmail").value.trim();
+      const pass = document.getElementById("loginPassword").value;
+      await handleLogin(email, pass);
+    }
+
+    async function handleLogin(email, password) {
+      const alertBox = document.getElementById("loginAlertBox");
+      const alertMsg = document.getElementById("loginAlertMsg");
+      const btn = document.getElementById("btnSubmitLogin");
+
+      btn.disabled = true;
+      btn.style.opacity = "0.7";
+
+      try {
+        const res = await Auth.login(email, password);
+        if (res.success) {
+          window.location.href = "index.html";
+        } else {
+          alertBox.style.display = "flex";
+          alertMsg.textContent = res.message || "E-mail ou senha incorretos.";
+        }
+      } catch (err) {
+        alertBox.style.display = "flex";
+        alertMsg.textContent = "Erro ao autenticar. Tente novamente.";
+      } finally {
+        btn.disabled = false;
+        btn.style.opacity = "1";
+      }
+    }
+  </script>
+</body>
+</html>
