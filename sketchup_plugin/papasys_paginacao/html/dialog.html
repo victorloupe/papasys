@@ -399,55 +399,123 @@
           <!-- Grid de Quantitativos 3D (Seção 8) -->
           <div class="quant-grid">
             <div class="quant-item" onclick="destacarRevestimento3D()" style="cursor: pointer;" title="Clique para inspecionar / selecionar faces de revestimento no 3D">
-              <span class="quant-label">Área Revestimento (Interna)</span>
-              <div class="quant-val-row">
-                <span id="statAreaRevest" class="quant-value">0.00</span>
+              <div class="quant-label-row">
+                <span class="quant-label">Área Revestimento (Interna)</span>
+                <button type="button" class="btn-copy-card" onclick="event.stopPropagation(); copiarValorQuant('inputAreaRevest', 'Área Revestimento', ' m²')" title="Copiar Área Revestimento">
+                  <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                </button>
+              </div>
+              <div class="quant-val-row-edit">
+                <input type="number" id="inputAreaRevest" class="quant-input-edit" step="0.01" min="0" value="0.00" oninput="aoEditarAreaRevest(this.value)" onclick="event.stopPropagation()" title="Clique para editar Área de Revestimento (m²)">
                 <span class="quant-unit">m²</span>
+                <span id="statAreaRevest" style="display: none;">0.00</span>
               </div>
             </div>
 
             <div class="quant-item" onclick="destacarLaminacao3D()" style="cursor: pointer;" title="Clique para inspecionar / selecionar faces de laminação (borda + paredes externas) no 3D">
-              <span class="quant-label">Área Laminação (Externa + Borda)</span>
-              <div class="quant-val-row">
-                <span id="statAreaLamina" class="quant-value">0.00</span>
+              <div class="quant-label-row">
+                <span class="quant-label">Área Laminação (Externa + Borda)</span>
+                <button type="button" class="btn-copy-card" onclick="event.stopPropagation(); copiarValorQuant('inputAreaLamina', 'Área Laminação', ' m²')" title="Copiar Área Laminação">
+                  <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                </button>
+              </div>
+              <div class="quant-val-row-edit">
+                <input type="number" id="inputAreaLamina" class="quant-input-edit" step="0.01" min="0" value="0.00" oninput="aoEditarAreaLamina(this.value)" onclick="event.stopPropagation()" title="Clique para editar Área de Laminação (m²)">
                 <span class="quant-unit">m²</span>
+                <span id="statAreaLamina" style="display: none;">0.00</span>
               </div>
             </div>
 
             <div class="quant-item">
-              <span class="quant-label">Volume Interno da Piscina</span>
-              <div class="quant-val-row">
-                <span id="statVolumeM3" class="quant-value">0.00</span>
+              <div class="quant-label-row">
+                <span class="quant-label">Volume Interno da Piscina</span>
+                <button type="button" class="btn-copy-card" onclick="copiarValorQuant('inputVolumeM3', 'Volume', ' m³')" title="Copiar Volume">
+                  <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                </button>
+              </div>
+              <div class="quant-val-row-edit">
+                <input type="number" id="inputVolumeM3" class="quant-input-edit" step="0.01" min="0" value="0.00" oninput="aoEditarVolumeM3(this.value)" title="Clique para editar Volume (m³)">
                 <span class="quant-unit">m³</span>
+                <span id="statVolumeM3" style="display: none;">0.00</span>
               </div>
               <div id="statVolumeLitros" class="quant-sub">0 L</div>
             </div>
 
-            <div class="quant-item">
-              <span class="quant-label">Cantos Lineares &amp; Quinas</span>
-              <div class="quant-val-row">
-                <span id="statCantosLineares" class="quant-value">0.00</span>
-                <span class="quant-unit">m</span>
+            <div class="quant-item quant-item-editable">
+              <div class="quant-label-row">
+                <span class="quant-label">Cantos Lineares (m)</span>
+                <button type="button" class="btn-copy-card" onclick="copiarValorQuant('inputCantosLineares', 'Cantos Lineares', ' m')" title="Copiar Cantos Lineares">
+                  <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                </button>
               </div>
-              <div id="statQuinasVivas" class="quant-sub">0 quinas vivas</div>
+              <div class="quant-val-row-edit">
+                <input type="number" id="inputCantosLineares" class="quant-input-edit" step="0.01" min="0" value="0.00" oninput="aoEditarCantosLineares(this.value)" title="Clique para editar metragem de cantos lineares">
+                <span class="quant-unit">m</span>
+                <span id="statCantosLineares" style="display: none;">0.00</span>
+              </div>
+              <div class="quant-sub-row-edit">
+                <span class="quant-sub-label">Quinas vivas:</span>
+                <div class="quant-quinas-wrap">
+                  <input type="number" id="inputQuinasVivas" class="quant-input-quinas" step="1" min="0" value="0" oninput="aoEditarQuinasVivas(this.value)" title="Clique para editar quantidade de quinas vivas">
+                  <button type="button" class="btn-copy-card btn-copy-mini" onclick="copiarValorQuant('inputQuinasVivas', 'Quinas Vivas', ' un')" title="Copiar Quinas Vivas">
+                    <svg viewBox="0 0 24 24" width="9" height="9" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                  </button>
+                  <span id="statQuinasVivas" style="display: none;">0 quinas vivas</span>
+                </div>
+              </div>
             </div>
           </div>
 
-          <!-- Seção 7: Peças de Acabamento Calculadas -->
+          <!-- Seção 7: Peças de Acabamento Calculadas (Inclusas no preço do m² - Seção 9.1) -->
           <div id="boxAcabamentos" class="finish-box">
             <div class="finish-header">
-              <span class="finish-title">Peças de Acabamento Calculadas (Seção 7)</span>
+              <span class="finish-title">Peças de Acabamento (Inclusas no m² - Seção 9.1)</span>
               <span id="badgeFinishRule" class="badge-finish-rule">BP11 + C3</span>
             </div>
             
             <div id="finishDetailsNormal" class="finish-items-list">
               <div class="finish-row">
                 <span id="lblFinishLinearNome" class="finish-name">Cantoneira BP11 (20 cm)</span>
-                <span id="lblFinishLinearQtd" class="finish-qty">0 un</span>
+                <div class="finish-qty-wrap">
+                  <input type="number" id="inputFinishLinearQtd" class="quant-input-finish" min="0" step="1" value="0" oninput="aoEditarFinishLinear(this.value)" title="Clique para editar quantidade de peças lineares">
+                  <span class="finish-unit">un</span>
+                  <button type="button" class="btn-copy-card btn-copy-mini" onclick="copiarValorQuant('inputFinishLinearQtd', 'Peças Lineares', ' un')" title="Copiar quantidade de peças lineares">
+                    <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                  </button>
+                  <span id="lblFinishLinearQtd" style="display: none;">0 un</span>
+                </div>
               </div>
               <div class="finish-row">
                 <span id="lblFinishQuinaNome" class="finish-name">Peça C3 (quina viva)</span>
-                <span id="lblFinishQuinaQtd" class="finish-qty">0 un</span>
+                <div class="finish-qty-wrap">
+                  <input type="number" id="inputFinishQuinaQtd" class="quant-input-finish" min="0" step="1" value="0" oninput="aoEditarFinishQuina(this.value)" title="Clique para editar quantidade de quinas/quebra-canto">
+                  <span class="finish-unit">un</span>
+                  <button type="button" class="btn-copy-card btn-copy-mini" onclick="copiarValorQuant('inputFinishQuinaQtd', 'Peças Quina', ' un')" title="Copiar quantidade de quinas">
+                    <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                  </button>
+                  <span id="lblFinishQuinaQtd" style="display: none;">0 un</span>
+                </div>
               </div>
             </div>
 
@@ -467,18 +535,22 @@
             </div>
           </div>
 
-          <!-- Resumo Financeiro da Piscina (Seção 11) -->
+          <!-- Resumo Financeiro da Piscina (Ordem da Seção 9.4) -->
           <div class="pricing-summary-card">
             <div class="price-row">
-              <span>Valor Base (Revestimento + Acabamento + Laminação):</span>
+              <span>1. Preço Base (Revestimento m² × Preço m²):</span>
               <span id="lblValorBase" class="tabular-nums">R$ 0,00</span>
             </div>
+            <div class="price-row" id="rowDescontoMolde" style="display: none; color: #16a34a;">
+              <span>2. − Desconto Molde (Incorporadora):</span>
+              <span id="lblValorDescontoMolde" class="tabular-nums">− R$ 0,00</span>
+            </div>
             <div class="price-row" id="rowAutoAcrescimo" style="display: none;">
-              <span>Acréscimo Autoportante (+50%):</span>
+              <span>3. + Autoportante (+50%):</span>
               <span id="lblValorAuto" class="tabular-nums" style="color: var(--amber-600);">+ R$ 0,00</span>
             </div>
             <div class="price-row" id="rowMargemEtapa">
-              <span>Margem da Etapa (<span id="lblMargemPct">Prévia +5%</span>):</span>
+              <span>4. + Acréscimo da Etapa (<span id="lblMargemPct">Prévia +5%</span>):</span>
               <span id="lblValorMargem" class="tabular-nums">+ R$ 0,00</span>
             </div>
             <div class="price-total-row">

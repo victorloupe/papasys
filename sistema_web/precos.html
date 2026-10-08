@@ -93,7 +93,7 @@
     <div class="page-context-header" style="margin-bottom: 14px;">
       <div>
         <h1 class="page-main-title">Central de Configurações & Parâmetros</h1>
-        <p class="page-main-sub">Defina as tabelas de preços, insumos, regras de molde e as permissões de acesso da equipe.</p>
+        <p class="page-main-sub">Defina as tabelas de preços por m², regras de molde, acréscimos e permissões de acesso da equipe.</p>
       </div>
 
       <div class="admin-badge-strip">
@@ -123,15 +123,15 @@
     </div>
 
     <!-- ========================================================================= -->
-    <!-- ABA 1: TABELA DE PREÇOS & REGRAS DE CÁLCULO -->
+    <!-- ABA 1: TABELA DE PREÇOS & REGRAS DE CÁLCULO (SEÇÃO 9) -->
     <!-- ========================================================================= -->
     <div id="painelPrecos" class="config-columns-wrap">
       
-      <!-- Coluna da Esquerda: Revestimentos & Insumos Complementares -->
+      <!-- Coluna da Esquerda: Tabela de Preço do m² por Divisão & Tipo de Piscina -->
       <div class="config-col">
-        <!-- Card 1: Revestimentos & Pastilhas (R$/m²) -->
+        <!-- Card 1: Preço do m² por Divisão e Tipo de Piscina (Seção 9.1 & 9.5) -->
         <div class="config-card">
-          <div class="config-card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+          <div class="config-card-header">
             <div>
               <h3 class="config-card-title">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
@@ -141,129 +141,115 @@
                   <line x1="9" y1="3" x2="9" y2="21"></line>
                   <line x1="15" y1="3" x2="15" y2="21"></line>
                 </svg>
-                1. Revestimentos &amp; Pastilhas (R$ por m²)
+                1. Preço do m² por Divisão &amp; Tipo de Piscina
               </h3>
-              <p class="config-card-sub">Preço por m² nas regras Sem Molde e Com Molde</p>
+              <p class="config-card-sub">Preço base da piscina = Área de revestimento (m²) × preço do m²</p>
             </div>
-            <button type="button" class="btn-add-coating" onclick="abrirModalNovoRevestimento()" title="Cadastrar nova pastilha ou revestimento personalizado">
-              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
+          </div>
+
+          <div style="padding: 14px 18px;">
+            <table class="config-m2-table" style="width: 100%; border-collapse: separate; border-spacing: 0; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+              <thead>
+                <tr style="background: #f8fafc;">
+                  <th style="padding: 10px 14px; text-align: left; font-size: 12px; font-weight: 700; color: #475569; border-bottom: 1px solid #e2e8f0;">Divisão</th>
+                  <th style="padding: 10px 14px; text-align: left; font-size: 12px; font-weight: 700; color: #475569; border-bottom: 1px solid #e2e8f0;">Convencional (R$/m²)</th>
+                  <th style="padding: 10px 14px; text-align: left; font-size: 12px; font-weight: 700; color: #475569; border-bottom: 1px solid #e2e8f0;">Especial (R$/m²)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style="padding: 12px 14px; font-size: 13px; font-weight: 700; color: #0f172a; border-bottom: 1px solid #f1f5f9;">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                      <span style="width: 8px; height: 8px; border-radius: 50%; background: #0284c7;"></span>
+                      iGUi Sob Medida
+                    </div>
+                  </td>
+                  <td style="padding: 10px 14px; border-bottom: 1px solid #f1f5f9;">
+                    <div class="config-input-group">
+                      <span class="config-prefix">R$</span>
+                      <input type="number" id="preco_m2_sob_medida_convencional" class="config-input" step="1.00" min="0" placeholder="140.00">
+                      <span class="config-suffix">/m²</span>
+                    </div>
+                  </td>
+                  <td style="padding: 10px 14px; border-bottom: 1px solid #f1f5f9;">
+                    <div class="config-input-group">
+                      <span class="config-prefix">R$</span>
+                      <input type="number" id="preco_m2_sob_medida_especial" class="config-input" step="1.00" min="0" placeholder="175.00">
+                      <span class="config-suffix">/m²</span>
+                    </div>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td style="padding: 12px 14px; font-size: 13px; font-weight: 700; color: #0f172a; border-bottom: 1px solid #f1f5f9;">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                      <span style="width: 8px; height: 8px; border-radius: 50%; background: #f97316;"></span>
+                      iGUi Incorporadora
+                    </div>
+                  </td>
+                  <td style="padding: 10px 14px; border-bottom: 1px solid #f1f5f9;">
+                    <div class="config-input-group">
+                      <span class="config-prefix">R$</span>
+                      <input type="number" id="preco_m2_incorporadora_convencional" class="config-input" step="1.00" min="0" placeholder="120.00">
+                      <span class="config-suffix">/m²</span>
+                    </div>
+                  </td>
+                  <td style="padding: 10px 14px; border-bottom: 1px solid #f1f5f9;">
+                    <div class="config-input-group">
+                      <span class="config-prefix">R$</span>
+                      <input type="number" id="preco_m2_incorporadora_especial" class="config-input" step="1.00" min="0" placeholder="150.00">
+                      <span class="config-suffix">/m²</span>
+                    </div>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td style="padding: 12px 14px; font-size: 13px; font-weight: 700; color: #0f172a;">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                      <span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
+                      iGUi Internacional
+                    </div>
+                  </td>
+                  <td style="padding: 10px 14px;">
+                    <div class="config-input-group">
+                      <span class="config-prefix">R$</span>
+                      <input type="number" id="preco_m2_internacional_convencional" class="config-input" step="1.00" min="0" placeholder="150.00">
+                      <span class="config-suffix">/m²</span>
+                    </div>
+                  </td>
+                  <td style="padding: 10px 14px;">
+                    <div class="config-input-group">
+                      <span class="config-prefix">R$</span>
+                      <input type="number" id="preco_m2_internacional_especial" class="config-input" step="1.00" min="0" placeholder="185.00">
+                      <span class="config-suffix">/m²</span>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div class="mold-explanation-alert" style="margin-top: 14px;">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0; margin-top: 1px;">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
               </svg>
-              + Adicionar Pastilha
-            </button>
-          </div>
-
-          <!-- Lista Estruturada de Cards de Pastilhas (Sem Molde & Com Molde) -->
-          <div class="coatings-list-wrap" id="listaRevestimentosContainer">
-            <!-- Renderizado dinamicamente por renderizarTabelaRevestimentos() em precos.js -->
-          </div>
-        </div>
-
-        <!-- Card 5: Insumos Complementares & Argamassas -->
-        <div class="config-card">
-          <div class="config-card-header">
-            <div>
-              <h3 class="config-card-title">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <polyline points="12 6 12 12 14 14"></polyline>
-                </svg>
-                5. Insumos Complementares &amp; Argamassas
-              </h3>
-              <p class="config-card-sub">Valores médios por m² para composições orçamentárias</p>
-            </div>
-          </div>
-
-          <div class="config-fields-list">
-            <div class="config-field-row">
-              <span class="config-field-label">Argamassa Especial de Assentamento:</span>
-              <div class="config-input-group">
-                <span class="config-prefix">R$</span>
-                <input type="number" id="preco_insumo_argamassa" class="config-input" step="0.50" min="0">
-                <span class="config-suffix">/m²</span>
-              </div>
-            </div>
-
-            <div class="config-field-row">
-              <span class="config-field-label">Rejunte Epóxi Impermeável:</span>
-              <div class="config-input-group">
-                <span class="config-prefix">R$</span>
-                <input type="number" id="preco_insumo_rejunte" class="config-input" step="0.50" min="0">
-                <span class="config-suffix">/m²</span>
+              <div>
+                <strong>Regras Oficiais de Composição (Seção 9.1):</strong>
+                <ul style="margin: 4px 0 0 16px; padding: 0; font-size: 11.5px; line-height: 1.5;">
+                  <li>As <strong>peças de acabamento</strong> (BP11, C3, boleadas, quebra-cantos) <strong>não têm valor próprio</strong>: já estão incluídas no preço do m² do revestimento. O sistema apenas informa as quantidades.</li>
+                  <li>A <strong>área de laminação</strong> <strong>não tem valor</strong>: é apenas informativa no orçamento.</li>
+                  <li>O <strong>volume interno</strong> também é apenas informativo.</li>
+                </ul>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Coluna da Direita: Peças de Acabamento + Laminação + Regras de Margem -->
+      <!-- Coluna da Direita: Preço com Molde & Acréscimos -->
       <div class="config-col">
-        <!-- Card 2: Peças de Acabamento (R$/unidade) -->
-        <div class="config-card">
-          <div class="config-card-header">
-            <div>
-              <h3 class="config-card-title">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                  <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
-                  <polyline points="2 17 12 22 22 17"></polyline>
-                  <polyline points="2 12 12 17 22 12"></polyline>
-                </svg>
-                2. Peças de Acabamento (R$ por Unidade)
-              </h3>
-              <p class="config-card-sub">Cantoneiras BP11, quinas C3 e pastilhas boleadas</p>
-            </div>
-          </div>
-
-          <div class="config-fields-list">
-            <div class="config-field-row">
-              <span class="config-field-label">Cantoneira BP11 (20 cm cada):</span>
-              <div class="config-input-group">
-                <span class="config-prefix">R$</span>
-                <input type="number" id="preco_acab_bp11" class="config-input" step="0.50" min="0">
-                <span class="config-suffix">/un</span>
-              </div>
-            </div>
-
-            <div class="config-field-row">
-              <span class="config-field-label">Peça C3 (Quina viva):</span>
-              <div class="config-input-group">
-                <span class="config-prefix">R$</span>
-                <input type="number" id="preco_acab_c3" class="config-input" step="0.50" min="0">
-                <span class="config-suffix">/un</span>
-              </div>
-            </div>
-
-            <div class="config-field-row">
-              <span class="config-field-label">Pastilha Boleada 7,5x7,5 cm:</span>
-              <div class="config-input-group">
-                <span class="config-prefix">R$</span>
-                <input type="number" id="preco_acab_boleada_7_5" class="config-input" step="0.50" min="0">
-                <span class="config-suffix">/un</span>
-              </div>
-            </div>
-
-            <div class="config-field-row">
-              <span class="config-field-label">Pastilha Boleada 15x15 cm:</span>
-              <div class="config-input-group">
-                <span class="config-prefix">R$</span>
-                <input type="number" id="preco_acab_boleada_15" class="config-input" step="0.50" min="0">
-                <span class="config-suffix">/un</span>
-              </div>
-            </div>
-
-            <div class="config-field-row">
-              <span class="config-field-label">Peça Quebra-canto (Quina viva):</span>
-              <div class="config-input-group">
-                <span class="config-prefix">R$</span>
-                <input type="number" id="preco_acab_quebra_canto" class="config-input" step="0.50" min="0">
-                <span class="config-suffix">/un</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Card 3: Laminação e Molde (Incorporadora) -->
+        <!-- Card 2: Preço com Molde (Somente Incorporadora - Seção 9.2 & 9.5) -->
         <div class="config-card">
           <div class="config-card-header">
             <div>
@@ -274,32 +260,44 @@
                   <line x1="8" y1="6" x2="10" y2="6"></line>
                   <line x1="14" y1="6" x2="16" y2="6"></line>
                 </svg>
-                3. Laminação &amp; Regra de Molde (Incorporadora)
+                2. Preço com Molde (Somente Incorporadora)
               </h3>
-              <p class="config-card-sub">Preço do m² de laminação externa e volume gatilho para preço com molde</p>
+              <p class="config-card-sub">Valor do m² que a piscina vai ser quando tiver 10 ou mais unidades (gatilho de lote)</p>
             </div>
           </div>
 
           <div class="config-fields-list">
             <div class="config-field-row">
               <div>
-                <span class="config-field-label">Preço da Laminação Externa:</span>
-                <span class="config-field-sub">Preço fixo por m² aplicado nas bordas e casco externo da piscina</span>
+                <span class="config-field-label">Valor do m² com Molde (Convencional):</span>
+                <span class="config-field-sub">Preço por m² da piscina convencional para 10 ou mais unidades</span>
               </div>
               <div class="config-input-group">
                 <span class="config-prefix">R$</span>
-                <input type="number" id="preco_lam_m2" class="config-input" step="1.00" min="0">
+                <input type="number" id="regra_preco_molde_convencional" class="config-input" step="1.00" min="0" placeholder="100.00">
                 <span class="config-suffix">/m²</span>
               </div>
             </div>
 
-            <div class="config-field-row">
+            <div class="config-field-row" style="margin-top: 6px;">
               <div>
-                <span class="config-field-label">Mínimo de Unidades para virar Molde:</span>
-                <span class="config-field-sub">Gatilho de lote na divisão Incorporadora</span>
+                <span class="config-field-label">Valor do m² com Molde (Especial):</span>
+                <span class="config-field-sub">Preço por m² da piscina especial para 10 ou mais unidades</span>
               </div>
               <div class="config-input-group">
-                <input type="number" id="regra_min_molde" class="config-input" step="1" min="1">
+                <span class="config-prefix">R$</span>
+                <input type="number" id="regra_preco_molde_especial" class="config-input" step="1.00" min="0" placeholder="130.00">
+                <span class="config-suffix">/m²</span>
+              </div>
+            </div>
+
+            <div class="config-field-row" style="margin-top: 6px;">
+              <div>
+                <span class="config-field-label">Quantidade Mínima para Molde:</span>
+                <span class="config-field-sub">Gatilho de lote na divisão Incorporadora (padrão: 10 un)</span>
+              </div>
+              <div class="config-input-group">
+                <input type="number" id="regra_min_molde" class="config-input" step="1" min="1" placeholder="10">
                 <span class="config-suffix">unidades</span>
               </div>
             </div>
@@ -311,14 +309,13 @@
                 <line x1="12" y1="8" x2="12.01" y2="8"></line>
               </svg>
               <div>
-                <strong>Regra da Incorporadora:</strong> Padrão: 10 un. Se algum modelo do orçamento atingir este volume, 
-                todas as piscinas do orçamento recebem automaticamente o <strong>preço da pastilha COM MOLDE</strong> (o benefício do molde incide sobre a pastilha).
+                <strong>Regra de Molde (Seção 9.2):</strong> Quando algum modelo do orçamento tiver <strong>10 ou mais unidades</strong> (configurável acima), o valor do m² das piscinas daquele orçamento passa a ser diretamente o valor configurado para molde acima. O sistema pré-seleciona automaticamente 'com molde', mas o usuário pode alterar manualmente por modelo.
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Card 4: Regras de Acréscimo e Margem -->
+        <!-- Card 3: Regras de Acréscimo & Etapas (Seção 9.3 & 9.5) -->
         <div class="config-card">
           <div class="config-card-header">
             <div>
@@ -328,43 +325,65 @@
                   <line x1="12" y1="20" x2="12" y2="4"></line>
                   <line x1="6" y1="20" x2="6" y2="14"></line>
                 </svg>
-                4. Regras de Acréscimo &amp; Margem
+                3. Regras de Acréscimo &amp; Etapas
               </h3>
-              <p class="config-card-sub">Acréscimo estrutural e margens por etapa de venda</p>
+              <p class="config-card-sub">Acréscimos aplicados sobre o valor da piscina (após molde)</p>
             </div>
           </div>
 
           <div class="config-fields-list">
             <div class="config-field-row">
-              <span class="config-field-label">Acréscimo Piscina Autoportante:</span>
+              <div>
+                <span class="config-field-label">Acréscimo Piscina Autoportante:</span>
+                <span class="config-field-sub">Acréscimo estrutural (padrão: +50%)</span>
+              </div>
               <div class="config-input-group">
-                <input type="number" id="regra_pct_autoportante" class="config-input" step="1" min="0">
+                <input type="number" id="regra_pct_autoportante" class="config-input" step="1" min="0" placeholder="50">
                 <span class="config-suffix">%</span>
               </div>
             </div>
-            <p class="config-hint-text">Padrão: +50%. Aplicado sobre o valor base se a estrutura for autoportante.</p>
 
             <div class="config-field-row" style="margin-top: 6px;">
-              <span class="config-field-label">Margem da Etapa Prévia:</span>
+              <div>
+                <span class="config-field-label">Acréscimo Etapa Prévia:</span>
+                <span class="config-field-sub">Margem preliminar de estimativa (padrão: +5%)</span>
+              </div>
               <div class="config-input-group">
-                <input type="number" id="regra_pct_previa" class="config-input" step="0.5" min="0">
+                <input type="number" id="regra_pct_previa" class="config-input" step="0.5" min="0" placeholder="5">
                 <span class="config-suffix">%</span>
               </div>
             </div>
 
             <div class="config-field-row">
-              <span class="config-field-label">Margem da Etapa Galga (Pré-venda):</span>
+              <div>
+                <span class="config-field-label">Acréscimo Etapa Galga:</span>
+                <span class="config-field-sub">Quadro técnico pré-venda (padrão: 0%)</span>
+              </div>
               <div class="config-input-group">
-                <input type="number" id="regra_pct_galga" class="config-input" step="0.5" min="0">
+                <input type="number" id="regra_pct_galga" class="config-input" step="0.5" min="0" placeholder="0">
                 <span class="config-suffix">%</span>
               </div>
             </div>
 
             <div class="config-field-row">
-              <span class="config-field-label">Margem da Etapa Desenho Técnico:</span>
+              <div>
+                <span class="config-field-label">Acréscimo Etapa Desenho Técnico:</span>
+                <span class="config-field-sub">Documentação técnica de venda (padrão: 0%)</span>
+              </div>
               <div class="config-input-group">
-                <input type="number" id="regra_pct_desenho" class="config-input" step="0.5" min="0">
+                <input type="number" id="regra_pct_desenho" class="config-input" step="0.5" min="0" placeholder="0">
                 <span class="config-suffix">%</span>
+              </div>
+            </div>
+
+            <div class="mold-explanation-alert" style="background: #f8fafc; border-color: #cbd5e1; color: #475569;">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0; margin-top: 1px;">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+              <div>
+                <strong>Exclusão de Insumos (Seção 9.6):</strong> A seção "Insumos Complementares &amp; Argamassas" foi totalmente excluída. O orçamento é composto exclusivamente pelos itens descritos na Seção 9.
               </div>
             </div>
           </div>
@@ -527,62 +546,6 @@
         </form>
       </div>
 
-    </div>
-  </div>
-
-  <!-- Modal: Adicionar Nova Pastilha / Revestimento -->
-  <div id="modalNovoRevestimento" class="modal-overlay" style="display: none;" onclick="fecharModalNovoRevestimento()">
-    <div class="modal-card" onclick="event.stopPropagation()">
-      <div class="modal-header">
-        <h3 class="modal-title">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-            <line x1="3" y1="9" x2="21" y2="9"></line>
-            <line x1="9" y1="3" x2="9" y2="21"></line>
-          </svg>
-          Adicionar Nova Pastilha / Revestimento
-        </h3>
-        <button class="btn-close-modal" onclick="fecharModalNovoRevestimento()">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div class="form-group" style="margin-bottom: 10px;">
-          <label class="form-label">Nome da Pastilha / Revestimento:</label>
-          <input type="text" id="inputNovoRevNome" class="form-control" placeholder="Ex: Pastilha Cristal 2,5x2,5 cm ou Porcelanato Portobello">
-        </div>
-
-        <div class="form-group" style="margin-bottom: 10px;">
-          <label class="form-label">Regra de Acabamento Vinculada:</label>
-          <select id="selectNovoRevAcabamento" class="form-control">
-            <option value="bp11_c3">Cantoneira BP11 (20 cm) + Peça C3 (quina viva)</option>
-            <option value="boleada_7_5">Pastilha Boleada Reta 7,5x7,5 cm + Quebra-canto</option>
-            <option value="boleada_15">Pastilha Boleada Reta 15x15 cm + Quebra-canto</option>
-            <option value="personalizado">Personalizado (apenas metragens sem peças de acabamento)</option>
-          </select>
-        </div>
-
-        <div class="grid-2">
-          <div class="form-group">
-            <label class="form-label">Preço Sem Molde (R$/m²):</label>
-            <div class="config-input-group">
-              <span class="config-prefix">R$</span>
-              <input type="number" id="inputNovoRevPrecoSemMolde" class="config-input" step="0.50" min="0" placeholder="0.00">
-              <span class="config-suffix">/m²</span>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Preço Com Molde (R$/m²):</label>
-            <div class="config-input-group">
-              <span class="config-prefix">R$</span>
-              <input type="number" id="inputNovoRevPrecoComMolde" class="config-input" step="0.50" min="0" placeholder="0.00">
-              <span class="config-suffix">/m²</span>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 8px; padding-top: 10px;">
-        <button type="button" class="btn btn-secondary" onclick="fecharModalNovoRevestimento()">Cancelar</button>
-        <button type="button" class="btn btn-primary" onclick="confirmarAdicionarNovoRevestimento()">Salvar Pastilha</button>
-      </div>
     </div>
   </div>
 

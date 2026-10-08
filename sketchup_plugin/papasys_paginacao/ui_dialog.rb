@@ -423,7 +423,8 @@ module PapaSys
             projeto = params['projeto'] || 'Piscina Sem Nome'
             cliente = params['cliente'] || 'Cliente Geral'
             notas = params['notas'] || ''
-            modificar_3d = params.key?('modificar_3d') ? !!params['modificar_3d'] : true
+            # REGRA ESTRITA: NUNCA modificar a geometria 3D da piscina desenhada pelo usuário
+            modificar_3d = false
 
             Config.largura_cm = largura
             Config.altura_cm = altura

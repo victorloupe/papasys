@@ -82,165 +82,104 @@ function alternarAbaConfig(aba) {
 }
 
 // ==============================================================================
-// ==============================================================================
-// SEÇÃO A: PREÇOS & REGRAS DE CÁLCULO (SEÇÕES 9, 10, 11)
+// SEÇÃO A: PREÇOS & REGRAS DE CÁLCULO (SEÇÃO 9)
 // ==============================================================================
 
 function carregarConfiguracoesNaTela() {
   const settings = PricingEngine.getSettings();
 
-  // 1. Renderiza a tabela dinâmica de Revestimentos / Pastilhas
-  renderizarTabelaRevestimentos();
+  // 1. Tabela de Preço do m² por Divisão e Tipo de Piscina (Convencional / Especial) - Seção 9.1 & 9.5
+  const elSmConv = document.getElementById("preco_m2_sob_medida_convencional");
+  const elSmEsp = document.getElementById("preco_m2_sob_medida_especial");
+  const elIncConv = document.getElementById("preco_m2_incorporadora_convencional");
+  const elIncEsp = document.getElementById("preco_m2_incorporadora_especial");
+  const elIntConv = document.getElementById("preco_m2_internacional_convencional");
+  const elIntEsp = document.getElementById("preco_m2_internacional_especial");
 
-  // 2. Peças de Acabamento (R$/unidade)
-  document.getElementById("preco_acab_bp11").value = settings.acabamento.bp11 || 18.50;
-  document.getElementById("preco_acab_c3").value = settings.acabamento.c3 || 14.00;
-  document.getElementById("preco_acab_boleada_7_5").value = settings.acabamento.boleada_7_5 || 8.50;
-  document.getElementById("preco_acab_boleada_15").value = settings.acabamento.boleada_15 || 12.00;
-  document.getElementById("preco_acab_quebra_canto").value = settings.acabamento.quebra_canto || 15.00;
+  if (elSmConv) elSmConv.value = (settings.m2_prices?.sob_medida?.convencional ?? 140.00).toFixed(2);
+  if (elSmEsp) elSmEsp.value = (settings.m2_prices?.sob_medida?.especial ?? 175.00).toFixed(2);
+  if (elIncConv) elIncConv.value = (settings.m2_prices?.incorporadora?.convencional ?? 120.00).toFixed(2);
+  if (elIncEsp) elIncEsp.value = (settings.m2_prices?.incorporadora?.especial ?? 150.00).toFixed(2);
+  if (elIntConv) elIntConv.value = (settings.m2_prices?.internacional?.convencional ?? 150.00).toFixed(2);
+  if (elIntEsp) elIntEsp.value = (settings.m2_prices?.internacional?.especial ?? 185.00).toFixed(2);
 
-  // 3. Laminação (R$/m² fixo - sem distinção de molde na laminação)
-  const elLam = document.getElementById("preco_lam_m2");
-  if (elLam) {
-    elLam.value = (settings.laminacao.preco_m2 !== undefined) ? settings.laminacao.preco_m2 : (settings.laminacao.sem_molde || 95.00);
-  }
+  // 2. Regra de Molde da Incorporadora (Seção 9.2 & 9.5)
+  const elMoldeConv = document.getElementById("regra_preco_molde_convencional");
+  const elMoldeEsp = document.getElementById("regra_preco_molde_especial");
+  const elMinMolde = document.getElementById("regra_min_molde");
 
-  // 4. Parâmetros e Regras (Seção 9, 10, 11)
-  document.getElementById("regra_min_molde").value = settings.regras.min_unidades_molde || 10;
-  document.getElementById("regra_pct_autoportante").value = settings.regras.acrescimo_autoportante_pct || 50.0;
-  document.getElementById("regra_pct_previa").value = settings.regras.margem_previa_pct || 5.0;
-  document.getElementById("regra_pct_galga").value = settings.regras.margem_galga_pct || 0.0;
-  document.getElementById("regra_pct_desenho").value = settings.regras.margem_desenho_tecnico_pct || 0.0;
+  const incConvPadrao = settings.m2_prices?.incorporadora?.convencional ?? 120.00;
+  const incEspPadrao = settings.m2_prices?.incorporadora?.especial ?? 150.00;
 
-  // 5. Insumos complementares
-  const elArg = document.getElementById("preco_insumo_argamassa");
-  const elRej = document.getElementById("preco_insumo_rejunte");
-  if (elArg) elArg.value = settings.insumos.argamassa_m2 || 10.50;
-  if (elRej) elRej.value = settings.insumos.rejunte_m2 || 6.80;
+  const precoMoldeConv = settings.molde?.preco_m2_convencional !== undefined 
+    ? settings.molde.preco_m2_convencional 
+    : (incConvPadrao - (settings.molde?.desconto_m2 || 20.00));
+
+  const precoMoldeEsp = settings.molde?.preco_m2_especial !== undefined 
+    ? settings.molde.preco_m2_especial 
+    : (incEspPadrao - (settings.molde?.desconto_m2 || 20.00));
+
+  if (elMoldeConv) elMoldeConv.value = parseFloat(precoMoldeConv).toFixed(2);
+  if (elMoldeEsp) elMoldeEsp.value = parseFloat(precoMoldeEsp).toFixed(2);
+  if (elMinMolde) elMinMolde.value = settings.molde?.min_unidades ?? 10;
+
+  // 3. Regras de Acréscimo e Etapas (Seção 9.3 & 9.5)
+  const elAuto = document.getElementById("regra_pct_autoportante");
+  const elPrevia = document.getElementById("regra_pct_previa");
+  const elGalga = document.getElementById("regra_pct_galga");
+  const elDesenho = document.getElementById("regra_pct_desenho");
+
+  if (elAuto) elAuto.value = settings.acrescimos?.autoportante_pct ?? 50.0;
+  if (elPrevia) elPrevia.value = settings.acrescimos?.etapas?.previa ?? 5.0;
+  if (elGalga) elGalga.value = settings.acrescimos?.etapas?.galga ?? 0.0;
+  if (elDesenho) elDesenho.value = settings.acrescimos?.etapas?.desenho_tecnico ?? 0.0;
 }
 
-// Renderiza a lista de pastilhas com visual moderno em cards (Sem Molde & Com Molde)
-function renderizarTabelaRevestimentos() {
-  const container = document.getElementById("listaRevestimentosContainer");
-  const tbody = document.getElementById("listaRevestimentosTabela");
-  if (!container && !tbody) return;
-
-  const coatings = PricingEngine.getCoatingsList();
-  const finishLabels = {
-    bp11_c3: "Cantoneira BP11 + C3",
-    boleada_7_5: "Boleada 7,5 + Quebra-canto",
-    boleada_15: "Boleada 15 + Quebra-canto",
-    personalizado: "Personalizado"
-  };
-
-  if (container) {
-    container.innerHTML = coatings.map((c) => {
-      const precoSem = (c.preco_sem_molde !== undefined ? c.preco_sem_molde : 0).toFixed(2);
-      const precoCom = (c.preco_com_molde !== undefined ? c.preco_com_molde : 0).toFixed(2);
-      const finishText = finishLabels[c.acabamento] || c.acabamento;
-
-      return `
-        <div class="coating-item-card" id="card_coating_${c.id}">
-          <div class="coating-item-header">
-            <div class="coating-item-info">
-              <div class="coating-item-icon">
-                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="3" y="3" width="7" height="7"></rect>
-                  <rect x="14" y="3" width="7" height="7"></rect>
-                  <rect x="14" y="14" width="7" height="7"></rect>
-                  <rect x="3" y="14" width="7" height="7"></rect>
-                </svg>
-              </div>
-              <span class="coating-item-title">${c.nome}</span>
-              ${c.is_custom ? '<span class="coating-custom-badge">Personalizado</span>' : ''}
-            </div>
-            
-            <div class="coating-item-header-right">
-              <span class="coating-finish-pill" title="Regra de acabamento">${finishText}</span>
-              ${c.is_custom ? `
-                <button type="button" class="btn-del-coating" onclick="excluirRevestimento('${c.id}', '${c.nome}')" title="Excluir esta pastilha">
-                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                </button>
-              ` : ''}
-            </div>
-          </div>
-
-          <div class="coating-item-prices-grid">
-            <div class="coating-price-field sem-molde">
-              <span class="coating-price-tag">Sem Molde:</span>
-              <div class="config-input-group price-field-group">
-                <span class="config-prefix">R$</span>
-                <input type="number" id="preco_sem_molde_${c.id}" class="config-input price-card-input" step="0.50" min="0" value="${precoSem}" placeholder="0.00">
-                <span class="config-suffix">/m²</span>
-              </div>
-            </div>
-
-            <div class="coating-price-field com-molde">
-              <span class="coating-price-tag">Com Molde:</span>
-              <div class="config-input-group price-field-group">
-                <span class="config-prefix">R$</span>
-                <input type="number" id="preco_com_molde_${c.id}" class="config-input price-card-input" step="0.50" min="0" value="${precoCom}" placeholder="0.00">
-                <span class="config-suffix">/m²</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      `;
-    }).join("");
-  }
-}
-
-// Salva todos os preços configurados
+// Salva todos os preços e regras configuradas (Somente Admin - Seção 9.5)
 function salvarConfiguracoesPreco() {
-  const coatings = PricingEngine.getCoatingsList().map(c => {
-    const elSem = document.getElementById(`preco_sem_molde_${c.id}`);
-    const elCom = document.getElementById(`preco_com_molde_${c.id}`);
-    const sem = elSem ? (parseFloat(elSem.value) || 0) : c.preco_sem_molde;
-    const com = elCom ? (parseFloat(elCom.value) || 0) : c.preco_com_molde;
-    return {
-      ...c,
-      preco_sem_molde: sem,
-      preco_com_molde: com
-    };
-  });
+  const current = PricingEngine.getSettings();
 
-  const elLam = document.getElementById("preco_lam_m2");
-  const precoLam = elLam ? (parseFloat(elLam.value) || 95.00) : 95.00;
+  const incConv = parseFloat(document.getElementById("preco_m2_incorporadora_convencional")?.value) || 120.00;
+  const incEsp = parseFloat(document.getElementById("preco_m2_incorporadora_especial")?.value) || 150.00;
 
-  const elArg = document.getElementById("preco_insumo_argamassa");
-  const elRej = document.getElementById("preco_insumo_rejunte");
+  const precoMoldeConv = parseFloat(document.getElementById("regra_preco_molde_convencional")?.value) || (incConv - 20.00);
+  const precoMoldeEsp = parseFloat(document.getElementById("regra_preco_molde_especial")?.value) || (incEsp - 20.00);
 
   const updated = {
-    revestimentos: coatings,
-    revestimento: coatings.reduce((acc, c) => { acc[c.id] = c.preco_sem_molde; return acc; }, {}),
-    acabamento: {
-      bp11: parseFloat(document.getElementById("preco_acab_bp11").value) || 18.50,
-      c3: parseFloat(document.getElementById("preco_acab_c3").value) || 14.00,
-      boleada_7_5: parseFloat(document.getElementById("preco_acab_boleada_7_5").value) || 8.50,
-      boleada_15: parseFloat(document.getElementById("preco_acab_boleada_15").value) || 12.00,
-      quebra_canto: parseFloat(document.getElementById("preco_acab_quebra_canto").value) || 15.00
+    m2_prices: {
+      sob_medida: {
+        convencional: parseFloat(document.getElementById("preco_m2_sob_medida_convencional")?.value) || 140.00,
+        especial: parseFloat(document.getElementById("preco_m2_sob_medida_especial")?.value) || 175.00
+      },
+      incorporadora: {
+        convencional: incConv,
+        especial: incEsp
+      },
+      internacional: {
+        convencional: parseFloat(document.getElementById("preco_m2_internacional_convencional")?.value) || 150.00,
+        especial: parseFloat(document.getElementById("preco_m2_internacional_especial")?.value) || 185.00
+      }
     },
-    laminacao: {
-      preco_m2: precoLam,
-      sem_molde: precoLam,
-      com_molde: precoLam
+    molde: {
+      preco_m2_convencional: precoMoldeConv,
+      preco_m2_especial: precoMoldeEsp,
+      desconto_m2: Math.max(0, parseFloat((incConv - precoMoldeConv).toFixed(2))),
+      min_unidades: parseInt(document.getElementById("regra_min_molde")?.value) || 10
     },
-    insumos: {
-      argamassa_m2: elArg ? (parseFloat(elArg.value) || 10.50) : 10.50,
-      rejunte_m2: elRej ? (parseFloat(elRej.value) || 6.80) : 6.80
+    acrescimos: {
+      autoportante_pct: parseFloat(document.getElementById("regra_pct_autoportante")?.value) || 50.0,
+      etapas: {
+        previa: parseFloat(document.getElementById("regra_pct_previa")?.value) || 5.0,
+        galga: parseFloat(document.getElementById("regra_pct_galga")?.value) || 0.0,
+        desenho_tecnico: parseFloat(document.getElementById("regra_pct_desenho")?.value) || 0.0
+      }
     },
-    regras: {
-      min_unidades_molde: parseInt(document.getElementById("regra_min_molde").value) || 10,
-      acrescimo_autoportante_pct: parseFloat(document.getElementById("regra_pct_autoportante").value) || 50.0,
-      margem_previa_pct: parseFloat(document.getElementById("regra_pct_previa").value) || 5.0,
-      margem_galga_pct: parseFloat(document.getElementById("regra_pct_galga").value) || 0.0,
-      margem_desenho_tecnico_pct: parseFloat(document.getElementById("regra_pct_desenho").value) || 0.0
-    }
+    revestimentos: current.revestimentos || PricingEngine.DEFAULT_SETTINGS.revestimentos
   };
 
   const ok = PricingEngine.saveSettings(updated);
   if (ok) {
-    showToast("Todas as tabelas de preços e regras foram salvas com sucesso!", "success");
+    showToast("Configurações de Preços, Molde e Acréscimos salvas com sucesso!", "success");
     carregarConfiguracoesNaTela();
   } else {
     showToast("Falha ao salvar configurações de preço.", "error");
@@ -310,7 +249,7 @@ async function excluirRevestimento(id, nome) {
 async function restaurarPadroes() {
   const ok = await PapaSysDialog.confirm({
     title: "Restaurar Padrões de Preço",
-    message: "Deseja restaurar todos os valores unitários de pastilhas, insumos e percentuais para a tabela padrão original?",
+    message: "Deseja restaurar as tabelas de preços do m², regras de molde e percentuais de acréscimo para a configuração padrão original?",
     confirmText: "Sim, Restaurar",
     cancelText: "Cancelar",
     type: "warning"

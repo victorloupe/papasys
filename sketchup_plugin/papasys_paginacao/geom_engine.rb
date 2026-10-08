@@ -35,8 +35,10 @@ module PapaSys
 
         faces_sel = selecao.grep(Sketchup::Face).select { |f| f.valid? && !f.deleted? }
         grupos_sel = (selecao.grep(Sketchup::Group) + selecao.grep(Sketchup::ComponentInstance)).select { |g| g.valid? }
+        arestas_sel = selecao.grep(Sketchup::Edge).select { |e| e.valid? && !e.deleted? }
 
         is_face_sel = !faces_sel.empty?
+        is_edge_sel = !arestas_sel.empty? && faces_sel.empty? && grupos_sel.empty?
         grupo = nil
         mat_forcar = nil
         faces_forcar_ids = nil
@@ -55,7 +57,9 @@ module PapaSys
 
         origem = (options[:origem] || 'centro').to_s.downcase
         canto_ref = (options[:canto_ref] || 'inf_esq').to_s.downcase
-        modificar_3d = options.key?(:modificar_3d) ? !!options[:modificar_3d] : true
+        # REGRA ESTRITA: NUNCA modificar ou ajustar a piscina 3D desenhada!
+        # Sempre utiliza a piscina exatamente como desenhada pelo projetista, sem alterar nada.
+        modificar_3d = false
         largura_borda_cm_op = (options[:largura_borda_cm] || 20.0).to_f
 
         colecoes = []
@@ -143,6 +147,21 @@ module PapaSys
         elsif tem_contexto_aberto
           colecoes = coletar_contexto_aberto(modelo)
           is_face_sel = false
+        elsif is_edge_sel
+          conectadas = arestas_sel.map { |e| e.all_connected rescue [] }.flatten.uniq
+          faces_con = conectadas.grep(Sketchup::Face).select { |f| f.valid? && !f.deleted? }
+          edges_con = conectadas.grep(Sketchup::Edge).select { |e| e.valid? && !e.deleted? }
+          if !faces_con.empty?
+            colecoes << {
+              owner: modelo,
+              entities: modelo.active_entities,
+              transform: Geom::Transformation.new,
+              inherited_mat: nil,
+              faces: faces_con,
+              edges: edges_con
+            }
+            is_face_sel = false
+          end
         else
           return { success: false, error: 'Por favor, selecione as faces da piscina ou o grupo/componente.' }
         end
@@ -183,7 +202,7 @@ module PapaSys
         total_pontos_ajustados = 0
 
         if !modificar_3d
-          puts "[PapaSys] Modo 'Enviar Sem Ajustar': mantendo geometria 3D original e lendo quantitativos."
+          puts "[PapaSys] Geometria 3D original preservada 100% intacta (sempre usa a piscina desenhada, sem alterar nada)."
         elsif tem_curvas
           puts "[PapaSys] Curvas detectadas: Formato 3D orgânico mantido 100% intacto."
         elsif total_edges_count > 2500
@@ -336,7 +355,7 @@ module PapaSys
         pecas_curva = comp_curva_horizontal_m > 0 ? (comp_curva_horizontal_m / ((largura_cm.to_f + rejunte_cm.to_f) / 100.0)).round : 0
 
         # Cálculo dos quantitativos iGUi (Revestimento, Laminação, Volume, Cantos e Acabamentos)
-        dados_igui = calcular_quantitativos_igui(faces_revest, all_faces_info, bb_pos, dims, options)
+        dados_igui = calcular_quantitativos_igui(faces_revest, all_faces_info, bb_pos, dims, options.merge(arestas_sel: arestas_sel))
 
         puts "[PapaSys/iGUi] Quantitativos -> Comp: #{dims[:comprimento_m]}m | Larg: #{dims[:largura_m]}m | Prof: #{dims[:profundidade_m]}m"
         puts "[PapaSys/iGUi] Revestimento: #{dados_igui[:area_revestimento_m2]} m² | Laminação: #{dados_igui[:area_laminacao_m2]} m²"
@@ -456,30 +475,31 @@ module PapaSys
           cz = fi[:center].z
           center = fi[:center]
 
-          # 1. Borda superior plana (deck/lip de acabamento):
-          # Toda face horizontal no topo da piscina é borda (laminação), NUNCA revestimento interno!
-          if norm.z > 0.3 && cz >= z_limite_borda
-            faces_lamina << fi
-            next
-          end
-
-          # 2. Superfície horizontal apontando para baixo (fundo externo ou aba inferior da borda):
+          # 1. Superfície horizontal apontando para baixo (fundo externo ou aba inferior da borda):
           if norm.z < -0.15
             faces_lamina << fi
             next
           end
 
-          # 3. Se for material de borda, deck ou laminação explícita:
           mats = [fi[:material], fi[:front_mat], (fi[:face].back_material rescue nil)].compact
-          if mats.any? { |m| m && (nome_material_externo?(m.name) || cor_material_laminacao?(m)) }
+
+          # 2. Prioridade MÁXIMA por REVESTIMENTO: se tem textura ou nome indica revestimento/pastilha/azulejo
+          tem_rev_mat = fi[:tem_textura] || mats.any? { |m| m && (m.name.to_s.downcase.include?('revestimento') || m.name.to_s.downcase.include?('pastilha') || m.name.to_s.downcase.include?('azulejo') || m.name.to_s.downcase.include?('azul') || m.name.to_s.downcase.include?('porcelanato')) }
+          if tem_rev_mat
+            faces_revest << fi
+            next
+          end
+
+          # 3. Borda superior plana (deck/lip de acabamento sem pastilha):
+          # Toda face horizontal no topo da piscina sem revestimento é borda (laminação)
+          if norm.z > 0.3 && cz >= z_limite_borda
             faces_lamina << fi
             next
           end
 
-          # 4. Prioridade por REVESTIMENTO: se tem textura ou nome indica revestimento/pastilha/azulejo
-          tem_rev_mat = fi[:tem_textura] || mats.any? { |m| m && (m.name.to_s.downcase.include?('revestimento') || m.name.to_s.downcase.include?('pastilha') || m.name.to_s.downcase.include?('azulejo') || m.name.to_s.downcase.include?('azul') || m.name.to_s.downcase.include?('porcelanato')) }
-          if tem_rev_mat
-            faces_revest << fi
+          # 4. Se for material de borda, deck ou laminação explícita:
+          if mats.any? { |m| m && (nome_material_externo?(m.name) || cor_material_laminacao?(m)) }
+            faces_lamina << fi
             next
           end
 
@@ -1504,7 +1524,7 @@ module PapaSys
         vol_info = calcular_volume_interno(faces_revest, bb_pos, dims)
 
         # Cantos lineares e Quinas vivas
-        cantos_info = detectar_cantos_e_quinas(faces_revest, dims)
+        cantos_info = detectar_cantos_e_quinas(faces_revest, dims, options.merge(all_faces_info: all_faces_info))
 
         # Peças de Acabamento (Seção 7)
         acabamentos = calcular_pecas_acabamento(revestimento_sel, cantos_info[:comprimento_cm], cantos_info[:quinas_vivas])
@@ -1559,7 +1579,13 @@ module PapaSys
 
       # Detecção precisa de cantos lineares (arestas salientes de degraus/bancos onde vai BP11 / Boleado Reto)
       # e quinas vivas (encontro de arestas salientes formando canto vivo onde vai C3 / Quebra-canto)
-      def self.detectar_cantos_e_quinas(faces_revest, dims)
+      def self.detectar_cantos_e_quinas(faces_revest, dims, options = {})
+        modelo = Sketchup.active_model
+        t_ativo = (modelo && modelo.active_path && !modelo.active_path.empty?) ? (modelo.edit_transform rescue Geom::Transformation.new) : Geom::Transformation.new
+
+        arestas_sel = options[:arestas_sel]
+        all_faces_info = options[:all_faces_info] || faces_revest
+
         bb_revest = Geom::BoundingBox.new
         faces_revest.each do |fi|
           f = fi[:face]
@@ -1568,80 +1594,299 @@ module PapaSys
           f.vertices.each { |v| bb_revest.add(t * v.position) if v.valid? }
         end
 
-        edge_map = {}
-        faces_revest.each do |fi|
-          f = fi[:face]
-          t = fi[:transform] || Geom::Transformation.new
-          f.edges.each do |e|
-            next unless e.valid? && !e.deleted?
-            edge_map[e.object_id] ||= { edge: e, transform: t, faces: [] }
-            edge_map[e.object_id][:faces] << fi
-          end
-        end
+        max_z_pool = (all_faces_info + faces_revest).map { |fi| fi[:max_z] }.max || 0.0
 
         cantos_lineares = []
         cantos_para_quinas = []
         comprimento_total_cm = 0.0
 
-        edge_map.values.each do |e_info|
-          faces = e_info[:faces]
-          next unless faces.length == 2
+        if arestas_sel && !arestas_sel.empty?
+          # MODO 1: SELEÇÃO DIRETA DE ARESTAS (Explicit Edge Selection)
+          # Usuário selecionou as arestas diretamente no SketchUp (visíveis em azul nos prints do usuário!)
+          arestas_sel.each do |e|
+            next unless e.valid? && !e.deleted?
+            p1 = t_ativo * e.start.position
+            p2 = t_ativo * e.end.position
+            edge_len_m = (p1.distance(p2).to_f * 0.0254).round(3)
+            edge_len_cm = (edge_len_m * 100.0).round(1)
+            comprimento_total_cm += edge_len_cm
 
-          f1 = faces[0]
-          f2 = faces[1]
+            face_horizontal = nil
+            face_vertical = nil
+            e.faces.each do |f|
+              next unless f.valid?
+              norm = (t_ativo * f.normal).normalize rescue f.normal
+              pts_g = f.vertices.map { |v| t_ativo * v.position } rescue []
+              c_g = t_ativo * f.bounds.center rescue f.bounds.center
+              f_info = {
+                face: f,
+                normal: norm,
+                pts: pts_g,
+                center: c_g,
+                max_z: pts_g.map(&:z).max || c_g.z,
+                min_z: pts_g.map(&:z).min || c_g.z
+              }
+              if norm.z.abs > 0.35
+                face_horizontal = f_info
+              elsif norm.z.abs < 0.35
+                face_vertical = f_info
+              end
+            end
 
-          is_horiz1 = f1[:normal].z.abs > 0.4
-          is_horiz2 = f2[:normal].z.abs > 0.4
-          is_vert1 = f1[:normal].z.abs < 0.3
-          is_vert2 = f2[:normal].z.abs < 0.3
-          face_vertical = nil
+            u_drop = nil
+            if face_vertical
+              n_v = face_vertical[:normal]
+              n_v_2d = Geom::Vector3d.new(n_v.x, n_v.y, 0)
+              p_mid_z = (p1.z + p2.z) / 2.0
+              if face_horizontal && face_vertical[:max_z] <= (p_mid_z + 1.5.cm) && face_vertical[:min_z] < (p_mid_z - 1.0.cm)
+                if n_v_2d.length > 0.001
+                  n_u = n_v_2d.normalize
+                  p_mid_2d = Geom::Point3d.new((p1.x + p2.x) / 2.0, (p1.y + p2.y) / 2.0, 0)
+                  pt_frente = Geom::Point3d.new(p_mid_2d.x + n_u.x * 2.5.cm, p_mid_2d.y + n_u.y * 2.5.cm, 0)
+                  pts_h = face_horizontal[:pts]
+                  in_frente = ponto_dentro_poligono_2d?(pt_frente.x, pt_frente.y, pts_h)
+                  u_drop = in_frente ? Geom::Vector3d.new(-n_u.x, -n_u.y, 0) : n_u
+                else
+                  u_drop = Geom::Vector3d.new(n_v.x, n_v.y, 0).normalize rescue nil
+                end
+              elsif n_v_2d.length > 0.001
+                n_u = n_v_2d.normalize
+                p_mid_2d = Geom::Point3d.new((p1.x + p2.x) / 2.0, (p1.y + p2.y) / 2.0, 0)
+                pt_frente = Geom::Point3d.new(p_mid_2d.x + n_u.x * 2.5.cm, p_mid_2d.y + n_u.y * 2.5.cm, 0)
+                pts_h = face_horizontal ? face_horizontal[:pts] : nil
+                in_frente = pts_h ? ponto_dentro_poligono_2d?(pt_frente.x, pt_frente.y, pts_h) : false
+                u_drop = in_frente ? Geom::Vector3d.new(-n_u.x, -n_u.y, 0) : n_u
+              end
+            end
 
-          e = e_info[:edge]
-          t = e_info[:transform]
-          p1 = t * e.start.position
-          p2 = t * e.end.position
-          p_mid_z = (p1.z + p2.z) / 2.0
-
-          # Aresta de canto linear (onde vai Boleada / Cantoneira) é ESTRITAMENTE HORIZONTAL (degraus/prainha/bancos)
-          next if (p1.z - p2.z).abs > 2.0.cm
-
-          is_convex = false
-
-          # Encontro de degrau/prainha/banco (uma face horizontal e uma vertical):
-          # A face vertical DEVE estar ABAIXO da aresta para ser degrau/quina saliente onde vai a pastilha boleada
-          if is_horiz1 && is_vert2
-            is_convex = (p_mid_z - f2[:center].z) > 1.0.cm
-            face_vertical = f2 if is_convex
-          elsif is_horiz2 && is_vert1
-            is_convex = (p_mid_z - f1[:center].z) > 1.0.cm
-            face_vertical = f1 if is_convex
+            canto_info = {
+              edge: e,
+              len_m: edge_len_m,
+              len_cm: edge_len_cm,
+              p1: p1,
+              p2: p2,
+              vetor: p1.vector_to(p2),
+              face_vertical: face_vertical,
+              face_horizontal: face_horizontal,
+              u_drop: u_drop
+            }
+            cantos_lineares << canto_info
+            # Apenas arestas horizontais podem formar quinas vivas salientes (pontos agudos que machucam)
+            cantos_para_quinas << canto_info if (p1.z - p2.z).abs <= 2.0.cm
+          end
+        else
+          # MODO 2: DETECÇÃO AUTOMÁTICA INTELIGENTE
+          # Mapeia todas as arestas conectando faces da piscina
+          edge_map = {}
+          (faces_revest + all_faces_info).uniq { |fi| fi[:face].object_id }.each do |fi|
+            f = fi[:face]
+            t = fi[:transform] || Geom::Transformation.new
+            next unless f.valid? && !f.deleted?
+            f.edges.each do |e|
+              next unless e.valid? && !e.deleted?
+              edge_map[e.object_id] ||= { edge: e, transform: t, faces: [] }
+              edge_map[e.object_id][:faces] << fi unless edge_map[e.object_id][:faces].any? { |xf| xf[:face] == f }
+            end
           end
 
-          next unless is_convex
+          seen_midpoints = {}
 
-          edge_len_m = (p1.distance(p2).to_f * 0.0254).round(3)
-          edge_len_cm = (edge_len_m * 100.0).round(1)
+          edge_map.values.each do |e_info|
+            faces = e_info[:faces]
+            next unless faces.length >= 2
 
-          canto_info = {
-            edge: e,
-            len_m: edge_len_m,
-            len_cm: edge_len_cm,
-            p1: p1,
-            p2: p2,
-            vetor: p1.vector_to(p2),
-            face_vertical: face_vertical
-          }
+            # Identifica face horizontal e face vertical conectadas à aresta
+            face_horizontal = faces.find { |fi| fi[:normal].z.abs > 0.35 }
+            face_vertical = faces.find { |fi| fi[:normal].z.abs < 0.35 }
+            next unless face_horizontal && face_vertical
 
-          cantos_para_quinas << canto_info
-          next unless aresta_contabilizavel_como_linear?(p1, p2, bb_revest)
+            # Pelo menos uma das faces deve ser do revestimento interno
+            tem_revest = faces_revest.any? { |fr| fr[:face] == face_horizontal[:face] || fr[:face] == face_vertical[:face] }
+            next unless tem_revest
 
-          cantos_lineares << canto_info
-          comprimento_total_cm += edge_len_cm
+            e = e_info[:edge]
+            t = e_info[:transform]
+            p1 = t * e.start.position
+            p2 = t * e.end.position
+            p_mid_z = (p1.z + p2.z) / 2.0
+
+            # Aresta de canto linear (onde vai Boleada / Cantoneira) é ESTRITAMENTE HORIZONTAL
+            next if (p1.z - p2.z).abs > 2.0.cm
+
+            # REGRA 1 (SALIENTE / DEGRAU):
+            # Em um degrau saliente, a face vertical (espelho) desce a partir da aresta.
+            # O pisante (face horizontal) fica atrás do espelho (direção oposta à normal 2D da face vertical).
+            # Em um encontro côncavo (piso com parede subindo), o piso fica à frente da parede.
+            n_v = face_vertical[:normal]
+            n_v_2d = Geom::Vector3d.new(n_v.x, n_v.y, 0)
+
+            eh_descendo = false
+            u_drop = nil
+
+            # Caso 1: A face vertical está fisicamente abaixo da aresta (espelho descendo, max_z <= p_mid_z + 1.5cm)
+            if face_vertical[:max_z] <= (p_mid_z + 1.5.cm) && face_vertical[:min_z] < (p_mid_z - 1.0.cm)
+              eh_descendo = true
+              if n_v_2d.length > 0.001
+                n_u = n_v_2d.normalize
+                p_mid_2d = Geom::Point3d.new((p1.x + p2.x) / 2.0, (p1.y + p2.y) / 2.0, 0)
+                pt_frente = Geom::Point3d.new(p_mid_2d.x + n_u.x * 2.5.cm, p_mid_2d.y + n_u.y * 2.5.cm, 0)
+                pts_h = face_horizontal[:pts]
+                in_frente = ponto_dentro_poligono_2d?(pt_frente.x, pt_frente.y, pts_h)
+                u_drop = in_frente ? Geom::Vector3d.new(-n_u.x, -n_u.y, 0) : n_u
+              else
+                u_drop = Geom::Vector3d.new(n_v.x, n_v.y, 0).normalize rescue nil
+              end
+
+            # Caso 2: A face vertical continua acima da aresta (ex: prainha conectada à parede lateral contínua do tanque)
+            elsif n_v_2d.length > 0.001
+              n_u = n_v_2d.normalize
+              p_mid_2d = Geom::Point3d.new((p1.x + p2.x) / 2.0, (p1.y + p2.y) / 2.0, 0)
+              test_d = 2.5.cm
+              pt_frente = Geom::Point3d.new(p_mid_2d.x + n_u.x * test_d, p_mid_2d.y + n_u.y * test_d, 0)
+              pt_tras = Geom::Point3d.new(p_mid_2d.x - n_u.x * test_d, p_mid_2d.y - n_u.y * test_d, 0)
+
+              pts_h = face_horizontal[:pts]
+              in_frente = ponto_dentro_poligono_2d?(pt_frente.x, pt_frente.y, pts_h)
+              in_tras = ponto_dentro_poligono_2d?(pt_tras.x, pt_tras.y, pts_h)
+
+              if in_tras && !in_frente
+                # O pisante está atrás do espelho -> degrau saliente com desnível à frente!
+                eh_descendo = (face_vertical[:min_z] < p_mid_z - 1.0.cm)
+                u_drop = n_u
+              elsif in_frente && !in_tras
+                # Se o pisante está na frente de n_u, verifica se a parede vai para baixo da cota
+                if face_vertical[:min_z] < p_mid_z - 1.0.cm && face_vertical[:center].z < p_mid_z
+                  eh_descendo = true
+                  u_drop = Geom::Vector3d.new(-n_u.x, -n_u.y, 0)
+                else
+                  eh_descendo = false
+                end
+              else
+                # Fallback por cotas Z
+                eh_descendo = (face_vertical[:center].z < p_mid_z - 0.5.cm) && (face_vertical[:min_z] < p_mid_z - 1.0.cm)
+                u_drop = n_u
+              end
+            else
+              eh_descendo = (face_vertical[:min_z] < p_mid_z - 1.0.cm) && (face_vertical[:center].z < p_mid_z)
+              u_drop = Geom::Vector3d.new(n_v.x, n_v.y, 0).normalize rescue nil
+            end
+
+            next unless eh_descendo
+
+            # REGRA 2: EXCLUSÃO DE BORDAS / PAREDES PERIMETRAIS DO TANQUE
+            # Degraus, prainhas e bancos são estruturas internas da piscina.
+            # Arestas no topo das paredes perimetrais do tanque (que encontram a borda de fibra / gelcoat)
+            # NÃO recebem boleada BP11. Apenas recebem se a borda do topo for revestida de pastilha (como no Spa).
+            if p_mid_z >= (max_z_pool - 20.0.cm)
+              mat_h = face_horizontal[:material]
+              eh_fibra = cor_material_laminacao?(mat_h) || nome_material_laminacao?(mat_h&.name)
+              sem_pastilha = !face_horizontal[:tem_textura] && (mat_h.nil? || !mat_h.name.to_s.downcase.include?('pastilha'))
+              alt_v = (face_vertical[:max_z] - face_vertical[:min_z])
+              eh_parede_tanque = alt_v > 50.0.cm
+              next if eh_fibra || sem_pastilha || eh_parede_tanque
+            end
+
+            # Deduplicação por ponto médio 3D (evita arestas duplicadas na mesma posição)
+            mk = [((p1.x + p2.x) * 2.5).round, ((p1.y + p2.y) * 2.5).round, ((p1.z + p2.z) * 2.5).round]
+            next if seen_midpoints[mk]
+            seen_midpoints[mk] = true
+
+            edge_len_m = (p1.distance(p2).to_f * 0.0254).round(3)
+            edge_len_cm = (edge_len_m * 100.0).round(1)
+
+            canto_info = {
+              edge: e,
+              len_m: edge_len_m,
+              len_cm: edge_len_cm,
+              p1: p1,
+              p2: p2,
+              vetor: p1.vector_to(p2),
+              face_vertical: face_vertical,
+              face_horizontal: face_horizontal,
+              u_drop: u_drop
+            }
+
+            cantos_lineares << canto_info
+            cantos_para_quinas << canto_info
+            comprimento_total_cm += edge_len_cm
+          end
+
+          # ETAPA 2B: DETECÇÃO DE QUINAS PARA DENTRO (Cantos verticais internos de degraus/prainhas)
+          # Regra iGUi / PapaSys: "Toda quina (para dentro) é considerado - cantos lineares"
+          edge_map.values.each do |e_info|
+            faces = e_info[:faces]
+            next unless faces.length >= 2
+
+            vert_faces = faces.select { |fi| fi[:normal].z.abs < 0.35 }
+            next unless vert_faces.length >= 2
+
+            f_v1 = vert_faces[0]
+            f_v2 = vert_faces[1]
+
+            tem_revest = faces_revest.any? { |fr| fr[:face] == f_v1[:face] || fr[:face] == f_v2[:face] }
+            next unless tem_revest
+
+            e = e_info[:edge]
+            t = e_info[:transform]
+            p1 = t * e.start.position
+            p2 = t * e.end.position
+
+            # Aresta VERTICAL (desnível de parede)
+            dz = (p1.z - p2.z).abs
+            dx = (p1.x - p2.x).abs
+            dy = (p1.y - p2.y).abs
+            next unless dz >= 5.0.cm && dx <= 3.0.cm && dy <= 3.0.cm
+
+            nv1_2d = Geom::Vector3d.new(f_v1[:normal].x, f_v1[:normal].y, 0)
+            nv2_2d = Geom::Vector3d.new(f_v2[:normal].x, f_v2[:normal].y, 0)
+            next if nv1_2d.length < 0.001 || nv2_2d.length < 0.001
+            ang = nv1_2d.normalize.angle_between(nv2_2d.normalize) rescue 0.0
+            next unless ang > 35.degrees && ang < 145.degrees
+
+            mk = [((p1.x + p2.x) * 2.5).round, ((p1.y + p2.y) * 2.5).round, ((p1.z + p2.z) * 2.5).round]
+            next if seen_midpoints[mk]
+
+            # Conecta a um canto linear horizontal (ex: topo encontra borda da prainha ou base encontra degrau)
+            toca_canto_horizontal = cantos_lineares.any? do |cl|
+              cl[:p1].distance(p1) < 4.0.cm || cl[:p2].distance(p1) < 4.0.cm ||
+              cl[:p1].distance(p2) < 4.0.cm || cl[:p2].distance(p2) < 4.0.cm
+            end
+            next unless toca_canto_horizontal
+
+            seen_midpoints[mk] = true
+
+            edge_len_m = (p1.distance(p2).to_f * 0.0254).round(3)
+            edge_len_cm = (edge_len_m * 100.0).round(1)
+
+            canto_info = {
+              edge: e,
+              len_m: edge_len_m,
+              len_cm: edge_len_cm,
+              p1: p1,
+              p2: p2,
+              vetor: p1.vector_to(p2),
+              face_vertical: f_v1,
+              face_horizontal: nil,
+              u_drop: nil,
+              eh_quina_para_dentro: true
+            }
+
+            # Regra iGUi: "Toda quina para dentro é considerado cantos lineares"
+            # NÃO gera quina viva (não entra em cantos_para_quinas)
+            cantos_lineares << canto_info
+            comprimento_total_cm += edge_len_cm
+          end
         end
 
-        # Contagem de quinas vivas (vértices onde 2 ou mais cantos convexos se encontram,
-        # como o canto vivo do degrau destacado no print do usuário). Pontas que encostam
-        # no contorno interno da piscina são terminações contra parede, não quebra-canto.
+        # Paredes perimetrais da piscina (faces verticais que alcançam a cota superior do tanque)
+        # Terminações de degraus contra paredes perimetrais não geram peças de quebra-canto.
+        max_z_pool = faces_revest.map { |fi| fi[:max_z] }.max || 0.0
+        paredes_perimetrais = faces_revest.select do |fi|
+          fi[:normal].z.abs < 0.25 && fi[:max_z] >= (max_z_pool - 15.0.cm)
+        end
+
+        # Contagem de quinas vivas (vértices onde 2 cantos lineares se encontram formando QUINA VIVA SALIENTE).
+        # Regra iGUi / PapaSys: Toda quina (para dentro) é considerada cantos lineares (não gera peça quebra-canto).
         cantos_por_vertice = {}
         cantos_para_quinas.each do |c|
           # Chaves de vértice discretizadas em 1cm para coincidir vértices compartilhados
@@ -1657,23 +1902,20 @@ module PapaSys
           next false if cantos_no_vertice.length < 2
 
           pt = cantos_no_vertice.first[:ponto]
-          next false if ponto_no_limite_interno?(pt, bb_revest, 3.0.cm)
 
-          # Só existe peça de quina quando duas bordas lineares se encontram em L.
-          # Bordas colineares ou quase colineares são uma continuidade da mesma peça.
-          tem_encontro_em_l = false
+          # Só existe peça de quina viva quando duas bordas lineares se encontram
+          # formando uma quina SALIENTE / CONVEXA (para fora da estrutura, apontando
+          # para a água). Quinas para dentro (côncavas/reentrantes) são consideradas
+          # cantos lineares comuns e NÃO geram peça de quebra-canto.
+          tem_quina_viva_saliente = false
           cantos_no_vertice.combination(2) do |a, b|
-            va = vetor_saida_do_vertice(a, pt)
-            vb = vetor_saida_do_vertice(b, pt)
-            next if va.length <= 0.001 || vb.length <= 0.001
-            ang = va.angle_between(vb) rescue 0.0
-            if ang > 35.degrees && ang < 145.degrees
-              tem_encontro_em_l = true
+            if quina_viva_saliente?(a, b, pt)
+              tem_quina_viva_saliente = true
               break
             end
           end
 
-          tem_encontro_em_l
+          tem_quina_viva_saliente
         end
 
         {
@@ -1692,31 +1934,82 @@ module PapaSys
           (pt.y - bb.max.y).abs <= tolerancia
       end
 
-      def self.aresta_contabilizavel_como_linear?(p1, p2, bb)
-        return true if !p1 || !p2 || !bb || bb.empty?
+      # Identifica com precisão geométrica se duas arestas que se encontram em L formam:
+      # - Uma QUINA VIVA (saliente / convexa / ponto agudo que projeta para fora): RETORNA TRUE
+      # - Uma QUINA PARA DENTRO (côncava / reentrante / canto de parede): RETORNA FALSE
+      #
+      # Regra PapaSys / iGUi: "São somente pontos agudos, cantos que machucam".
+      # Toda quina para dentro é considerada cantos lineares comuns (boleadas), não gera peça de quebra-canto / C3.
+      def self.quina_viva_saliente?(a, b, pt)
+        va = vetor_saida_do_vertice(a, pt)
+        vb = vetor_saida_do_vertice(b, pt)
+        return false if va.length <= 0.001 || vb.length <= 0.001
 
-        dx = (p2.x - p1.x).abs
-        dy = (p2.y - p1.y).abs
-        return false if dx < 0.001 && dy < 0.001
+        va_2d = Geom::Vector3d.new(va.x, va.y, 0)
+        vb_2d = Geom::Vector3d.new(vb.x, vb.y, 0)
+        return false if va_2d.length <= 0.001 || vb_2d.length <= 0.001
 
-        comprimento_m = (p1.distance(p2).to_f * 0.0254)
-        menor_lado_m = ([bb.width.to_f, bb.height.to_f].min * 0.0254)
-        tolerancia_limite = 3.0.cm
+        va_u = va_2d.normalize
+        vb_u = vb_2d.normalize
 
-        # Os cantos lineares iGUi são as frentes dos degraus/bancos/prainhas.
-        # Em piscinas retas, essas frentes cruzam a largura menor da piscina.
-        if bb.width.to_f >= bb.height.to_f
-          return true if dy >= dx
-        else
-          return true if dx >= dy
+        ang = va_u.angle_between(vb_u) rescue 0.0
+        # Encontro em L / canto (entre 35° e 145°)
+        return false if ang < 35.degrees || ang > 145.degrees
+
+        # Bissetriz do setor angular no plano horizontal (aponta para o interior do setor do canto)
+        v_bis = (va_u + vb_u)
+        return false if v_bis.length <= 0.001
+        v_bis_u = v_bis.normalize
+
+        # REGRA FUNDAMENTAL iGUi: "São somente pontos agudos, cantos que machucam"
+        # Uma quina viva saliente projeta ponta para fora: a queda (desnível das paredes)
+        # ocorre para FORA do setor angular (oposta à bissetriz: v_drop . v_bis < 0).
+        # Em quinas para dentro (côncavas/reentrantes de parede), a queda ocorre no
+        # MESMO sentido da bissetriz (as paredes fecham em volta do poço: v_drop . v_bis > 0).
+        u_drop_a = a[:u_drop]
+        u_drop_b = b[:u_drop]
+
+        v_drop = Geom::Vector3d.new(0, 0, 0)
+        v_drop += u_drop_a if u_drop_a && u_drop_a.length > 0.001
+        v_drop += u_drop_b if u_drop_b && u_drop_b.length > 0.001
+
+        # Fallback de vetor de queda caso u_drop não estivesse definido
+        if v_drop.length <= 0.001
+          [a[:face_vertical], b[:face_vertical]].compact.each do |fv|
+            n = fv[:normal]
+            n_2d = Geom::Vector3d.new(n.x, n.y, 0)
+            v_drop += n_2d.normalize if n_2d.length > 0.001
+          end
         end
 
-        # Retornos curtos internos também recebem acabamento linear quando estão
-        # destacados dentro da piscina, como a lateral curta do banco/degrau central.
-        # Retornos no limite do tanque são terminações contra parede e ficam fora.
-        return false if ponto_no_limite_interno?(p1, bb, tolerancia_limite) || ponto_no_limite_interno?(p2, bb, tolerancia_limite)
+        return false if v_drop.length <= 0.001
 
-        comprimento_m <= (menor_lado_m * 0.35)
+        # Queda para fora (oposta a bissetriz) = Quina Viva Saliente (< -0.1)
+        # Queda para dentro (mesma direção de bissetriz) = Quina para Dentro (> 0.1)
+        v_drop.dot(v_bis_u) < -0.1
+      end
+
+      # Teste exato de Ponto em Polígono 2D (Ray-Casting Algorithm)
+      def self.ponto_dentro_poligono_2d?(x, y, pts)
+        return false if !pts || pts.length < 3
+        inside = false
+        j = pts.length - 1
+        pts.each_with_index do |pi, i|
+          pj = pts[j]
+          if ((pi.y > y) != (pj.y > y))
+            denom = (pj.y - pi.y).to_f
+            if denom.abs > 1e-12
+              x_inter = (pj.x - pi.x) * (y - pi.y) / denom + pi.x
+              inside = !inside if x < x_inter
+            end
+          end
+          j = i
+        end
+        inside
+      end
+
+      def self.aresta_contabilizavel_como_linear?(p1, p2, bb)
+        true
       end
 
       def self.vetor_saida_do_vertice(canto, pt)

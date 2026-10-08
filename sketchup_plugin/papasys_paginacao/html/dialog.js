@@ -3,7 +3,7 @@
 // ==============================================================================
 
 const appState = {
-  version: "2.0.0",
+  version: "2.0.9",
   serverUrl: "https://bhbbpdvgkyjqxhghbmpe.supabase.co",
   active_tab: 1,
   user: {
@@ -81,42 +81,35 @@ const appState = {
     dimensoes: { comprimento_m: 0.0, largura_m: 0.0, profundidade_m: 0.0 }
   },
 
-  // Tabela de Preços e Regras (Seção 9, 10 e 11)
+  // Tabela de Preços e Regras (Seção 9)
   precos: {
+    m2_prices: {
+      sob_medida: { convencional: 140.0, especial: 175.0 },
+      incorporadora: { convencional: 120.0, especial: 150.0 },
+      internacional: { convencional: 150.0, especial: 185.0 }
+    },
+    molde: {
+      preco_m2_convencional: 100.0,
+      preco_m2_especial: 130.0,
+      desconto_m2: 20.0,
+      min_unidades: 10
+    },
+    acrescimos: {
+      autoportante_pct: 50.0,
+      etapas: {
+        previa: 5.0,
+        galga: 0.0,
+        desenho_tecnico: 0.0
+      }
+    },
     revestimentos: [
-      { id: "pastilha_5x5", nome: "Pastilha 5x5", acabamento: "bp11_c3", preco_sem_molde: 85.0, preco_com_molde: 68.0 },
-      { id: "pastilha_7_5x7_5", nome: "Pastilha 7,5x7,5", acabamento: "boleada_7_5", preco_sem_molde: 90.0, preco_com_molde: 72.0 },
-      { id: "pastilha_10x10", nome: "Pastilha 10x10", acabamento: "bp11_c3", preco_sem_molde: 85.0, preco_com_molde: 68.0 },
-      { id: "pastilha_15x15", nome: "Pastilha 15x15", acabamento: "boleada_15", preco_sem_molde: 98.0, preco_com_molde: 78.0 },
-      { id: "porcelanato_villagres", nome: "Porcelanato Villagres", acabamento: "personalizado", preco_sem_molde: 120.0, preco_com_molde: 98.0 },
-      { id: "personalizado", nome: "Personalizado", acabamento: "personalizado", preco_sem_molde: 0.0, preco_com_molde: 0.0 }
-    ],
-    revestimento: {
-      pastilha_5x5: 85.0,
-      pastilha_7_5x7_5: 90.0,
-      pastilha_10x10: 85.0,
-      pastilha_15x15: 98.0,
-      porcelanato_villagres: 120.0,
-      personalizado: 0.0
-    },
-    acabamento: {
-      bp11: 18.50,
-      c3: 14.00,
-      boleada_7_5: 8.50,
-      boleada_15: 12.00,
-      quebra_canto: 15.00
-    },
-    laminacao: {
-      preco_m2: 95.0,
-      sem_molde: 95.0,
-      com_molde: 95.0
-    },
-    regras: {
-      min_unidades_molde: 10,
-      acrescimo_autoportante_pct: 50.0,
-      margem_previa_pct: 5.0,
-      margem_galga_pct: 0.0
-    }
+      { id: "pastilha_5x5", nome: "Pastilha 5x5", acabamento: "bp11_c3" },
+      { id: "pastilha_7_5x7_5", nome: "Pastilha 7,5x7,5", acabamento: "boleada_7_5" },
+      { id: "pastilha_10x10", nome: "Pastilha 10x10", acabamento: "bp11_c3" },
+      { id: "pastilha_15x15", nome: "Pastilha 15x15", acabamento: "boleada_15" },
+      { id: "porcelanato_villagres", nome: "Porcelanato Villagres", acabamento: "personalizado" },
+      { id: "personalizado", nome: "Personalizado", acabamento: "personalizado" }
+    ]
   },
 
   selectionInfo: null,
@@ -917,8 +910,144 @@ function onAjusteSucesso(res) {
     elQuinas.textContent = qCount > 0 ? `${qCount} quina(s) viva(s)` : "0 quinas vivas";
   }
 
+  // Sincroniza campos de input editáveis
+  const elInputAreaRev = document.getElementById("inputAreaRevest");
+  const elInputAreaLam = document.getElementById("inputAreaLamina");
+  const elInputVolM3 = document.getElementById("inputVolumeM3");
+  const elInputCantos = document.getElementById("inputCantosLineares");
+  const elInputQuinas = document.getElementById("inputQuinasVivas");
+
+  if (elInputAreaRev && document.activeElement !== elInputAreaRev) {
+    elInputAreaRev.value = appState.quantitativos.area_revestimento_m2;
+  }
+  if (elInputAreaLam && document.activeElement !== elInputAreaLam) {
+    elInputAreaLam.value = appState.quantitativos.area_laminacao_m2;
+  }
+  if (elInputVolM3 && document.activeElement !== elInputVolM3) {
+    elInputVolM3.value = appState.quantitativos.volume_m3;
+  }
+  if (elInputCantos && document.activeElement !== elInputCantos) {
+    elInputCantos.value = appState.quantitativos.cantos_lineares_m;
+  }
+  if (elInputQuinas && document.activeElement !== elInputQuinas) {
+    elInputQuinas.value = appState.quantitativos.quinas_vivas_count;
+  }
+
+  // Limpa overrides de peças caso venha uma nova detecção do 3D
+  delete appState.quantitativos.finish_linear_override;
+  delete appState.quantitativos.finish_quina_override;
+
   recalcularPecasAcabamento();
   atualizarCalculosFinanceiros();
+}
+
+// Edição manual de Áreas, Volume, Cantos e Quinas
+function aoEditarAreaRevest(val) {
+  const m = parseFloat(val) || 0.0;
+  appState.quantitativos.area_revestimento_m2 = m.toFixed(2);
+  const el = document.getElementById("statAreaRevest");
+  if (el) el.textContent = appState.quantitativos.area_revestimento_m2;
+  atualizarCalculosFinanceiros();
+}
+
+function aoEditarAreaLamina(val) {
+  const m = parseFloat(val) || 0.0;
+  appState.quantitativos.area_laminacao_m2 = m.toFixed(2);
+  const el = document.getElementById("statAreaLamina");
+  if (el) el.textContent = appState.quantitativos.area_laminacao_m2;
+  atualizarCalculosFinanceiros();
+}
+
+function aoEditarVolumeM3(val) {
+  const m = parseFloat(val) || 0.0;
+  const litros = Math.round(m * 1000);
+  appState.quantitativos.volume_m3 = m.toFixed(2);
+  appState.quantitativos.volume_litros = litros;
+  const elVolM3 = document.getElementById("statVolumeM3");
+  const elVolL = document.getElementById("statVolumeLitros");
+  if (elVolM3) elVolM3.textContent = appState.quantitativos.volume_m3;
+  if (elVolL) elVolL.textContent = `${litros.toLocaleString('pt-BR')} L`;
+}
+
+function aoEditarCantosLineares(val) {
+  const m = parseFloat(val) || 0.0;
+  appState.quantitativos.cantos_lineares_m = m.toFixed(2);
+  appState.quantitativos.cantos_lineares_cm = (m * 100.0).toFixed(1);
+  delete appState.quantitativos.finish_linear_override;
+  const elCantos = document.getElementById("statCantosLineares");
+  if (elCantos) elCantos.textContent = appState.quantitativos.cantos_lineares_m;
+  recalcularPecasAcabamento();
+  atualizarCalculosFinanceiros();
+}
+
+function aoEditarQuinasVivas(val) {
+  const q = parseInt(val) || 0;
+  appState.quantitativos.quinas_vivas_count = q;
+  delete appState.quantitativos.finish_quina_override;
+  const elQuinas = document.getElementById("statQuinasVivas");
+  if (elQuinas) elQuinas.textContent = q > 0 ? `${q} quina(s) viva(s)` : "0 quinas vivas";
+  recalcularPecasAcabamento();
+  atualizarCalculosFinanceiros();
+}
+
+// Edição direta de peças de acabamento (quantidade de peças)
+function aoEditarFinishLinear(val) {
+  const q = parseInt(val) || 0;
+  appState.quantitativos.finish_linear_override = q;
+  const el = document.getElementById("lblFinishLinearQtd");
+  if (el) el.textContent = `${q} un`;
+  atualizarCalculosFinanceiros();
+}
+
+function aoEditarFinishQuina(val) {
+  const q = parseInt(val) || 0;
+  appState.quantitativos.finish_quina_override = q;
+  const el = document.getElementById("lblFinishQuinaQtd");
+  if (el) el.textContent = `${q} un`;
+  atualizarCalculosFinanceiros();
+}
+
+// Funções de Copiar para Área de Transferência
+function copiarValorQuant(inputId, label, sufixo = "") {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  const val = input.value || "0";
+  copiarParaClipboard(val, `${label}: ${val}${sufixo}`);
+}
+
+function copiarTexto(elementId, label, sufixo = "") {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+  const val = (el.textContent || el.innerText || "").trim();
+  copiarParaClipboard(val, `${label}: ${val}${sufixo}`);
+}
+
+function copiarParaClipboard(texto, labelFeedback) {
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(texto).then(() => {
+      showToast(`${labelFeedback} copiado!`, "success");
+    }).catch(() => {
+      fallbackCopiar(texto, labelFeedback);
+    });
+  } else {
+    fallbackCopiar(texto, labelFeedback);
+  }
+}
+
+function fallbackCopiar(texto, labelFeedback) {
+  try {
+    const tempInput = document.createElement("input");
+    tempInput.style.position = "fixed";
+    tempInput.style.opacity = "0";
+    tempInput.value = texto;
+    document.body.appendChild(tempInput);
+    tempInput.select();
+    document.execCommand("copy");
+    document.body.removeChild(tempInput);
+    showToast(`${labelFeedback} copiado!`, "success");
+  } catch (e) {
+    showToast(`Copiado: ${texto}`, "info");
+  }
 }
 
 function onAjusteErro(erro) {
@@ -1001,8 +1130,10 @@ function recalcularPecasAcabamento() {
 
     if (regra === "bp11_c3") {
       // Cantoneira BP11 (20 cm cada) -> ceil(comprimento ÷ 20 cm) + 1 C3 por quina viva
-      const qtdBp11 = Math.ceil(cantosCm / 20.0);
-      const qtdC3 = quinas * 1;
+      const qtdBp11Calc = Math.ceil(cantosCm / 20.0);
+      const qtdC3Calc = quinas * 1;
+      const qtdBp11 = appState.quantitativos.finish_linear_override !== undefined ? appState.quantitativos.finish_linear_override : qtdBp11Calc;
+      const qtdC3 = appState.quantitativos.finish_quina_override !== undefined ? appState.quantitativos.finish_quina_override : qtdC3Calc;
 
       if (badgeRule) {
         badgeRule.textContent = "BP11 + C3";
@@ -1014,10 +1145,17 @@ function recalcularPecasAcabamento() {
       if (lblQuinaNome) lblQuinaNome.textContent = "Peça C3 (quina viva)";
       if (lblQuinaQtd) lblQuinaQtd.textContent = `${qtdC3} un`;
 
+      const elInputLin = document.getElementById("inputFinishLinearQtd");
+      const elInputQui = document.getElementById("inputFinishQuinaQtd");
+      if (elInputLin && document.activeElement !== elInputLin) elInputLin.value = qtdBp11;
+      if (elInputQui && document.activeElement !== elInputQui) elInputQui.value = qtdC3;
+
     } else if (regra === "boleada_7_5") {
       // Boleada reta 7,5cm -> ceil(comprimento ÷ 7,5 cm) + 1 quebra-canto por quina
-      const qtdBoleada = Math.ceil(cantosCm / 7.5);
-      const qtdQuebra = quinas * 1;
+      const qtdBoleadaCalc = Math.ceil(cantosCm / 7.5);
+      const qtdQuebraCalc = quinas * 1;
+      const qtdBoleada = appState.quantitativos.finish_linear_override !== undefined ? appState.quantitativos.finish_linear_override : qtdBoleadaCalc;
+      const qtdQuebra = appState.quantitativos.finish_quina_override !== undefined ? appState.quantitativos.finish_quina_override : qtdQuebraCalc;
 
       if (badgeRule) {
         badgeRule.textContent = "Boleada 7,5 + Quebra-canto";
@@ -1029,10 +1167,17 @@ function recalcularPecasAcabamento() {
       if (lblQuinaNome) lblQuinaNome.textContent = "Peça Quebra-canto (quina viva)";
       if (lblQuinaQtd) lblQuinaQtd.textContent = `${qtdQuebra} un`;
 
+      const elInputLin = document.getElementById("inputFinishLinearQtd");
+      const elInputQui = document.getElementById("inputFinishQuinaQtd");
+      if (elInputLin && document.activeElement !== elInputLin) elInputLin.value = qtdBoleada;
+      if (elInputQui && document.activeElement !== elInputQui) elInputQui.value = qtdQuebra;
+
     } else if (regra === "boleada_15") {
       // Boleada reta 15cm -> ceil(comprimento ÷ 15 cm) + 1 quebra-canto por quina
-      const qtdBoleada = Math.ceil(cantosCm / 15.0);
-      const qtdQuebra = quinas * 1;
+      const qtdBoleadaCalc = Math.ceil(cantosCm / 15.0);
+      const qtdQuebraCalc = quinas * 1;
+      const qtdBoleada = appState.quantitativos.finish_linear_override !== undefined ? appState.quantitativos.finish_linear_override : qtdBoleadaCalc;
+      const qtdQuebra = appState.quantitativos.finish_quina_override !== undefined ? appState.quantitativos.finish_quina_override : qtdQuebraCalc;
 
       if (badgeRule) {
         badgeRule.textContent = "Boleada 15 + Quebra-canto";
@@ -1043,6 +1188,11 @@ function recalcularPecasAcabamento() {
       if (lblLinearQtd) lblLinearQtd.textContent = `${qtdBoleada} un`;
       if (lblQuinaNome) lblQuinaNome.textContent = "Peça Quebra-canto (quina viva)";
       if (lblQuinaQtd) lblQuinaQtd.textContent = `${qtdQuebra} un`;
+
+      const elInputLin = document.getElementById("inputFinishLinearQtd");
+      const elInputQui = document.getElementById("inputFinishQuinaQtd");
+      if (elInputLin && document.activeElement !== elInputLin) elInputLin.value = qtdBoleada;
+      if (elInputQui && document.activeElement !== elInputQui) elInputQui.value = qtdQuebra;
     }
   }
 }
@@ -1050,87 +1200,84 @@ function recalcularPecasAcabamento() {
 // ==============================================================================
 // MOTOR DE PRECIFICAÇÃO E REGRAS (SEÇÃO 9 E 11)
 // ==============================================================================
+// MOTOR DE PRECIFICAÇÃO E REGRAS (SEÇÃO 9)
+// ==============================================================================
 function atualizarCalculosFinanceiros() {
   verificarRegraMoldeIncorporadora();
 
   const areaRevest = parseFloat(appState.quantitativos.area_revestimento_m2) || 0.0;
-  const areaLamina = parseFloat(appState.quantitativos.area_laminacao_m2) || 0.0;
-  const cantosCm = parseFloat(appState.quantitativos.cantos_lineares_cm) || (parseFloat(appState.quantitativos.cantos_lineares_m) * 100.0) || 0.0;
-  const quinas = parseInt(appState.quantitativos.quinas_vivas_count) || 0;
+  const divisao = (appState.selected_division || "sob_medida").toLowerCase();
+  const poolType = (appState.pool_type || "convencional").toLowerCase();
 
-  const rev = appState.coating_type;
-  const precos = appState.precos;
+  // 1. Área de revestimento × preço do m² (conforme divisão e tipo) - Seção 9.1 & 9.4
+  const divPrecos = appState.precos.m2_prices?.[divisao] || { convencional: 140.0, especial: 175.0 };
+  const precoM2Padrao = parseFloat(divPrecos[poolType]) || 140.0;
+  let precoM2Efetivo = precoM2Padrao;
+  let descontoM2 = 0.0;
+  let valorDescontoMolde = 0.0;
 
-  // 1. Custo Revestimento (O preço da pastilha muda se for Com Molde ou Sem Molde)
-  const cInfo = (appState.precos.revestimentos || []).find(r => r.id === rev) || { preco_sem_molde: 98.0, preco_com_molde: 78.0 };
-  const precoM2Rev = appState.has_mold ? (cInfo.preco_com_molde !== undefined ? cInfo.preco_com_molde : cInfo.preco_sem_molde) : cInfo.preco_sem_molde;
-  const custoRevest = areaRevest * precoM2Rev;
-
-  // 2. Custo Acabamentos (Seção 7)
-  let custoAcabamentos = 0.0;
-  if (rev === "pastilha_5x5" || rev === "pastilha_10x10") {
-    const qtdBp11 = Math.ceil(cantosCm / 20.0);
-    const qtdC3 = quinas * 1;
-    custoAcabamentos = (qtdBp11 * precos.acabamento.bp11) + (qtdC3 * precos.acabamento.c3);
-  } else if (rev === "pastilha_7_5x7_5") {
-    const qtdBoleada = Math.ceil(cantosCm / 7.5);
-    const qtdQuebra = quinas * 1;
-    custoAcabamentos = (qtdBoleada * precos.acabamento.boleada_7_5) + (qtdQuebra * precos.acabamento.quebra_canto);
-  } else if (rev === "pastilha_15x15") {
-    const qtdBoleada = Math.ceil(cantosCm / 15.0);
-    const qtdQuebra = quinas * 1;
-    custoAcabamentos = (qtdBoleada * precos.acabamento.boleada_15) + (qtdQuebra * precos.acabamento.quebra_canto);
-  } else {
-    // Porcelanato Villagres ou Personalizado -> sem acabamento calculado
-    custoAcabamentos = 0.0;
+  // 2. Regra de Molde (Incorporadora): se com molde, usa diretamente o valor configurado para molde
+  const isIncorporadora = divisao === "incorporadora";
+  if (isIncorporadora && appState.has_mold) {
+    if (poolType === "especial") {
+      precoM2Efetivo = parseFloat(appState.precos.molde?.preco_m2_especial) || (precoM2Padrao - (parseFloat(appState.precos.molde?.desconto_m2) || 20.0));
+    } else {
+      precoM2Efetivo = parseFloat(appState.precos.molde?.preco_m2_convencional) || (precoM2Padrao - (parseFloat(appState.precos.molde?.desconto_m2) || 20.0));
+    }
+    descontoM2 = Math.max(0, precoM2Padrao - precoM2Efetivo);
+    valorDescontoMolde = areaRevest * descontoM2;
   }
 
-  // 3. Custo Laminação (preço fixo por m² - o benefício do molde incide na pastilha)
-  const precoM2Lamina = precos.laminacao.preco_m2 !== undefined ? precos.laminacao.preco_m2 : (precos.laminacao.sem_molde || 95.0);
-  const custoLamina = areaLamina * precoM2Lamina;
+  const valorBaseRevest = areaRevest * precoM2Padrao;
+  const valorAposMolde = areaRevest * precoM2Efetivo;
 
-  // Insumos básicos complementares (argamassa e rejunte)
-  const custoInsumos = (areaRevest * 12.0);
-
-  // 4. VALOR BASE
-  const valorBaseUnitario = custoRevest + custoAcabamentos + custoLamina + custoInsumos;
-
-  // 5. + ACRÉSCIMO AUTOPORTANTE (+50%)
+  // 3. + Acréscimo de autoportante (se aplicável, +50%) - Seção 9.3 & 9.4
   const isAuto = appState.structure_type === "autoportante";
-  const pctAuto = isAuto ? (precos.regras.acrescimo_autoportante_pct || 50.0) : 0.0;
-  const valorComAuto = valorBaseUnitario * (1 + pctAuto / 100.0);
-  const diffAuto = valorComAuto - valorBaseUnitario;
+  const pctAuto = isAuto ? (parseFloat(appState.precos.acrescimos?.autoportante_pct) || 50.0) : 0.0;
+  const diffAuto = valorAposMolde * (pctAuto / 100.0);
+  const valorComAuto = valorAposMolde + diffAuto;
 
-  // 6. + MARGEM DA ETAPA (Prévia +5% ou Galga 0%)
-  const pctEtapa = appState.stage === "previa" ? (precos.regras.margem_previa_pct || 5.0) : (precos.regras.margem_galga_pct || 0.0);
-  const valorFinalUnitario = valorComAuto * (1 + pctEtapa / 100.0);
-  const diffMargem = valorFinalUnitario - valorComAuto;
+  // 4. + Acréscimo da etapa (Prévia: +5% ou Galga: 0%) - Seção 9.3 & 9.4
+  const pctEtapa = appState.stage === "previa" 
+    ? (parseFloat(appState.precos.acrescimos?.etapas?.previa) ?? 5.0) 
+    : (parseFloat(appState.precos.acrescimos?.etapas?.galga) ?? 0.0);
+  const diffMargem = valorComAuto * (pctEtapa / 100.0);
+  const valorFinalUnitario = valorComAuto + diffMargem;
 
-  // 7. TOTAL MULTIPLICADO PELAS UNIDADES
+  // 5. × Quantidade de unidades do modelo - Seção 9.4
   const inputUnidades = document.getElementById("inputUnidades");
-  const unidades = appState.selected_division === "sob_medida" ? 1 : Math.max(1, parseInt(inputUnidades ? inputUnidades.value : 1) || 1);
+  const unidades = isIncorporadora ? Math.max(1, parseInt(inputUnidades ? inputUnidades.value : 1) || 1) : 1;
   const valorTotalGeral = valorFinalUnitario * unidades;
 
   // Atualiza Valores na UI
   const formatBRL = (v) => Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
   const lblBase = document.getElementById("lblValorBase");
+  const lblDescontoMolde = document.getElementById("lblValorDescontoMolde");
+  const rowMolde = document.getElementById("rowDescontoMolde");
   const lblAuto = document.getElementById("lblValorAuto");
+  const rowAuto = document.getElementById("rowAutoAcrescimo");
   const lblMarg = document.getElementById("lblValorMargem");
   const lblUnit = document.getElementById("lblValorUnitario");
   const lblCount = document.getElementById("lblTotalUnitsCount");
   const lblTotal = document.getElementById("lblValorTotalGeral");
+  const lblMargemPct = document.getElementById("lblMargemPct");
 
-  if (lblBase) lblBase.textContent = formatBRL(valorBaseUnitario);
+  if (lblBase) lblBase.textContent = `${formatBRL(valorAposMolde)} (${areaRevest.toFixed(2)}m² × ${formatBRL(precoM2Efetivo)}/m²)`;
+  if (rowMolde) rowMolde.style.display = (isIncorporadora && appState.has_mold && valorDescontoMolde > 0) ? "flex" : "none";
+  if (lblDescontoMolde) lblDescontoMolde.textContent = `− ${formatBRL(valorDescontoMolde)} (Preço com Molde: ${formatBRL(precoM2Efetivo)}/m²)`;
+  if (rowAuto) rowAuto.style.display = isAuto ? "flex" : "none";
   if (lblAuto) lblAuto.textContent = `+ ${formatBRL(diffAuto)}`;
+  if (lblMargemPct) lblMargemPct.textContent = appState.stage === "previa" ? "Prévia +5%" : "Galga 0%";
   if (lblMarg) lblMarg.textContent = `+ ${formatBRL(diffMargem)}`;
   if (lblUnit) lblUnit.textContent = formatBRL(valorFinalUnitario);
   if (lblCount) lblCount.textContent = `${unidades} un`;
   if (lblTotal) lblTotal.textContent = formatBRL(valorTotalGeral);
 
   appState.valoresCalculados = {
-    unit_base_value: valorBaseUnitario,
-    unit_autoportante_value: valorComAuto,
+    unit_base_value: valorBaseRevest,
+    unit_molde_discount: valorDescontoMolde,
+    unit_autoportante_value: diffAuto,
     unit_stage_margin_value: diffMargem,
     unit_final_value: valorFinalUnitario,
     total_model_value: valorTotalGeral,

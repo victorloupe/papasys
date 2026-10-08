@@ -123,14 +123,40 @@ function renderizarProposta(b) {
     }).join("");
   }
 
-  // Composição Financeira da Seção 11 e Cronograma
-  document.getElementById("propBaseCost").textContent = PricingEngine.formatBRL(b.total_base_cost);
-  const diffAuto = (b.total_price - b.total_base_cost) * 0.7; // aproximado
-  const diffMargem = b.stage === 'previa' ? (b.total_price * 0.05 / 1.05) : 0;
+  // Composição Financeira exata da Seção 9.4 e Cronograma
+  const calcConsolidado = PricingEngine.calcularOrcamentoCompleto(b, pools);
+  const totalBaseRevest = calcConsolidado.total_base_revest !== undefined ? calcConsolidado.total_base_revest : (b.total_base_revest || b.total_base_cost || 0);
+  const totalDescMolde = calcConsolidado.total_desconto_molde || b.total_desconto_molde || 0;
+  const totalAuto = calcConsolidado.total_acrescimo_auto || 0;
+  const totalEtapa = calcConsolidado.total_acrescimo_etapa || 0;
+  const valorFinal = calcConsolidado.total_price || b.total_price || 0;
 
-  document.getElementById("propAutoCost").textContent = `+ ${PricingEngine.formatBRL(diffAuto)}`;
-  document.getElementById("propStageMargin").textContent = `+ ${PricingEngine.formatBRL(diffMargem)} (${b.stage === 'previa' ? '+5%' : '0%'})`;
-  document.getElementById("propGrandTotal").textContent = PricingEngine.formatBRL(b.total_price);
+  const elBase = document.getElementById("propBaseCost");
+  if (elBase) elBase.textContent = PricingEngine.formatBRL(totalBaseRevest);
+
+  const rowMolde = document.getElementById("rowPropDescontoMolde");
+  const elMolde = document.getElementById("propMoldeDiscount");
+  if (rowMolde && elMolde) {
+    if (totalDescMolde > 0) {
+      rowMolde.style.display = "flex";
+      elMolde.textContent = `- ${PricingEngine.formatBRL(totalDescMolde)}`;
+    } else {
+      rowMolde.style.display = b.division === "incorporadora" ? "flex" : "none";
+      elMolde.textContent = `R$ 0,00`;
+    }
+  }
+
+  const elAuto = document.getElementById("propAutoCost");
+  if (elAuto) elAuto.textContent = totalAuto > 0 ? `+ ${PricingEngine.formatBRL(totalAuto)}` : `R$ 0,00`;
+
+  const elEtapa = document.getElementById("propStageMargin");
+  if (elEtapa) {
+    const pctEtapaStr = b.stage === 'previa' ? '+5%' : '0%';
+    elEtapa.textContent = totalEtapa > 0 ? `+ ${PricingEngine.formatBRL(totalEtapa)} (${pctEtapaStr})` : `R$ 0,00 (${pctEtapaStr})`;
+  }
+
+  const elGrand = document.getElementById("propGrandTotal");
+  if (elGrand) elGrand.textContent = PricingEngine.formatBRL(valorFinal);
 
   // Cronograma de Desembolso
   const total = b.total_price || 0;

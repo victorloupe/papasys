@@ -611,81 +611,105 @@ function renderizarModelosPiscina() {
                     <div>Cantos Lineares: ${acab.peca_linear.qtd}m &bull; Quinas Vivas: ${acab.peca_quina.qtd} un.</div>
                   </div>
                 ` : `
-                  <div class="finishes-review-list">
-                    <div class="fin-item">
-                      <span>${acab.peca_linear.nome}</span>
-                      <strong>${acab.peca_linear.qtd} ${acab.peca_linear.unit} &bull; ${PricingEngine.formatBRL(acab.peca_linear.total_price)}</strong>
+                    <div class="finishes-review-list">
+                      <div class="fin-item">
+                        <span>${acab.peca_linear.nome}</span>
+                        <strong>${acab.peca_linear.qtd} ${acab.peca_linear.unit} <span style="font-size: 10.5px; font-weight: 500; color: #64748b;">(incluso no m²)</span></strong>
+                      </div>
+                      <div class="fin-item">
+                        <span>${acab.peca_quina.nome}</span>
+                        <strong>${acab.peca_quina.qtd} ${acab.peca_quina.unit} <span style="font-size: 10.5px; font-weight: 500; color: #64748b;">(incluso no m²)</span></strong>
+                      </div>
                     </div>
-                    <div class="fin-item">
-                      <span>${acab.peca_quina.nome}</span>
-                      <strong>${acab.peca_quina.qtd} ${acab.peca_quina.unit} &bull; ${PricingEngine.formatBRL(acab.peca_quina.total_price)}</strong>
-                    </div>
-                  </div>
-                `}
+                  `}
+                </div>
+                <div style="font-size: 10px; color: #94a3b8; padding-top: 4px; border-top: 1px dashed #e2e8f0; margin-top: auto;">
+                  Acabamentos e laminação inclusos/informativos (Seção 9.1)
+                </div>
               </div>
-              <div style="font-size: 10px; color: #94a3b8; padding-top: 4px; border-top: 1px dashed #e2e8f0; margin-top: auto;">
-                Quantitativos aferidos via engenharia 3D
-              </div>
+
             </div>
 
-          </div>
+            <!-- Coluna 3: Composição de Preço (Ordem Exata da Seção 9.4) -->
+            <div class="pool-col-pricing">
+              <h4 class="col-section-title">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                Cálculo do Orçamento (Seção 9.4)
+              </h4>
 
-          <!-- Coluna 3: Composição de Preço -->
-          <div class="pool-col-pricing">
-            <h4 class="col-section-title">
-              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
-              Composição de Preço
-            </h4>
-
-            <div class="pricing-step-list">
-              <div class="pricing-steps-top">
-                <div class="pricing-step-item">
-                  <span class="step-label">1. Valor Base Unitário:</span>
-                  <span class="step-val tabular-nums">${PricingEngine.formatBRL(calc.unit_base_value)}</span>
-                </div>
-                <div class="step-sub-details">
-                  Revest: ${PricingEngine.formatBRL(calc.custo_revestimento)} &bull; Acab: ${PricingEngine.formatBRL(calc.custo_acabamentos)} &bull; Lamina: ${PricingEngine.formatBRL(calc.custo_laminacao)}
-                </div>
-
-                ${p.structure_type === 'autoportante' ? `
-                  <div class="pricing-step-item auto">
-                    <span class="step-label">2. + Autoportante (+50%):</span>
-                    <span class="step-val tabular-nums">+ ${PricingEngine.formatBRL(calc.acrescimo_autoportante_unit)}</span>
-                  </div>
-                ` : `
+              <div class="pricing-step-list">
+                <div class="pricing-steps-top">
+                  <!-- 1. Área de revestimento × preço do m² -->
                   <div class="pricing-step-item">
-                    <span class="step-label">2. Estrutura Padrão:</span>
-                    <span class="step-val tabular-nums">Sem acréscimo</span>
+                    <span class="step-label">1. Preço Base (${calc.area_revestimento} m² × ${PricingEngine.formatBRL(calc.preco_m2)}/m²):</span>
+                    <span class="step-val tabular-nums">${PricingEngine.formatBRL(calc.valor_base_revest)}</span>
                   </div>
-                `}
+                  <div class="step-sub-details">
+                    Divisão: ${currentBudget.division === 'incorporadora' ? 'Incorporadora' : currentBudget.division === 'internacional' ? 'Internacional' : 'Sob Medida'} &bull; Tipo: ${calc.pool_type === 'especial' ? 'Especial' : 'Convencional'}
+                  </div>
 
-                <div class="pricing-step-item">
-                  <span class="step-label">3. + Margem da Etapa (${currentBudget.stage === 'previa' ? '+5%' : '0%'}):</span>
-                  <span class="step-val tabular-nums">+ ${PricingEngine.formatBRL(calc.margem_etapa_unit || 0)}</span>
+                  <!-- 2. − Desconto de Molde (Incorporadora) -->
+                  ${calc.has_mold ? `
+                    <div class="pricing-step-item" style="color: #16a34a;">
+                      <span class="step-label">2. − Desconto Molde (-${PricingEngine.formatBRL(calc.desconto_molde_m2)}/m²):</span>
+                      <span class="step-val tabular-nums">− ${PricingEngine.formatBRL(calc.valor_desconto_molde_unit)}</span>
+                    </div>
+                    <div class="step-sub-details" style="color: #16a34a;">
+                      Subtotal com Molde: ${PricingEngine.formatBRL(calc.valor_apos_molde)}
+                    </div>
+                  ` : (currentBudget.division === 'incorporadora' ? `
+                    <div class="pricing-step-item" style="color: #64748b;">
+                      <span class="step-label">2. Desconto de Molde:</span>
+                      <span class="step-val tabular-nums">Sem molde (R$ 0,00)</span>
+                    </div>
+                  ` : '')}
+
+                  <!-- 3. + Acréscimo Autoportante -->
+                  ${p.structure_type === 'autoportante' ? `
+                    <div class="pricing-step-item auto">
+                      <span class="step-label">3. + Autoportante (+${calc.pct_autoportante}%):</span>
+                      <span class="step-val tabular-nums">+ ${PricingEngine.formatBRL(calc.valor_acrescimo_auto_unit)}</span>
+                    </div>
+                    <div class="step-sub-details">
+                      Subtotal com Autoportante: ${PricingEngine.formatBRL(calc.valor_com_autoportante)}
+                    </div>
+                  ` : `
+                    <div class="pricing-step-item">
+                      <span class="step-label">3. Estrutura Padrão:</span>
+                      <span class="step-val tabular-nums">Sem acréscimo</span>
+                    </div>
+                  `}
+
+                  <!-- 4. + Acréscimo da Etapa -->
+                  <div class="pricing-step-item">
+                    <span class="step-label">4. + Acréscimo Etapa (${currentBudget.stage === 'previa' ? '+5%' : '0%'}):</span>
+                    <span class="step-val tabular-nums">+ ${PricingEngine.formatBRL(calc.valor_acrescimo_etapa_unit)}</span>
+                  </div>
+
+                  <div class="pricing-step-divider"></div>
+
+                  <!-- Valor Unitário da Piscina -->
+                  <div class="pricing-step-item final">
+                    <span class="step-label">Valor Unitário da Piscina:</span>
+                    <span class="step-val final tabular-nums">${PricingEngine.formatBRL(calc.preco_final_unitario)}</span>
+                  </div>
                 </div>
 
-                <div class="pricing-step-divider"></div>
+                <div>
+                  <!-- 5. × Quantidade de Unidades -->
+                  <div class="pricing-model-total">
+                    <div class="model-total-label">5. Subtotal do Modelo (${p.units_count} ${p.units_count === 1 ? 'un' : 'unidades'}):</div>
+                    <div class="model-total-val tabular-nums">${PricingEngine.formatBRL(calc.preco_total_modelo)}</div>
+                  </div>
 
-                <div class="pricing-step-item final">
-                  <span class="step-label">Valor Unitário Final:</span>
-                  <span class="step-val final tabular-nums">${PricingEngine.formatBRL(calc.preco_final_unitario)}</span>
+                  <div class="pricing-step-item" style="padding-top: 3px; margin-top: 3px; border-top: 1px dashed #e2e8f0;">
+                    <span class="step-label" style="color: #64748b;">Status do Modelo:</span>
+                    <span class="step-val" style="color: #16a34a; font-weight: 700;">Conferido</span>
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <div class="pricing-model-total">
-                  <div class="model-total-label">Subtotal do Modelo (${p.units_count} un):</div>
-                  <div class="model-total-val tabular-nums">${PricingEngine.formatBRL(calc.preco_total_modelo)}</div>
-                </div>
-
-                <div class="pricing-step-item" style="padding-top: 3px; margin-top: 3px; border-top: 1px dashed #e2e8f0;">
-                  <span class="step-label" style="color: #64748b;">Status da Modelagem:</span>
-                  <span class="step-val" style="color: #16a34a; font-weight: 700;">Conferido</span>
-                </div>
-              </div>
             </div>
-
-          </div>
 
         </div>
       </div>

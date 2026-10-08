@@ -18,6 +18,20 @@ const App = {
   statusFilter: "all", // 'all', 'em_aberto', 'em_analise', 'aprovado'
   sortBy: "recent", // 'recent', 'oldest', 'price_desc', 'price_asc', 'code', 'client'
 
+  // Filtros Globais Unificados (Seção 11)
+  filterState: {
+    datePreset: "current_month", // Padrão: Mês atual (Seção 11.1)
+    startDate: "",
+    endDate: "",
+    division: "all",
+    stage: "all",
+    responsibleId: "all",
+    poolType: "all",
+    structureType: "all",
+    coatingType: "all",
+    hasMold: "all"
+  },
+
   // Gestão de Usuários & Modal
   userModalTab: "switch", // 'switch' | 'manage' | 'edit'
   editingUserId: null,
@@ -32,6 +46,10 @@ const App = {
     }
 
     App.setupEventListeners();
+
+    // Inicializa Filtros da Seção 11 com padrão 'Mês atual'
+    App.calculatePresetDates("current_month");
+    App.syncFilterUI();
 
     // Restaura preferências locais de visualização e itens por página
     try {
@@ -105,6 +123,261 @@ const App = {
         App.closeAllModals();
       }
     });
+  },
+
+  // ==============================================================================
+  // MÉTODOS DE FILTROS GLOBAIS UNIFICADOS (SEÇÃO 11)
+  // ==============================================================================
+  calculatePresetDates(preset) {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = now.getMonth();
+    const d = now.getDate();
+
+    let start, end;
+
+    switch (preset) {
+      case "today":
+        start = new Date(y, m, d, 0, 0, 0);
+        end = new Date(y, m, d, 23, 59, 59);
+        break;
+      case "this_week": {
+        const dayOfWeek = now.getDay();
+        const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+        start = new Date(y, m, d + diffToMonday, 0, 0, 0);
+        end = new Date(y, m, d + diffToMonday + 6, 23, 59, 59);
+        break;
+      }
+      case "current_month":
+        start = new Date(y, m, 1, 0, 0, 0);
+        end = new Date(y, m + 1, 0, 23, 59, 59);
+        break;
+      case "prev_month":
+        start = new Date(y, m - 1, 1, 0, 0, 0);
+        end = new Date(y, m, 0, 23, 59, 59);
+        break;
+      case "last_3_months":
+        start = new Date(y, m - 2, 1, 0, 0, 0);
+        end = new Date(y, m + 1, 0, 23, 59, 59);
+        break;
+      case "this_year":
+        start = new Date(y, 0, 1, 0, 0, 0);
+        end = new Date(y, 11, 31, 23, 59, 59);
+        break;
+      case "custom":
+        return;
+      default:
+        start = new Date(y, m, 1, 0, 0, 0);
+        end = new Date(y, m + 1, 0, 23, 59, 59);
+    }
+
+    const fmt = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
+    App.filterState.startDate = fmt(start);
+    App.filterState.endDate = fmt(end);
+  },
+
+  setDatePreset(preset) {
+    App.filterState.datePreset = preset;
+    if (preset !== "custom") {
+      App.calculatePresetDates(preset);
+    }
+    App.syncFilterUI();
+    App.currentPage = 1;
+    App.updateCounters();
+    App.renderContent();
+  },
+
+  onCustomDateChange() {
+    const elStart = document.getElementById("filterStartDate");
+    const elEnd = document.getElementById("filterEndDate");
+    if (elStart && elEnd && elStart.value && elEnd.value) {
+      App.filterState.datePreset = "custom";
+      App.filterState.startDate = elStart.value;
+      App.filterState.endDate = elEnd.value;
+      App.syncFilterUI();
+      App.currentPage = 1;
+      App.updateCounters();
+      App.renderContent();
+    }
+  },
+
+  onFilterChange(field, val) {
+    App.filterState[field] = val;
+    App.currentPage = 1;
+    App.updateCounters();
+    App.renderContent();
+  },
+
+  resetFilters() {
+    App.filterState = {
+      datePreset: "current_month",
+      startDate: "",
+      endDate: "",
+      division: "all",
+      stage: "all",
+      responsibleId: "all",
+      poolType: "all",
+      structureType: "all",
+      coatingType: "all",
+      hasMold: "all"
+    };
+    App.searchTerm = "";
+    const searchInput = document.getElementById("searchBudgets");
+    if (searchInput) searchInput.value = "";
+
+    App.calculatePresetDates("current_month");
+    App.syncFilterUI();
+    App.currentPage = 1;
+    App.updateCounters();
+    App.renderContent();
+    if (typeof showToast !== "undefined") {
+      showToast("Filtros redefinidos para o padrão (Mês atual).", "info");
+    }
+  },
+
+  syncFilterUI() {
+    const p = App.filterState.datePreset;
+
+    // Botões de atalho de data
+    document.querySelectorAll(".date-preset-btn").forEach(btn => {
+      btn.classList.toggle("active", btn.getAttribute("data-preset") === p);
+    });
+
+    const customWrap = document.getElementById("customDateWrap");
+    if (customWrap) {
+      customWrap.style.display = p === "custom" ? "flex" : "none";
+    }
+
+    const elStart = document.getElementById("filterStartDate");
+    const elEnd = document.getElementById("filterEndDate");
+    if (elStart && App.filterState.startDate) elStart.value = App.filterState.startDate;
+    if (elEnd && App.filterState.endDate) elEnd.value = App.filterState.endDate;
+
+    // Dropdowns
+    const elDiv = document.getElementById("filterSelectDivision");
+    const elStage = document.getElementById("filterSelectStage");
+    const elResp = document.getElementById("filterSelectResponsible");
+    const elPoolType = document.getElementById("filterSelectPoolType");
+    const elStruct = document.getElementById("filterSelectStructure");
+    const elCoat = document.getElementById("filterSelectCoating");
+    const elMold = document.getElementById("filterSelectMold");
+    const groupResp = document.getElementById("filterGroupResponsible");
+    const groupMold = document.getElementById("filterGroupMold");
+
+    if (elDiv) elDiv.value = App.filterState.division;
+    if (elStage) elStage.value = App.filterState.stage;
+    if (elPoolType) elPoolType.value = App.filterState.poolType;
+    if (elStruct) elStruct.value = App.filterState.structureType;
+    if (elCoat) elCoat.value = App.filterState.coatingType;
+    if (elMold) elMold.value = App.filterState.hasMold;
+
+    // Responsável visível apenas para Admin (Seção 11.2)
+    const isAdmin = Auth.isAdmin();
+    if (groupResp) {
+      groupResp.style.display = isAdmin ? "flex" : "none";
+    }
+    if (elResp && elResp.options.length <= 1) {
+      const users = Auth.getAllUsers();
+      elResp.innerHTML = `<option value="all">Todos os responsáveis</option>` +
+        users.map(u => `<option value="${u.id}">${u.name}</option>`).join("");
+    }
+    if (elResp) elResp.value = App.filterState.responsibleId;
+
+    // Molde visível apenas para Incorporadora ou Dashboard Geral
+    if (groupMold) {
+      const isInc = App.activeDivision === "incorporadora" || (App.activeDivision === "dashboard_geral" && App.filterState.division === "incorporadora");
+      groupMold.style.display = isInc ? "flex" : "none";
+    }
+  },
+
+  getFilteredBudgets(overrides = {}) {
+    let list = [...App.budgets];
+
+    const targetDiv = overrides.division !== undefined ? overrides.division : (App.activeDivision !== "dashboard_geral" ? App.activeDivision : App.filterState.division);
+    const targetStage = overrides.stage !== undefined ? overrides.stage : (App.activeDivision !== "dashboard_geral" ? App.activeStage : App.filterState.stage);
+
+    // 1. Filtro de Divisão (Seção 11.2)
+    if (!overrides.ignoreDivision && targetDiv && targetDiv !== "all") {
+      list = list.filter(b => b.division === targetDiv);
+    }
+
+    // 2. Filtro de Etapa (Seção 11.2)
+    if (!overrides.ignoreStage && targetStage && targetStage !== "all") {
+      list = list.filter(b => b.stage === targetStage);
+    }
+
+    // 3. Filtro de Data (Seção 11.1 - Padrão: Mês atual)
+    if (App.filterState.startDate && App.filterState.endDate) {
+      const start = new Date(App.filterState.startDate + "T00:00:00");
+      const end = new Date(App.filterState.endDate + "T23:59:59");
+
+      list = list.filter(b => {
+        if (!b.created_at) return true;
+        const d = new Date(b.created_at);
+        return d >= start && d <= end;
+      });
+    }
+
+    // 4. Filtro de Responsável (Admin - Seção 11.2)
+    if (App.filterState.responsibleId && App.filterState.responsibleId !== "all") {
+      list = list.filter(b => b.assigned_user_id === App.filterState.responsibleId);
+    }
+
+    // 5. Filtro de Tipo de Piscina (Convencional / Especial - Seção 11.2)
+    if (App.filterState.poolType && App.filterState.poolType !== "all") {
+      const type = App.filterState.poolType.toLowerCase();
+      list = list.filter(b => {
+        if (!b.pools || b.pools.length === 0) return true;
+        return b.pools.some(p => (p.pool_type || p.tipo_piscina || "convencional").toLowerCase() === type);
+      });
+    }
+
+    // 6. Filtro de Estrutura (Autoportante / Não autoportante - Seção 11.2)
+    if (App.filterState.structureType && App.filterState.structureType !== "all") {
+      const struct = App.filterState.structureType.toLowerCase();
+      list = list.filter(b => {
+        if (!b.pools || b.pools.length === 0) return true;
+        return b.pools.some(p => (p.structure_type || "nao_autoportante").toLowerCase() === struct);
+      });
+    }
+
+    // 7. Filtro de Revestimento (Seção 11.2)
+    if (App.filterState.coatingType && App.filterState.coatingType !== "all") {
+      const coating = App.filterState.coatingType.toLowerCase();
+      list = list.filter(b => {
+        if (!b.pools || b.pools.length === 0) return true;
+        return b.pools.some(p => (p.coating_type || "pastilha_15x15").toLowerCase() === coating);
+      });
+    }
+
+    // 8. Filtro de Molde (Incorporadora - Seção 11.2)
+    if (App.filterState.hasMold && App.filterState.hasMold !== "all") {
+      const wantMold = App.filterState.hasMold === "com_molde";
+      list = list.filter(b => {
+        if (b.division !== "incorporadora") return false;
+        if (!b.pools || b.pools.length === 0) return false;
+        const algumComMolde = b.pools.some(p => p.has_mold === true);
+        return wantMold ? algumComMolde : !algumComMolde;
+      });
+    }
+
+    // 9. Filtro de Busca (ID / Código, cliente, modelo - Seção 11.2)
+    if (App.searchTerm) {
+      const term = App.searchTerm.toLowerCase();
+      list = list.filter(b => {
+        const poolsText = (b.pools || []).map(p => `${p.model_name} ${p.coating_type}`).join(" ");
+        const text = `${b.budget_code} ${b.project_name} ${b.client_name} ${b.assigned_user_name || ''} ${poolsText}`.toLowerCase();
+        return text.includes(term);
+      });
+    }
+
+    return list;
   },
 
   // Atualiza a barra de navegação superior e dados do usuário ativo
@@ -230,7 +503,8 @@ const App = {
   updateCounters() {
     if (App.activeDivision === "dashboard_geral") return;
 
-    const divBudgets = App.budgets.filter(b => b.division === App.activeDivision);
+    // Aplica os filtros unificados da Seção 11 aos contadores de etapa
+    const divBudgets = App.getFilteredBudgets({ division: App.activeDivision, ignoreStage: true });
     const countPrevia = divBudgets.filter(b => b.stage === "previa").length;
     const countGalga = divBudgets.filter(b => b.stage === "galga").length;
     const countDesenho = divBudgets.filter(b => b.stage === "desenho_tecnico").length;
@@ -309,8 +583,8 @@ const App = {
     const stage = App.activeStage;
     const isAdmin = Auth.isAdmin();
 
-    // Todos os orçamentos da divisão e etapa atuais
-    const baseList = App.budgets.filter(b => b.division === division && b.stage === stage);
+    // Orçamentos filtrados da divisão e etapa atuais (com filtros unificados da Seção 11)
+    const baseList = App.getFilteredBudgets({ division: division, stage: stage });
 
     // Contadores para os filtros de status
     const countTotal = baseList.length;
@@ -987,12 +1261,7 @@ const App = {
   },
 
   limparFiltros() {
-    App.searchTerm = "";
-    App.statusFilter = "all";
-    App.currentPage = 1;
-    const input = document.getElementById("searchBudgets");
-    if (input) input.value = "";
-    App.renderContent();
+    App.resetFilters();
   },
 
   async excluirOrcamento(budgetId) {
@@ -1014,12 +1283,12 @@ const App = {
     }
   },
 
-  // 2. RENDERIZAÇÃO DO DASHBOARD GERAL DA DIRETORIA (SEÇÃO 3)
+  // 2. RENDERIZAÇÃO DO DASHBOARD GERAL DA DIRETORIA (SEÇÃO 3 & SEÇÃO 11)
   // "Visualiza quem está fazendo o quê (responsável por cada orçamento).
   // Acessa um Dashboard geral com todos os dados e indicadores.
   // Gerencia usuários: define divisões, páginas e tarefas de cada um."
   renderAdminDashboard(container) {
-    const all = App.budgets;
+    const all = App.getFilteredBudgets({ ignoreDivision: false, ignoreStage: false });
     const users = Auth.getAllUsers();
 
     // Indicadores Gerais

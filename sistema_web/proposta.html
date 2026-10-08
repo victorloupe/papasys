@@ -153,21 +153,25 @@
       </table>
     </div>
 
-    <!-- Degraus e Composição Financeira -->
+    <!-- Degraus e Composição Financeira (Seção 9.4) -->
     <div class="prop-section" id="propSecaoComposicaoPreco" style="margin-top: 20px;">
-      <h3 class="prop-section-title">Composição de Preço & Descontos / Acréscimos</h3>
+      <h3 class="prop-section-title">Composição de Preço & Descontos / Acréscimos (Seção 9.4)</h3>
 
       <div class="prop-pricing-breakdown">
         <div class="breakdown-row">
-          <span>1. Custo Base (Revestimento + Acabamentos BP11/C3 + Laminação com/sem molde + Insumos):</span>
+          <span>1. Preço Base (Área de Revestimento × Preço m²):</span>
           <span id="propBaseCost" class="tabular-nums">R$ 0,00</span>
         </div>
+        <div class="breakdown-row" id="rowPropDescontoMolde">
+          <span>2. Desconto de Molde (Incorporadora):</span>
+          <span id="propMoldeDiscount" class="tabular-nums" style="color: var(--emerald-600);">- R$ 0,00</span>
+        </div>
         <div class="breakdown-row">
-          <span>2. Acréscimo Estrutura Autoportante (+50% se aplicável):</span>
+          <span>3. Acréscimo Estrutura Autoportante (+50% se aplicável):</span>
           <span id="propAutoCost" class="tabular-nums" style="color: var(--amber-600);">+ R$ 0,00</span>
         </div>
         <div class="breakdown-row">
-          <span>3. Margem da Etapa:</span>
+          <span>4. Acréscimo da Etapa:</span>
           <span id="propStageMargin" class="tabular-nums">+ R$ 0,00</span>
         </div>
         <div class="breakdown-row grand-total">
