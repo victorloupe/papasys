@@ -160,6 +160,10 @@ function initApp(dados) {
     atualizarInfoSelecao(dados.info_selecao);
   }
 
+  if (dados.pendentes_count !== undefined) {
+    atualizarStatusFilaLocal(dados.pendentes_count);
+  }
+
   // Executa análise inicial
   executarAnaliseGeometrica(false);
 }
@@ -318,9 +322,67 @@ function selecionarUsuarioLogin(userIdOrEmail) {
 }
 
 function onLoginSucesso(userData) {
+  const btn = document.getElementById("btnSkLogin");
+  if (btn) {
+    btn.disabled = false;
+    btn.textContent = "Autenticar no Supabase";
+  }
   aplicarUsuarioAtivo(userData);
   fecharModalUser();
   showToast(`Sessão ativa: ${userData.name}!`, "success");
+}
+
+function executarLoginSupabase() {
+  const email = (document.getElementById("skLoginEmail")?.value || "").trim();
+  const pass = document.getElementById("skLoginPassword")?.value || "";
+  const errBox = document.getElementById("skLoginErrorMsg");
+  const btn = document.getElementById("btnSkLogin");
+
+  if (!email || !pass) {
+    if (errBox) {
+      errBox.textContent = "Preencha o e-mail e a senha.";
+      errBox.style.display = "block";
+    }
+    return;
+  }
+
+  if (errBox) errBox.style.display = "none";
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Autenticando...";
+  }
+
+  if (window.sketchup && window.sketchup.login_supabase) {
+    window.sketchup.login_supabase({ email, password: pass });
+  } else if (window.sketchup && window.sketchup.login) {
+    const u = appState.allUsers.find(x => x.email.toLowerCase() === email.toLowerCase());
+    if (u) {
+      window.sketchup.login(u);
+    } else {
+      onLoginErro("Usuário não encontrado.");
+    }
+  } else {
+    onLoginSucesso({
+      name: email.split("@")[0],
+      email: email,
+      role: email.includes("admin") ? "admin" : "user",
+      allowed_divisions: ["sob_medida", "incorporadora", "internacional"]
+    });
+  }
+}
+
+function onLoginErro(msg) {
+  const errBox = document.getElementById("skLoginErrorMsg");
+  const btn = document.getElementById("btnSkLogin");
+  if (btn) {
+    btn.disabled = false;
+    btn.textContent = "Autenticar no Supabase";
+  }
+  if (errBox) {
+    errBox.textContent = msg || "Falha na autenticação.";
+    errBox.style.display = "block";
+  }
+  showToast(msg || "Falha ao autenticar no Supabase.", "error");
 }
 
 function toggleModalUser() {
@@ -373,15 +435,17 @@ function selecionarDivisao(divisao) {
   const btnEnvio = document.getElementById("lblTextoBotaoEnvio");
 
   if (divisao === "sob_medida") {
-    // Sob Medida: 1 orçamento = 1 piscina
+    // 14.4 Sob Medida: quantidade padrão 1 unidade, mas totalmente editável!
     if (inputUnidades) {
-      inputUnidades.value = 1;
-      inputUnidades.disabled = true;
+      inputUnidades.disabled = false;
+      if (!inputUnidades.value || parseInt(inputUnidades.value) < 1) {
+        inputUnidades.value = 1;
+      }
+      appState.units_count = Math.max(1, parseInt(inputUnidades.value) || 1);
     }
-    if (badgeLock) badgeLock.style.display = "inline-block";
+    if (badgeLock) badgeLock.style.display = "none";
     if (rowMolde) rowMolde.style.display = "none";
     if (btnEnvio) btnEnvio.textContent = "Enviar para iGUi Sob Medida";
-    appState.units_count = 1;
   } else if (divisao === "incorporadora") {
     // Incorporadora: múltiplos modelos/unidades e regra de molde
     if (inputUnidades) {
@@ -1363,6 +1427,16 @@ function enviarParaSistemaWeb() {
 
   showToast("Enviando orçamento para a nuvem iGUi...", "info");
 
+  const strip = document.getElementById("syncStatusStrip");
+  const stripText = document.getElementById("syncStatusText");
+  const stripIcon = document.getElementById("syncStatusIcon");
+  if (strip) {
+    strip.style.display = "flex";
+    strip.className = "plugin-sync-status-strip status-pendente";
+    if (stripIcon) stripIcon.textContent = "⏳";
+    if (stripText) stripText.textContent = "Enviando para a nuvem iGUi...";
+  }
+
   if (window.sketchup) {
     window.sketchup.enviar_orcamento(payload);
   } else {
@@ -1370,6 +1444,7 @@ function enviarParaSistemaWeb() {
       onEnvioSucesso({
         success: true,
         budget_id: "orc-mock-saved",
+        queue_count: 0,
         message: `Orçamento nº ${budgetCode} enviado com sucesso para ${divisao.toUpperCase()} (${etapa.toUpperCase()})!`,
         project_url: `orcamento.html?id=mock`
       });
@@ -1379,6 +1454,19 @@ function enviarParaSistemaWeb() {
 
 function onEnvioSucesso(res) {
   showToast(res.message || "Orçamento enviado com sucesso!", "success");
+
+  const strip = document.getElementById("syncStatusStrip");
+  const stripText = document.getElementById("syncStatusText");
+  const stripIcon = document.getElementById("syncStatusIcon");
+  if (strip) {
+    strip.style.display = "flex";
+    strip.className = "plugin-sync-status-strip status-enviado";
+    if (stripIcon) stripIcon.textContent = "✅";
+    if (stripText) stripText.textContent = "Enviado com sucesso";
+  }
+
+  atualizarStatusFilaLocal(res.queue_count || 0);
+
   setTimeout(() => {
     if (confirm("Orçamento sincronizado com sucesso!\n\nDeseja abrir a página do orçamento no sistema web agora?")) {
       const url = res.project_url || `index.html?divisao=${appState.selected_division}&etapa=${appState.stage}`;
@@ -1391,8 +1479,105 @@ function onEnvioSucesso(res) {
   }, 400);
 }
 
-function onEnvioErro(erro) {
-  showToast(erro || "Falha ao enviar orçamento.", "error");
+function onEnvioErro(res) {
+  const erroMsg = typeof res === "object" ? (res.error || res.message || "Falha ao enviar") : String(res);
+  showToast(erroMsg, "error");
+
+  const strip = document.getElementById("syncStatusStrip");
+  const stripText = document.getElementById("syncStatusText");
+  const stripIcon = document.getElementById("syncStatusIcon");
+  if (strip) {
+    strip.style.display = "flex";
+    if (typeof res === "object" && res.pendente) {
+      strip.className = "plugin-sync-status-strip status-pendente";
+      if (stripIcon) stripIcon.textContent = "⏳";
+      if (stripText) stripText.textContent = `Pendente na fila local (salvo para reenvio)`;
+    } else {
+      strip.className = "plugin-sync-status-strip status-erro";
+      if (stripIcon) stripIcon.textContent = "❌";
+      if (stripText) stripText.textContent = `Erro: ${erroMsg}`;
+    }
+  }
+
+  const queueCount = (typeof res === "object" && res.queue_count !== undefined) ? res.queue_count : (appState.pendentes_count || 1);
+  atualizarStatusFilaLocal(queueCount);
+}
+
+// ==============================================================================
+// FILA LOCAL E REENVIO DE PENDENTES (SEÇÃO 14.1)
+// ==============================================================================
+function atualizarStatusFilaLocal(count) {
+  const qtd = parseInt(count) || 0;
+  appState.pendentes_count = qtd;
+
+  const topBanner = document.getElementById("pluginSyncBanner");
+  const topCount = document.getElementById("topPendentesCount");
+  const btnTop = document.getElementById("btnPluginReenviarTop");
+  const countSpan = document.getElementById("countPendentes");
+  const btnAba3 = document.getElementById("btnReenviarPendentes");
+
+  if (topCount) topCount.textContent = qtd;
+  if (countSpan) countSpan.textContent = qtd;
+
+  if (qtd > 0) {
+    if (topBanner) topBanner.style.display = "flex";
+    if (btnTop) btnTop.style.display = "inline-block";
+    if (btnAba3) btnAba3.style.display = "inline-block";
+  } else {
+    if (topBanner) topBanner.style.display = "none";
+    if (btnTop) btnTop.style.display = "none";
+    if (btnAba3) btnAba3.style.display = "none";
+  }
+}
+
+function solicitarReenvioPendentes() {
+  showToast("Reenviando orçamentos pendentes na fila local...", "info");
+  const strip = document.getElementById("syncStatusStrip");
+  const stripText = document.getElementById("syncStatusText");
+  const stripIcon = document.getElementById("syncStatusIcon");
+  if (strip) {
+    strip.style.display = "flex";
+    strip.className = "plugin-sync-status-strip status-pendente";
+    if (stripIcon) stripIcon.textContent = "⏳";
+    if (stripText) stripText.textContent = "Reenviando orçamentos pendentes...";
+  }
+
+  if (window.sketchup && window.sketchup.reenviar_pendentes) {
+    window.sketchup.reenviar_pendentes();
+  } else {
+    setTimeout(() => {
+      onReenvioPendentes({
+        success: true,
+        message: "Fila processada com sucesso!",
+        reenviados: 1,
+        restantes: 0
+      });
+    }, 1000);
+  }
+}
+
+function onReenvioPendentes(res) {
+  if (res && res.message) {
+    showToast(res.message, res.success ? "success" : "warning");
+  }
+  atualizarStatusFilaLocal(res.restantes || 0);
+
+  const strip = document.getElementById("syncStatusStrip");
+  const stripText = document.getElementById("syncStatusText");
+  const stripIcon = document.getElementById("syncStatusIcon");
+
+  if (strip) {
+    strip.style.display = "flex";
+    if ((res.restantes || 0) === 0) {
+      strip.className = "plugin-sync-status-strip status-enviado";
+      if (stripIcon) stripIcon.textContent = "✅";
+      if (stripText) stripText.textContent = "Todos os pendentes foram enviados com sucesso!";
+    } else {
+      strip.className = "plugin-sync-status-strip status-pendente";
+      if (stripIcon) stripIcon.textContent = "⏳";
+      if (stripText) stripText.textContent = `${res.restantes} orçamento(s) ainda pendente(s).`;
+    }
+  }
 }
 
 // ==============================================================================

@@ -39,11 +39,9 @@ const App = {
 
   // Inicialização do aplicativo
   async init() {
-    // 1. Guarda de autenticação: redireciona para login se não houver sessão ativa
-    if (!Auth.isLoggedIn()) {
-      window.location.href = "login.html";
-      return;
-    }
+    // 1. Guarda de autenticação (Seção 12.2)
+    const authUser = await Auth.requireAuth();
+    if (!authUser) return;
 
     App.setupEventListeners();
 
@@ -65,7 +63,7 @@ const App = {
 
     App.updateUserInterface();
 
-    // Determina a divisão inicial permitida para o usuário ativo
+    // Determina a divisão inicial permitida para o usuário ativo (Seção 12.1 e 12.2)
     const user = Auth.getCurrentUser();
     if (user.role !== "admin") {
       const allowed = user.allowed_divisions || ["sob_medida"];
@@ -94,6 +92,17 @@ const App = {
 
   // Configura escutadores de eventos
   setupEventListeners() {
+    // Atualização em Tempo Real (WebSocket / Fallback REST Polling - Seção 13.2)
+    window.addEventListener("papasys-budget-updated", async () => {
+      console.log("[App] Atualização em tempo real recebida. Atualizando tela...");
+      await App.loadBudgets();
+    });
+
+    window.addEventListener("papasys-queue-flushed", async () => {
+      console.log("[App] Fila offline sincronizada. Atualizando tela...");
+      await App.loadBudgets();
+    });
+
     window.addEventListener("igui-user-changed", async () => {
       App.updateUserInterface();
       const user = Auth.getCurrentUser();
@@ -607,7 +616,7 @@ const App = {
     if (App.searchTerm) {
       filteredList = filteredList.filter(b => {
         const poolsText = (b.pools || []).map(p => `${p.model_name} ${p.coating_type}`).join(" ");
-        const text = `${b.budget_code} ${b.project_name} ${b.client_name} ${b.assigned_user_name || ''} ${poolsText}`.toLowerCase();
+        const text = `${b.budget_code} ${b.budget_revision || ''} ${b.project_name} ${b.client_name} ${b.assigned_user_name || ''} ${poolsText}`.toLowerCase();
         return text.includes(App.searchTerm);
       });
     }
@@ -688,20 +697,18 @@ const App = {
           </div>
         </div>
 
-        ${isAdmin ? `
-          <div class="metric-kpi-card">
-            <div class="kpi-icon-wrap green">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="12" y1="1" x2="12" y2="23"></line>
-                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-              </svg>
-            </div>
-            <div class="kpi-info">
-              <span class="kpi-label">Faturamento Estimado</span>
-              <span class="kpi-val tabular-nums">${PricingEngine.formatBRL(totalValor)}</span>
-            </div>
+        <div class="metric-kpi-card">
+          <div class="kpi-icon-wrap green">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="1" x2="12" y2="23"></line>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
           </div>
-        ` : ''}
+          <div class="kpi-info">
+            <span class="kpi-label">${isAdmin ? 'Faturamento Estimado' : 'Valor Total dos Orçamentos'}</span>
+            <span class="kpi-val tabular-nums">${PricingEngine.formatBRL(totalValor)}</span>
+          </div>
+        </div>
       </div>
 
       <!-- Barra de Controle: Filtros de Status, Ordenação, Limite e Alternador de Modo -->
@@ -839,6 +846,21 @@ const App = {
     `;
   },
 
+  // Extrai código do orçamento e revisão de forma independente
+  extrairCodigoERevisao(b) {
+    let code = (b.budget_code || "ORC-0000").trim();
+    let rev = (b.budget_revision || "").trim();
+
+    // Se o código tiver sufixo de revisão embutido (ex: 1434354 REV-B, 1434354-REV-B)
+    const match = code.match(/[\s\-_]+(REV[\-_A-Z0-9]+)$/i);
+    if (match) {
+      if (!rev) rev = match[1];
+      code = code.substring(0, match.index).trim();
+    }
+
+    return { cleanCode: code, revision: rev };
+  },
+
   // Linha individual do orçamento na tabela
   renderBudgetRow(b) {
     const isAdmin = Auth.isAdmin();
@@ -847,6 +869,7 @@ const App = {
     const totalUnits = pools.reduce((acc, p) => acc + (parseInt(p.units_count) || 1), 0);
     const assignedName = b.assigned_user_name || "Não atribuído";
     const assignedInitials = assignedName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
+    const { cleanCode, revision } = App.extrairCodigoERevisao(b);
 
     // Data formatada
     let dateStr = "Hoje";
@@ -886,15 +909,16 @@ const App = {
 
     return `
       <tr class="budget-row-item ${b.stage}" id="row-${b.id}">
-        <!-- 1. Código, Etapa e Data -->
+        <!-- 1. Código na Linha 1, Etapa e Revisão na Linha 2, Data na Linha 3 -->
         <td class="col-code">
           <div class="row-code-wrap">
-            <a href="orcamento.html?id=${b.id}" class="row-code-link" title="Abrir editor do orçamento">${b.budget_code}</a>
-            <div class="row-badges-sub">
+            <a href="orcamento.html?id=${b.id}" class="row-code-link" title="Abrir editor do orçamento">${cleanCode}</a>
+            <div class="row-badges-sub" style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin-top: 2px;">
               <span class="stage-tag-mini ${b.stage}">${b.stage.replace('_', ' ').toUpperCase()}</span>
+              ${revision ? `<span class="badge-revision-pill" title="Revisão">${revision}</span>` : ''}
               ${hasMold ? '<span class="badge-mold-mini" title="Preço com molde ativado">MOLDE</span>' : ''}
             </div>
-            <span class="row-date-text">${dateStr}</span>
+            <span class="row-date-text" style="margin-top: 2px;">${dateStr}</span>
           </div>
         </td>
 
@@ -1054,14 +1078,16 @@ const App = {
       nextStageLabel = "Avançar para Desenho Técnico (Venda) →";
     }
 
+    const { cleanCode, revision } = App.extrairCodigoERevisao(b);
     const hasMold = pools.some(p => p.has_mold);
 
     return `
       <div class="budget-card ${b.stage}" id="card-${b.id}">
         <div class="card-head">
           <div class="card-badge-row">
-            <span class="code-badge">${b.budget_code}</span>
+            <span class="code-badge">${cleanCode}</span>
             <span class="stage-tag ${b.stage}">${b.stage.replace('_', ' ').toUpperCase()}</span>
+            ${revision ? `<span class="badge-revision-pill" title="Revisão">${revision}</span>` : ''}
             ${hasMold ? '<span class="badge-mold">COM MOLDE</span>' : ''}
           </div>
 
@@ -1400,23 +1426,23 @@ const App = {
           <div class="dash-card">
             <h3 class="dash-card-title">Distribuição por Divisão (3 Divisões)</h3>
             <div class="division-distribution-list">
-              <div class="dist-item" onclick="App.selectDivision('sob_medida')">
+              <div class="dist-item" onclick="App.selectDivision('sob_medida')" style="border-left: 3px solid var(--color-sob-medida);">
                 <div class="dist-item-info">
-                  <strong>iGUi Sob Medida</strong>
-                  <span>1 piscina por orçamento</span>
+                  <strong style="color: var(--color-sob-medida);">iGUi Sob Medida</strong>
+                  <span>Projetos unitários personalizados</span>
                 </div>
                 <div class="dist-item-val">${sobMedidaCount} orçamentos</div>
               </div>
-              <div class="dist-item" onclick="App.selectDivision('incorporadora')">
+              <div class="dist-item" onclick="App.selectDivision('incorporadora')" style="border-left: 3px solid var(--color-incorporadora);">
                 <div class="dist-item-info">
-                  <strong>iGUi Incorporadora</strong>
+                  <strong style="color: var(--color-incorporadora);">iGUi Incorporadora</strong>
                   <span>Múltiplos modelos, moldes e desmembramento</span>
                 </div>
                 <div class="dist-item-val">${incorporadoraCount} orçamentos</div>
               </div>
-              <div class="dist-item" onclick="App.selectDivision('internacional')">
+              <div class="dist-item" onclick="App.selectDivision('internacional')" style="border-left: 3px solid var(--color-internacional);">
                 <div class="dist-item-info">
-                  <strong>iGUi Internacional</strong>
+                  <strong style="color: var(--color-internacional);">iGUi Internacional</strong>
                   <span>Projetos e exportação global</span>
                 </div>
                 <div class="dist-item-val">${internacionalCount} orçamentos</div>
@@ -2294,579 +2320,12 @@ const App = {
   // GESTÃO DE USUÁRIOS E SESSÃO ATIVA (SEÇÃO 3)
   // Administrador pode gerenciar equipe, configurar divisões, etapas e permissões
   // ============================================================================
-  toggleUserModal(tab = "switch") {
-    const m = document.getElementById("modalUserSelect");
-    if (!m) return;
-    const isVis = m.style.display !== "none";
-    if (isVis && tab === App.userModalTab) {
-      m.style.display = "none";
-      return;
-    }
-    m.style.display = "flex";
-    App.alternarAbaUsuario(tab);
+  abrirMeuPerfil() {
+    window.location.href = "perfil.html";
   },
 
   abrirModalGerenciarUsuarios() {
-    App.toggleUserModal("manage");
-  },
-
-  alternarAbaUsuario(tab) {
-    App.userModalTab = tab;
-    const isAdmin = Auth.isAdmin();
-
-    const btnSwitch = document.getElementById("tabBtnAlternarUsuario");
-    const btnManage = document.getElementById("tabBtnGerenciarEquipe");
-
-    if (btnSwitch) btnSwitch.classList.toggle("active", tab === "switch");
-    if (btnManage) {
-      btnManage.classList.toggle("active", tab === "manage" || tab === "edit");
-      btnManage.style.display = isAdmin ? "inline-flex" : "none";
-    }
-
-    App.renderUserModalContent();
-  },
-
-  renderUserModalContent() {
-    const container = document.getElementById("modalUserBody");
-    if (!container) return;
-
-    const current = Auth.getCurrentUser();
-    const isAdmin = Auth.isAdmin();
-    const users = Auth.getAllUsers();
-
-    if (App.userModalTab === "switch") {
-      const divLabels = {
-        sob_medida: "iGUi Sob Medida",
-        incorporadora: "iGUi Incorporadora",
-        internacional: "iGUi Internacional"
-      };
-
-      container.innerHTML = `
-        <div style="margin-bottom: 12px;">
-          <p class="field-hint" style="margin: 0; font-size: 13px; line-height: 1.4;">
-            Selecione uma conta para alternar a sessão ativa e testar as permissões de acesso (ex: Victor Lourenço só enxerga iGUi Sob Medida; Administrador tem acesso irrestrito):
-          </p>
-        </div>
-
-        <div class="users-list-select">
-          ${users.map(u => {
-            const isCurrent = u.id === current.id;
-            const parts = (u.name || "U").trim().split(" ");
-            const initials = parts.length > 1 
-              ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase() 
-              : parts[0].slice(0, 2).toUpperCase();
-            const roleLabel = u.role === "admin" ? "Administrador / Diretor" : "Projetista";
-            const allowedDivs = u.allowed_divisions || ["sob_medida"];
-
-            return `
-              <div class="user-select-card ${isCurrent ? 'active' : ''}" onclick="App.selecionarUsuarioSessao('${u.id}')">
-                <div class="user-avatar" style="background: ${u.avatar_color || '#0284c7'}">${initials}</div>
-                <div class="user-info">
-                  <div class="user-name-row">
-                    <span class="user-name">${u.name}</span>
-                    <span class="badge-role ${u.role === 'admin' ? 'admin' : ''}">${roleLabel}</span>
-                    ${isCurrent ? '<span class="badge-active-user">● Conectado</span>' : ''}
-                  </div>
-                  <div class="user-email-text">${u.email}</div>
-                  <div class="user-permissions-chips">
-                    ${allowedDivs.map(d => `
-                      <span class="tag-perm-chip ${d.replace('_', '-')}">
-                        ${divLabels[d] || d}
-                      </span>
-                    `).join('')}
-                  </div>
-                </div>
-                <div class="user-card-actions" onclick="event.stopPropagation()">
-                  ${isAdmin ? `
-                    <button type="button" class="btn-card-edit" onclick="App.abrirFormEditarUsuario('${u.id}')" title="Editar permissões e dados deste usuário">
-                      <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 2px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                      Editar
-                    </button>
-                  ` : ''}
-                  ${!isCurrent ? `
-                    <button type="button" class="btn btn-sm btn-primary" onclick="App.selecionarUsuarioSessao('${u.id}')" title="Conectar nesta conta">
-                      Entrar
-                    </button>
-                  ` : ''}
-                </div>
-              </div>
-            `;
-          }).join("")}
-        </div>
-
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; padding-top: 12px; border-top: 1px solid #e2e8f0; flex-wrap: wrap; gap: 8px;">
-          <div>
-            ${isAdmin ? `
-              <button type="button" class="btn btn-sm btn-primary" onclick="App.abrirFormNovoUsuario()">
-                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align: -1px; margin-right: 3px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                Novo Usuário
-              </button>
-              <a href="precos.html?tab=usuarios" class="btn btn-sm btn-secondary" style="margin-left: 6px;">
-                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 3px;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-                Configurações & Usuários
-              </a>
-            ` : `
-              <span class="field-hint" style="font-size: 12px;">Conectado como <strong>${current.name}</strong> (${current.email})</span>
-            `}
-          </div>
-
-          <div style="display: flex; gap: 8px; align-items: center;">
-            <button type="button" class="btn btn-sm btn-logout" onclick="Auth.logout()" title="Encerrar Sessão e Sair do Sistema" style="padding: 6px 10px;">
-              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-            </button>
-          </div>
-        </div>
-      `;
-
-    } else if (App.userModalTab === "manage") {
-      if (!isAdmin) {
-        App.showToast("Apenas administradores podem gerenciar usuários.", "error");
-        App.alternarAbaUsuario("switch");
-        return;
-      }
-
-      const adminCount = users.filter(u => u.role === "admin").length;
-      const projCount = users.length - adminCount;
-      const divLabels = {
-        sob_medida: "Sob Medida",
-        incorporadora: "Incorporadora",
-        internacional: "Internacional"
-      };
-      const stageLabels = {
-        previa: "1. Prévia",
-        galga: "2. Galga",
-        desenho_tecnico: "3. Desenho Técnico"
-      };
-
-      container.innerHTML = `
-        <div class="user-stats-strip">
-          <div class="user-stat-item">
-            <span>
-              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 3px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
-              Membros na Equipe:
-            </span>
-            <span class="user-stat-val">${users.length}</span>
-          </div>
-          <div class="user-stat-item">
-            <span>
-              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 3px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-              Admins:
-            </span>
-            <span class="user-stat-val">${adminCount}</span>
-          </div>
-          <div class="user-stat-item">
-            <span>
-              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 3px;"><path d="M2 12c2.5-3 5.5-3 8 0s5.5 3 8 0 3-1.5 4-1.5"></path></svg>
-              Projetistas:
-            </span>
-            <span class="user-stat-val">${projCount}</span>
-          </div>
-          <div style="margin-left: auto;">
-            <button type="button" class="btn btn-sm btn-primary" onclick="App.abrirFormNovoUsuario()">
-              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align: -1px; margin-right: 3px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-              Cadastrar Novo Usuário
-            </button>
-          </div>
-        </div>
-
-        <div class="users-management-list">
-          ${users.map(u => {
-            const isCurrent = u.id === current.id;
-            const parts = (u.name || "U").trim().split(" ");
-            const initials = parts.length > 1 
-              ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase() 
-              : parts[0].slice(0, 2).toUpperCase();
-            const allowedDivs = u.allowed_divisions || ["sob_medida"];
-            const allowedStages = u.allowed_stages || ["previa", "galga", "desenho_tecnico"];
-
-            return `
-              <div class="user-manage-item">
-                <div class="user-manage-left">
-                  <div class="user-avatar" style="background: ${u.avatar_color || '#0284c7'}">${initials}</div>
-                  <div class="user-info">
-                    <div class="user-name-row">
-                      <span class="user-name">${u.name}</span>
-                      <span class="badge-role ${u.role === 'admin' ? 'admin' : ''}">${u.role === 'admin' ? 'Administrador' : 'Projetista'}</span>
-                      ${isCurrent ? '<span class="badge-active-user">● Sessão Ativa</span>' : ''}
-                    </div>
-                    <div class="user-email-text">${u.email}</div>
-                    <div class="user-permissions-chips">
-                      ${allowedDivs.map(d => `
-                        <span class="tag-perm-chip ${d.replace('_', '-')}">${divLabels[d] || d}</span>
-                      `).join('')}
-                      <span style="color: #94a3b8; font-size: 10px; margin: 0 2px;">•</span>
-                      ${allowedStages.map(s => `
-                        <span class="tag-perm-chip stage-chip">${stageLabels[s] || s}</span>
-                      `).join('')}
-                    </div>
-                  </div>
-                </div>
-
-                <div class="user-manage-actions">
-                  <button type="button" class="btn btn-sm btn-secondary" onclick="App.abrirFormEditarUsuario('${u.id}')">
-                    <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 2px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                    Editar
-                  </button>
-                  ${!isCurrent ? `
-                    <button type="button" class="btn btn-sm btn-danger" onclick="App.excluirUsuario('${u.id}')" title="Excluir usuário da equipe">
-                      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                    </button>
-                  ` : `
-                    <button type="button" class="btn btn-sm btn-secondary" disabled title="Não é possível excluir o usuário ativo conectado" style="opacity: 0.4; cursor: not-allowed;">
-                      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                    </button>
-                  `}
-                </div>
-              </div>
-            `;
-          }).join("")}
-        </div>
-      `;
-
-    } else if (App.userModalTab === "edit") {
-      if (!isAdmin) {
-        App.showToast("Apenas administradores podem gerenciar usuários.", "error");
-        App.alternarAbaUsuario("switch");
-        return;
-      }
-
-      const u = App.editingUserId ? Auth.getUserById(App.editingUserId) : null;
-      const isNew = !u;
-      const user = u || {
-        name: "",
-        email: "",
-        role: "user",
-        allowed_divisions: ["sob_medida"],
-        allowed_stages: ["previa", "galga", "desenho_tecnico"],
-        avatar_color: "#0284c7"
-      };
-
-      App.selectedAvatarColor = user.avatar_color || "#0284c7";
-      const colors = [
-        { hex: "#0284c7", name: "Azul iGUi" },
-        { hex: "#059669", name: "Verde Esmeralda" },
-        { hex: "#ea580c", name: "Laranja Papa" },
-        { hex: "#7c3aed", name: "Roxo" },
-        { hex: "#dc2626", name: "Vermelho" },
-        { hex: "#0891b2", name: "Ciano" },
-        { hex: "#4f46e5", name: "Índigo" },
-        { hex: "#d97706", name: "Âmbar" }
-      ];
-
-      const hasSob = (user.allowed_divisions || []).includes("sob_medida");
-      const hasInc = (user.allowed_divisions || []).includes("incorporadora");
-      const hasInt = (user.allowed_divisions || []).includes("internacional");
-
-      const hasPrevia = (user.allowed_stages || []).includes("previa");
-      const hasGalga = (user.allowed_stages || []).includes("galga");
-      const hasDesenho = (user.allowed_stages || []).includes("desenho_tecnico");
-
-      container.innerHTML = `
-        <div class="user-form-card">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h3 style="margin: 0; font-size: 15px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 6px;">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                <circle cx="12" cy="7" r="4"></circle>
-              </svg>
-              <span>${isNew ? 'Cadastrar Novo Usuário da Equipe' : `Editar Usuário & Permissões: ${user.name}`}</span>
-            </h3>
-            <button type="button" class="btn btn-sm btn-secondary" onclick="App.alternarAbaUsuario('manage')">
-              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 2px;"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
-              Voltar à Lista
-            </button>
-          </div>
-
-          <div class="grid-2" style="gap: 12px; margin-top: 4px;">
-            <div class="form-group">
-              <label class="form-label font-bold">Nome Completo:</label>
-              <input type="text" id="formUserName" class="form-control" value="${user.name}" placeholder="Ex: Roberto da Silva">
-            </div>
-            <div class="form-group">
-              <label class="form-label font-bold">E-mail de Acesso (Login SketchUp & Web):</label>
-              <input type="email" id="formUserEmail" class="form-control" value="${user.email}" placeholder="Ex: roberto@papa.com">
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label font-bold">Perfil de Acesso / Papel:</label>
-            <select id="formUserRole" class="form-control" onchange="App.onRoleChangeSelect()">
-              <option value="user" ${user.role === 'user' ? 'selected' : ''}>Usuário Comum / Projetista (Acesso restrito às divisões e páginas selecionadas)</option>
-              <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Administrador / Diretor (Acesso irrestrito a todas as 3 divisões, páginas, Dashboard e Preços)</option>
-            </select>
-          </div>
-
-          <div>
-            <div class="form-section-title">1. Divisões Autorizadas</div>
-            <div class="interactive-perm-grid">
-              <div class="interactive-perm-card ${hasSob ? 'checked' : ''}" id="cardDivSobMedida" onclick="App.togglePermCard('chkDivSobMedida', 'cardDivSobMedida')">
-                <input type="checkbox" id="chkDivSobMedida" ${hasSob ? 'checked' : ''} style="margin-top: 3px;" onclick="event.stopPropagation(); App.syncCardCheck('chkDivSobMedida', 'cardDivSobMedida');">
-                <span class="perm-card-icon">
-                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M2 12c2.5-3 5.5-3 8 0s5.5 3 8 0 3-1.5 4-1.5"></path>
-                    <path d="M2 17c2.5-3 5.5-3 8 0s5.5 3 8 0 3-1.5 4-1.5"></path>
-                  </svg>
-                </span>
-                <div class="perm-card-content">
-                  <span class="perm-card-title">iGUi Sob Medida</span>
-                  <span class="perm-card-desc">Projetos unitários personalizados (1 orçamento = 1 piscina)</span>
-                </div>
-              </div>
-
-              <div class="interactive-perm-card ${hasInc ? 'checked' : ''}" id="cardDivInc" onclick="App.togglePermCard('chkDivInc', 'cardDivInc')">
-                <input type="checkbox" id="chkDivInc" ${hasInc ? 'checked' : ''} style="margin-top: 3px;" onclick="event.stopPropagation(); App.syncCardCheck('chkDivInc', 'cardDivInc');">
-                <span class="perm-card-icon">
-                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect>
-                    <path d="M9 22v-4h6v4"></path>
-                    <line x1="8" y1="6" x2="10" y2="6"></line>
-                    <line x1="14" y1="6" x2="16" y2="6"></line>
-                  </svg>
-                </span>
-                <div class="perm-card-content">
-                  <span class="perm-card-title">iGUi Incorporadora</span>
-                  <span class="perm-card-desc">Múltiplos modelos, cálculo de moldes e divisão de unidades</span>
-                </div>
-              </div>
-
-              <div class="interactive-perm-card ${hasInt ? 'checked' : ''}" id="cardDivInt" onclick="App.togglePermCard('chkDivInt', 'cardDivInt')">
-                <input type="checkbox" id="chkDivInt" ${hasInt ? 'checked' : ''} style="margin-top: 3px;" onclick="event.stopPropagation(); App.syncCardCheck('chkDivInt', 'cardDivInt');">
-                <span class="perm-card-icon">
-                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <line x1="2" y1="12" x2="22" y2="12"></line>
-                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
-                  </svg>
-                </span>
-                <div class="perm-card-content">
-                  <span class="perm-card-title">iGUi Internacional</span>
-                  <span class="perm-card-desc">Orçamentos para exportação e projetos internacionais</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <div class="form-section-title">2. Páginas / Etapas Autorizadas</div>
-            <div class="interactive-perm-grid">
-              <div class="interactive-perm-card ${hasPrevia ? 'checked' : ''}" id="cardStagePrevia" onclick="App.togglePermCard('chkStagePrevia', 'cardStagePrevia')">
-                <input type="checkbox" id="chkStagePrevia" ${hasPrevia ? 'checked' : ''} style="margin-top: 3px;" onclick="event.stopPropagation(); App.syncCardCheck('chkStagePrevia', 'cardStagePrevia');">
-                <span class="perm-card-icon" style="font-weight: 800; font-size: 14px; color: var(--igui-blue);">1</span>
-                <div class="perm-card-content">
-                  <span class="perm-card-title">Prévia</span>
-                  <span class="perm-card-desc">Estimativa preliminar com margem (+5%)</span>
-                </div>
-              </div>
-
-              <div class="interactive-perm-card ${hasGalga ? 'checked' : ''}" id="cardStageGalga" onclick="App.togglePermCard('chkStageGalga', 'cardStageGalga')">
-                <input type="checkbox" id="chkStageGalga" ${hasGalga ? 'checked' : ''} style="margin-top: 3px;" onclick="event.stopPropagation(); App.syncCardCheck('chkStageGalga', 'cardStageGalga');">
-                <span class="perm-card-icon" style="font-weight: 800; font-size: 14px; color: var(--igui-blue);">2</span>
-                <div class="perm-card-content">
-                  <span class="perm-card-title">Galga (Pré-venda)</span>
-                  <span class="perm-card-desc">Quadro técnico pré-venda (0% margem)</span>
-                </div>
-              </div>
-
-              <div class="interactive-perm-card ${hasDesenho ? 'checked' : ''}" id="cardStageDesenho" onclick="App.togglePermCard('chkStageDesenho', 'cardStageDesenho')">
-                <input type="checkbox" id="chkStageDesenho" ${hasDesenho ? 'checked' : ''} style="margin-top: 3px;" onclick="event.stopPropagation(); App.syncCardCheck('chkStageDesenho', 'cardStageDesenho');">
-                <span class="perm-card-icon" style="font-weight: 800; font-size: 14px; color: var(--igui-blue);">3</span>
-                <div class="perm-card-content">
-                  <span class="perm-card-title">Desenho Técnico (Venda)</span>
-                  <span class="perm-card-desc">Documentação técnica executiva final</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <div class="form-section-title">3. Cor do Avatar</div>
-            <div class="color-swatches-row">
-              ${colors.map(c => `
-                <button type="button" 
-                  class="color-swatch-btn ${App.selectedAvatarColor === c.hex ? 'selected' : ''}" 
-                  style="background: ${c.hex};" 
-                  title="${c.name}"
-                  onclick="App.selecionarCorAvatar('${c.hex}')">
-                </button>
-              `).join('')}
-            </div>
-          </div>
-
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 14px; border-top: 1px solid #e2e8f0;">
-            <div>
-              ${(!isNew && user.id !== current.id) ? `
-                <button type="button" class="btn btn-sm btn-danger" onclick="App.excluirUsuario('${user.id}')">
-                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 3px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                  Excluir Usuário
-                </button>
-              ` : ''}
-            </div>
-
-            <div style="display: flex; gap: 8px;">
-              <button type="button" class="btn btn-secondary" onclick="App.alternarAbaUsuario('manage')">
-                Cancelar
-              </button>
-              <button type="button" class="btn btn-primary" onclick="App.salvarUsuarioForm()">
-                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 3px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                Salvar Permissões
-              </button>
-            </div>
-          </div>
-        </div>
-      `;
-    }
-  },
-
-  abrirFormEditarUsuario(userId) {
-    App.editingUserId = userId;
-    App.alternarAbaUsuario("edit");
-  },
-
-  abrirFormNovoUsuario() {
-    App.editingUserId = null;
-    App.alternarAbaUsuario("edit");
-  },
-
-  selecionarCorAvatar(hex) {
-    App.selectedAvatarColor = hex;
-    document.querySelectorAll(".color-swatch-btn").forEach(b => {
-      b.classList.toggle("selected", b.getAttribute("title") === hex || b.style.backgroundColor === hex);
-    });
-    App.renderUserModalContent();
-  },
-
-  togglePermCard(checkboxId, cardId) {
-    const chk = document.getElementById(checkboxId);
-    if (!chk) return;
-    chk.checked = !chk.checked;
-    App.syncCardCheck(checkboxId, cardId);
-  },
-
-  syncCardCheck(checkboxId, cardId) {
-    const chk = document.getElementById(checkboxId);
-    const card = document.getElementById(cardId);
-    if (chk && card) {
-      card.classList.toggle("checked", chk.checked);
-    }
-  },
-
-  onRoleChangeSelect() {
-    const roleSel = document.getElementById("formUserRole");
-    if (!roleSel) return;
-    if (roleSel.value === "admin") {
-      ["chkDivSobMedida", "chkDivInc", "chkDivInt", "chkStagePrevia", "chkStageGalga", "chkStageDesenho"].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.checked = true;
-      });
-      ["cardDivSobMedida", "cardDivInc", "cardDivInt", "cardStagePrevia", "cardStageGalga", "cardStageDesenho"].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.classList.add("checked");
-      });
-    }
-  },
-
-  salvarUsuarioForm() {
-    const nomeEl = document.getElementById("formUserName");
-    const emailEl = document.getElementById("formUserEmail");
-    const roleEl = document.getElementById("formUserRole");
-
-    if (!nomeEl || !emailEl || !roleEl) return;
-
-    const name = nomeEl.value.trim();
-    const email = emailEl.value.trim().toLowerCase();
-    const role = roleEl.value;
-
-    if (!name) {
-      App.showToast("Informe o nome completo do usuário.", "error");
-      nomeEl.focus();
-      return;
-    }
-
-    if (!email || !email.includes("@")) {
-      App.showToast("Informe um e-mail válido para login.", "error");
-      emailEl.focus();
-      return;
-    }
-
-    const divs = [];
-    if (document.getElementById("chkDivSobMedida")?.checked) divs.push("sob_medida");
-    if (document.getElementById("chkDivInc")?.checked) divs.push("incorporadora");
-    if (document.getElementById("chkDivInt")?.checked) divs.push("internacional");
-
-    const stages = [];
-    if (document.getElementById("chkStagePrevia")?.checked) stages.push("previa");
-    if (document.getElementById("chkStageGalga")?.checked) stages.push("galga");
-    if (document.getElementById("chkStageDesenho")?.checked) stages.push("desenho_tecnico");
-
-    if (divs.length === 0) {
-      App.showToast("Selecione ao menos 1 divisão autorizada.", "error");
-      return;
-    }
-
-    if (stages.length === 0) {
-      App.showToast("Selecione ao menos 1 etapa autorizada.", "error");
-      return;
-    }
-
-    const userData = {
-      name,
-      email,
-      role,
-      allowed_divisions: divs,
-      allowed_stages: stages,
-      avatar_color: App.selectedAvatarColor || "#0284c7"
-    };
-
-    if (App.editingUserId) {
-      userData.id = App.editingUserId;
-    }
-
-    Auth.saveUser(userData);
-    App.showToast(`Usuário ${name} salvo com sucesso!`, "success");
-    App.alternarAbaUsuario("manage");
-  },
-
-  async excluirUsuario(userId) {
-    const user = Auth.getUserById(userId);
-    const userName = user ? user.name : "este usuário";
-
-    const ok = await PapaSysDialog.confirm({
-      title: "Excluir Usuário",
-      message: `Tem certeza que deseja excluir o usuário "${userName}"? Esta ação removerá os acessos deste perfil.`,
-      confirmText: "Sim, Excluir",
-      cancelText: "Cancelar",
-      type: "danger"
-    });
-    if (!ok) return;
-
-    if (Auth.deleteUser(userId)) {
-      App.showToast(`Usuário "${userName}" excluído com sucesso.`, "success");
-      App.alternarAbaUsuario("manage");
-    }
-  },
-
-  async restaurarUsuariosPadrao() {
-    const ok = await PapaSysDialog.confirm({
-      title: "Restaurar Usuários Padrão",
-      message: "Deseja restaurar a lista de usuários de fábrica (incluindo admin@papa.com e usuario@papa.com)?",
-      confirmText: "Restaurar Padrões",
-      cancelText: "Cancelar",
-      type: "warning"
-    });
-    if (!ok) return;
-
-    Auth.resetDefaultUsers();
-    App.showToast("Usuários padrão restaurados com sucesso!", "success");
-    App.alternarAbaUsuario(App.userModalTab);
-  },
-
-  selecionarUsuarioSessao(userId) {
-    const u = Auth.getAllUsers().find(x => x.id === userId);
-    if (u) {
-      Auth.setCurrentUser(u);
-      App.closeAllModals();
-      App.showToast(`Sessão ativa: conectado como ${u.name}!`, "success");
-    }
+    window.location.href = "precos.html?tab=usuarios";
   },
 
   // Modal Novo Orçamento

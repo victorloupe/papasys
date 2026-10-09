@@ -8,7 +8,7 @@
   <link rel="shortcut icon" href="favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css?v=1.4.1">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -27,24 +27,60 @@
     </div>
 
     <div class="nav-right">
-      <a href="index.html" class="btn btn-secondary btn-sm">
-        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 3px;"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
-        Voltar ao Painel
-      </a>
-
-      <button class="btn btn-success btn-sm" onclick="salvarOrcamento()">
-        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 3px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-        Salvar Alterações
+      <!-- Sincronizar Dados com Supabase (Ícone ao lado dos botões de ação) -->
+      <button type="button" id="btnSyncNow" class="btn-nav-sync" onclick="SyncManager.manualSync()" title="Sincronizar dados com o Supabase agora">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="23 4 23 10 17 10"></polyline>
+          <polyline points="1 20 1 14 7 14"></polyline>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+        </svg>
       </button>
 
-      <button class="btn btn-primary btn-sm" onclick="abrirPropostaExecutiva()">
-        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 3px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
-        Proposta PDF
+      <a href="index.html" class="btn btn-secondary btn-sm" title="Voltar ao Painel Principal">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+        <span>Voltar</span>
+      </a>
+
+      <button class="btn btn-secondary btn-sm" onclick="abrirComparadorRevestimentos()" title="Comparar revestimentos e cenários de preço lado a lado">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="20" x2="18" y2="10"></line>
+          <line x1="12" y1="20" x2="12" y2="4"></line>
+          <line x1="6" y1="20" x2="6" y2="14"></line>
+        </svg>
+        <span>Comparar Cenários</span>
+      </button>
+
+      <button class="btn btn-secondary btn-sm" onclick="criarNovaRevisaoOrcamento()" title="Criar uma nova revisão (ex: Rev. B) para este orçamento mantendo o histórico">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="1 4 1 10 7 10"></polyline>
+          <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+        </svg>
+        <span>Nova Revisão</span>
+      </button>
+
+      <button class="btn btn-success btn-sm" onclick="salvarOrcamento()" title="Salvar Alterações no Supabase">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+          <polyline points="17 21 17 13 7 13 7 21"></polyline>
+          <polyline points="7 3 7 8 15 8"></polyline>
+        </svg>
+        <span>Salvar</span>
+      </button>
+
+      <button class="btn btn-primary btn-sm" onclick="abrirPropostaExecutiva()" title="Visualizar Proposta Executiva PDF">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+        </svg>
+        <span>Proposta PDF</span>
       </button>
 
       <div class="nav-divider"></div>
 
-      <!-- Perfil do Usuário Ativo com Sair Integrado -->
+      <!-- Perfil do Usuário Ativo com Ícone Meu Perfil e Sair Integrados -->
       <div class="user-profile-menu">
         <div class="user-profile-info" onclick="window.location.href='index.html'" title="Usuário Ativo - Voltar ao Painel">
           <div class="user-profile-avatar" id="orcUserAvatar">AD</div>
@@ -52,13 +88,19 @@
             <span class="user-profile-name" id="orcUserName">Administrador</span>
             <span class="badge-user-role admin" id="orcUserRole">Diretoria / Admin</span>
           </div>
-          <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" class="user-profile-chevron">
-            <polyline points="6 9 12 15 18 9"></polyline>
-          </svg>
         </div>
 
         <div class="user-profile-divider"></div>
 
+        <!-- Ícone Meu Perfil (ao lado do nome e avatar) -->
+        <a href="perfil.html" class="btn-inline-action" title="Meu Perfil e Alterar Senha">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+        </a>
+
+        <!-- Botão Sair -->
         <button type="button" class="btn-inline-logout" onclick="event.stopPropagation(); Auth.logout();" title="Encerrar Sessão e Sair do Sistema">
           <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
@@ -97,6 +139,17 @@
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
             </svg>
+          </div>
+          <!-- Controle Interativo de Ativar / Desativar Revisão (Nome Livre) -->
+          <div class="revision-toggle-box" style="display: inline-flex; align-items: center; gap: 6px; background: #ffffff; padding: 3px 8px; border-radius: 6px; border: 1px solid #e2e8f0; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
+            <label style="display: inline-flex; align-items: center; gap: 5px; margin: 0; cursor: pointer; font-size: 11.5px; font-weight: 700; color: #475569;" title="Marque para ativar uma revisão para este orçamento">
+              <input type="checkbox" id="chkAtivarRevisao" onchange="aoAlternarAtivarRevisao(this.checked)" style="cursor: pointer;">
+              <span>Revisão:</span>
+            </label>
+            <div id="boxInputRevisao" style="display: none; align-items: center; gap: 4px;">
+              <input type="text" id="inputNomeRevisao" class="form-control" style="width: 100px; height: 24px; padding: 0 6px; font-size: 11px; font-weight: 800; text-transform: uppercase; color: #6d28d9; background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 4px;" placeholder="Ex: REV-B" title="Digite o nome que desejar para a revisão" oninput="aoAlterarNomeRevisao(this.value)">
+              <span id="badgeRevisaoPreview" class="badge-revision-pill">REV-B</span>
+            </div>
           </div>
           <span class="tag-div" id="badgeDivisao">iGUi Sob Medida</span>
         </div>
@@ -176,7 +229,7 @@
         <div class="form-group">
           <label class="form-label">Divisão iGUi:</label>
           <select id="selectDivisao" class="form-control" onchange="currentBudget.division = this.value; registrarEdicaoManual(); renderizarOrcamento();">
-            <option value="sob_medida">iGUi Sob Medida (1 piscina)</option>
+            <option value="sob_medida">iGUi Sob Medida (Projetos Unitários / Personalizados)</option>
             <option value="incorporadora">iGUi Incorporadora (Multi-modelos)</option>
             <option value="internacional">iGUi Internacional</option>
           </select>
@@ -208,8 +261,16 @@
             </svg>
           </div>
         </div>
-        <div id="statTotalValor" class="stat-tile-value tabular-nums" style="color: var(--igui-blue);">R$ 0,00</div>
-        <div class="stat-tile-sub" id="statTotalUnidades">1 unidade</div>
+        <div id="statTotalValorBox" style="display: flex; flex-direction: column; gap: 3px;">
+          <div id="statTotalValor" class="stat-tile-value tabular-nums" style="color: var(--igui-blue);">R$ 0,00</div>
+          <div id="statTotalValorComparacao" style="display: none;"></div>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+          <div class="stat-tile-sub" id="statTotalUnidades">1 unidade</div>
+          <button type="button" class="btn btn-xs btn-secondary" onclick="abrirModalAjustarTotalOrcamento()" style="font-size: 10px; padding: 2px 7px;" title="Ajustar valor total manualmente">
+            Ajustar Total
+          </button>
+        </div>
       </div>
 
       <div class="stat-tile">
@@ -255,6 +316,43 @@
         </div>
         <div id="statTotalVolume" class="stat-tile-value tabular-nums">0.0 m³ (0 L)</div>
         <div class="stat-tile-sub">Capacidade cúbica e em litros</div>
+      </div>
+    </div>
+
+    <!-- Bloco 2.1: Ajuste Comercial Dinâmico (Desconto / Acréscimo em % ou R$) -->
+    <div class="dash-card full-width" style="margin-top: 14px; background: linear-gradient(to right, #f8fafc, #ffffff); border: 1px solid #e2e8f0; padding: 14px 20px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="width: 36px; height: 36px; border-radius: 8px; background: #e0f2fe; color: #0284c7; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="1" x2="12" y2="23"></line>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+          </div>
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <h4 style="margin: 0; font-size: 14px; font-weight: 700; color: #0f172a;">Ajuste Comercial da Proposta</h4>
+              <span id="tagResumoAjusteComercial" style="display: none; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 700;"></span>
+            </div>
+            <p style="margin: 2px 0 0 0; font-size: 12px; color: #64748b;">Condição especial de negociação: aplique desconto comercial ou taxa de serviços/frete sem alterar a tabela base dos modelos</p>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <select id="selTipoAjusteComercial" class="form-control" style="width: auto; height: 36px; font-size: 12.5px; font-weight: 600;" onchange="aoMudarAjusteComercial()">
+            <option value="none">Sem Ajuste Comercial (Tabela)</option>
+            <option value="discount_pct">Desconto Comercial em % (-)</option>
+            <option value="discount_fixed">Desconto Comercial em R$ (-)</option>
+            <option value="surcharge_pct">Acréscimo de Serviço em % (+)</option>
+            <option value="surcharge_fixed">Acréscimo de Frete/Serviço em R$ (+)</option>
+          </select>
+
+          <div id="boxValorAjusteComercial" style="display: none; align-items: center; gap: 6px;">
+            <input type="number" id="inpValorAjusteComercial" class="form-control" style="width: 105px; height: 36px; font-size: 13px; font-weight: 700;" step="0.5" min="0" placeholder="0.00" oninput="aoMudarAjusteComercial()">
+            <span id="lblUnidadeAjusteComercial" style="font-size: 13px; font-weight: 700; color: #475569;">%</span>
+            <input type="text" id="inpMotivoAjusteComercial" class="form-control" style="width: 220px; height: 36px; font-size: 12px;" placeholder="Justificativa (ex: À vista / Frete)" oninput="aoMudarAjusteComercial()">
+          </div>
+        </div>
       </div>
     </div>
 
@@ -368,7 +466,7 @@
       </div>
 
       <div class="papasys-dialog-body" style="padding-top: 4px;">
-        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px; margin-bottom: 14px; font-size: 12.5px; color: #1e40af; line-height: 1.5;">
+        <div class="modal-banner-info">
           <strong>Atenção:</strong> Na etapa de <strong>Prévia (+5% de margem)</strong>, as medidas são estimativas preliminares de projeto. A etapa de <strong>Galga (0% de margem)</strong> exige a confirmação técnica da fábrica sobre a viabilidade com a modulação real das pastilhas e encaixe de peças, podendo haver pequenas alterações nas medidas da piscina. Confirme ou ajuste as dimensões abaixo:
         </div>
 
@@ -377,7 +475,7 @@
         </div>
 
         <div style="margin-top: 14px; padding: 10px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
-          <label style="display: flex; align-items: flex-start; gap: 8px; font-size: 13px; cursor: pointer; color: #1e293b;">
+          <label class="modal-confirm-checkbox">
             <input type="checkbox" id="chkConfirmacaoGalgaFabrica" onchange="aoAlternarCheckboxGalga(this.checked)" style="margin-top: 2px;">
             <span><strong>Confirmo que a galga técnica foi validada junto à fábrica</strong> para este modelo de pastilha e que as medidas acima foram verificadas e são definitivas para a etapa de Galga.</span>
           </label>
@@ -419,6 +517,34 @@
     </div>
   </div>
 
+  <!-- MODAL: COMPARADOR DE REVESTIMENTOS & CENÁRIOS COMERCIAIS (Sugestão 3) -->
+  <div id="modalComparadorRevestimentos" class="papasys-dialog-overlay" style="display: none;" onclick="fecharModalComparadorRevestimentos()">
+    <div class="papasys-dialog-card modal-lg" style="max-width: 820px;" onclick="event.stopPropagation()">
+      <div class="papasys-dialog-header">
+        <div class="papasys-dialog-icon dialog-icon-info" style="background: #e0f2fe; color: #0284c7;">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="20" x2="18" y2="10"></line>
+            <line x1="12" y1="20" x2="12" y2="4"></line>
+            <line x1="6" y1="20" x2="6" y2="14"></line>
+          </svg>
+        </div>
+        <div class="papasys-dialog-headings">
+          <h3 class="papasys-dialog-title">Comparador de Revestimentos &amp; Cenários Comerciais</h3>
+          <p class="papasys-dialog-message">Simule em tempo real o impacto financeiro e parcelamento ao alternar entre acabamentos da iGUi.</p>
+        </div>
+        <button type="button" class="btn-close-modal" onclick="fecharModalComparadorRevestimentos()">&times;</button>
+      </div>
+
+      <div class="papasys-dialog-body" id="conteudoComparadorRevestimentos" style="padding-top: 6px;">
+        <!-- Injetado dinamicamente por orcamento.js -->
+      </div>
+
+      <div class="papasys-dialog-footer" style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px solid #f1f5f9;">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="fecharModalComparadorRevestimentos()">Fechar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast -->
   <div id="toastContainer" class="toast-container"></div>
 
@@ -427,6 +553,7 @@
   <script src="js/animations.js?v=1.4.0"></script>
   <script src="js/config.js?v=1.4.0"></script>
   <script src="js/dialog.js?v=1.4.0"></script>
+  <script src="js/sync.js"></script>
   <script src="js/auth.js?v=1.4.0"></script>
   <script src="js/pricing.js?v=1.4.0"></script>
   <script src="js/supabase.js?v=1.4.0"></script>

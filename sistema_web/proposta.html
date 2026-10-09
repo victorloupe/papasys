@@ -8,7 +8,7 @@
   <link rel="shortcut icon" href="favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -27,19 +27,43 @@
     </div>
 
     <div class="nav-right">
-      <a href="index.html" class="btn btn-secondary btn-sm">
-        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 3px;"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
-        Voltar ao Painel
+      <!-- Sincronizar Dados com Supabase (Ícone ao lado dos botões de ação) -->
+      <button type="button" id="btnSyncNow" class="btn-nav-sync" onclick="SyncManager.manualSync()" title="Sincronizar dados com o Supabase agora">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="23 4 23 10 17 10"></polyline>
+          <polyline points="1 20 1 14 7 14"></polyline>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+        </svg>
+      </button>
+
+      <a href="index.html" class="btn btn-secondary btn-sm" title="Voltar ao Painel Principal">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+        <span>Voltar</span>
       </a>
 
-      <button class="btn btn-primary btn-sm" onclick="window.print()">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -1px; margin-right: 4px;"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-        Imprimir / Salvar PDF
+      <button class="btn btn-secondary btn-sm" id="btnToggleVisaoCliente" onclick="alternarVisaoCliente()" title="Alternar entre formato comercial simplificado para o cliente e detalhado">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+          <circle cx="12" cy="12" r="3"></circle>
+        </svg>
+        <span id="txtBtnVisao">Modo Cliente (Comercial)</span>
+      </button>
+
+      <button class="btn btn-primary btn-sm" onclick="window.print()" title="Imprimir ou Salvar PDF">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="6 9 6 2 18 2 18 9"></polyline>
+          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+          <rect x="6" y="14" width="12" height="8"></rect>
+        </svg>
+        <span>Imprimir / Salvar PDF</span>
       </button>
 
       <div class="nav-divider"></div>
 
-      <!-- Perfil do Usuário Ativo com Sair Integrado -->
+      <!-- Perfil do Usuário Ativo com Ícone Meu Perfil e Sair Integrados -->
       <div class="user-profile-menu">
         <div class="user-profile-info" onclick="window.location.href='index.html'" title="Usuário Ativo - Voltar ao Painel">
           <div class="user-profile-avatar" id="propUserAvatar">AD</div>
@@ -47,13 +71,19 @@
             <span class="user-profile-name" id="propUserName">Administrador</span>
             <span class="badge-user-role admin" id="propUserRole">Diretoria / Admin</span>
           </div>
-          <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" class="user-profile-chevron">
-            <polyline points="6 9 12 15 18 9"></polyline>
-          </svg>
         </div>
 
         <div class="user-profile-divider"></div>
 
+        <!-- Ícone Meu Perfil (ao lado do nome e avatar) -->
+        <a href="perfil.html" class="btn-inline-action" title="Meu Perfil e Alterar Senha">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+        </a>
+
+        <!-- Botão Sair -->
         <button type="button" class="btn-inline-logout" onclick="event.stopPropagation(); Auth.logout();" title="Encerrar Sessão e Sair do Sistema">
           <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
@@ -174,6 +204,10 @@
           <span>4. Acréscimo da Etapa:</span>
           <span id="propStageMargin" class="tabular-nums">+ R$ 0,00</span>
         </div>
+        <div class="breakdown-row" id="rowPropAjusteComercial" style="display: none;">
+          <span id="lblPropAjusteComercial">5. Ajuste Comercial da Proposta:</span>
+          <span id="propValorAjusteComercial" class="tabular-nums">R$ 0,00</span>
+        </div>
         <div class="breakdown-row grand-total">
           <span>VALOR TOTAL PROPOSTA:</span>
           <span id="propGrandTotal" class="tabular-nums">R$ 0,00</span>
@@ -221,13 +255,13 @@
     <div class="prop-signatures" style="margin-top: 40px;">
       <div class="sig-col">
         <div class="sig-line"></div>
-        <div class="sig-name">iGUi Piscinas</div>
+        <div class="sig-name" id="sigNomeTecnico">iGUi Piscinas</div>
         <div class="sig-sub">Departamento de Engenharia e Vendas</div>
       </div>
 
       <div class="sig-col">
         <div class="sig-line"></div>
-        <div class="sig-name">De Acordo do Cliente</div>
+        <div class="sig-name" id="sigNomeCliente">De Acordo do Cliente</div>
         <div class="sig-sub">Assinatura / Carimbo CNPJ</div>
       </div>
     </div>
@@ -237,6 +271,7 @@
   <!-- Scripts -->
   <script src="js/config.js"></script>
   <script src="js/dialog.js"></script>
+  <script src="js/sync.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/pricing.js"></script>
   <script src="js/supabase.js"></script>

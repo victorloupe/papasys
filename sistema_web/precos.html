@@ -8,7 +8,7 @@
   <link rel="shortcut icon" href="favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -27,12 +27,21 @@
     </div>
 
     <div class="nav-right">
-      <a href="index.html" class="nav-link-btn" title="Retornar ao Painel Principal">
+      <!-- Sincronizar Dados com Supabase (Ícone ao lado dos botões de ação) -->
+      <button type="button" id="btnSyncNow" class="btn-nav-sync" onclick="SyncManager.manualSync()" title="Sincronizar dados com o Supabase agora">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="23 4 23 10 17 10"></polyline>
+          <polyline points="1 20 1 14 7 14"></polyline>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+        </svg>
+      </button>
+
+      <a href="index.html" class="btn btn-secondary btn-sm" title="Retornar ao Painel Principal">
         <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="19" y1="12" x2="5" y2="12"></line>
           <polyline points="12 19 5 12 12 5"></polyline>
         </svg>
-        Voltar ao Painel
+        <span>Voltar</span>
       </a>
 
       <!-- Ações da Aba Preços -->
@@ -60,7 +69,7 @@
 
       <div class="nav-divider"></div>
 
-      <!-- Perfil do Usuário Ativo com Sair Integrado -->
+      <!-- Perfil do Usuário Ativo com Ícone Meu Perfil e Sair Integrados -->
       <div class="user-profile-menu">
         <div class="user-profile-info" onclick="alternarAbaConfig('usuarios')" title="Administrador Logado - Gerenciar Equipe">
           <div class="user-profile-avatar" id="precosUserAvatar">AD</div>
@@ -68,13 +77,19 @@
             <span class="user-profile-name" id="precosUserName">Administrador</span>
             <span class="badge-user-role admin" id="precosUserRole">Diretoria / Admin</span>
           </div>
-          <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" class="user-profile-chevron">
-            <polyline points="6 9 12 15 18 9"></polyline>
-          </svg>
         </div>
 
         <div class="user-profile-divider"></div>
 
+        <!-- Ícone Meu Perfil (ao lado do nome e avatar) -->
+        <a href="perfil.html" class="btn-inline-action" title="Meu Perfil e Alterar Senha">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+        </a>
+
+        <!-- Botão Sair -->
         <button type="button" class="btn-inline-logout" onclick="event.stopPropagation(); Auth.logout();" title="Encerrar Sessão e Sair do Sistema">
           <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
@@ -148,30 +163,30 @@
           </div>
 
           <div style="padding: 14px 18px;">
-            <table class="config-m2-table" style="width: 100%; border-collapse: separate; border-spacing: 0; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+            <table class="config-m2-table">
               <thead>
-                <tr style="background: #f8fafc;">
-                  <th style="padding: 10px 14px; text-align: left; font-size: 12px; font-weight: 700; color: #475569; border-bottom: 1px solid #e2e8f0;">Divisão</th>
-                  <th style="padding: 10px 14px; text-align: left; font-size: 12px; font-weight: 700; color: #475569; border-bottom: 1px solid #e2e8f0;">Convencional (R$/m²)</th>
-                  <th style="padding: 10px 14px; text-align: left; font-size: 12px; font-weight: 700; color: #475569; border-bottom: 1px solid #e2e8f0;">Especial (R$/m²)</th>
+                <tr>
+                  <th>Divisão</th>
+                  <th>Convencional (R$/m²)</th>
+                  <th>Especial (R$/m²)</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td style="padding: 12px 14px; font-size: 13px; font-weight: 700; color: #0f172a; border-bottom: 1px solid #f1f5f9;">
+                  <td class="division-name">
                     <div style="display: flex; align-items: center; gap: 6px;">
                       <span style="width: 8px; height: 8px; border-radius: 50%; background: #0284c7;"></span>
                       iGUi Sob Medida
                     </div>
                   </td>
-                  <td style="padding: 10px 14px; border-bottom: 1px solid #f1f5f9;">
+                  <td>
                     <div class="config-input-group">
                       <span class="config-prefix">R$</span>
                       <input type="number" id="preco_m2_sob_medida_convencional" class="config-input" step="1.00" min="0" placeholder="140.00">
                       <span class="config-suffix">/m²</span>
                     </div>
                   </td>
-                  <td style="padding: 10px 14px; border-bottom: 1px solid #f1f5f9;">
+                  <td>
                     <div class="config-input-group">
                       <span class="config-prefix">R$</span>
                       <input type="number" id="preco_m2_sob_medida_especial" class="config-input" step="1.00" min="0" placeholder="175.00">
@@ -181,20 +196,20 @@
                 </tr>
 
                 <tr>
-                  <td style="padding: 12px 14px; font-size: 13px; font-weight: 700; color: #0f172a; border-bottom: 1px solid #f1f5f9;">
+                  <td class="division-name">
                     <div style="display: flex; align-items: center; gap: 6px;">
                       <span style="width: 8px; height: 8px; border-radius: 50%; background: #f97316;"></span>
                       iGUi Incorporadora
                     </div>
                   </td>
-                  <td style="padding: 10px 14px; border-bottom: 1px solid #f1f5f9;">
+                  <td>
                     <div class="config-input-group">
                       <span class="config-prefix">R$</span>
                       <input type="number" id="preco_m2_incorporadora_convencional" class="config-input" step="1.00" min="0" placeholder="120.00">
                       <span class="config-suffix">/m²</span>
                     </div>
                   </td>
-                  <td style="padding: 10px 14px; border-bottom: 1px solid #f1f5f9;">
+                  <td>
                     <div class="config-input-group">
                       <span class="config-prefix">R$</span>
                       <input type="number" id="preco_m2_incorporadora_especial" class="config-input" step="1.00" min="0" placeholder="150.00">
@@ -204,20 +219,20 @@
                 </tr>
 
                 <tr>
-                  <td style="padding: 12px 14px; font-size: 13px; font-weight: 700; color: #0f172a;">
+                  <td class="division-name">
                     <div style="display: flex; align-items: center; gap: 6px;">
                       <span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
                       iGUi Internacional
                     </div>
                   </td>
-                  <td style="padding: 10px 14px;">
+                  <td>
                     <div class="config-input-group">
                       <span class="config-prefix">R$</span>
                       <input type="number" id="preco_m2_internacional_convencional" class="config-input" step="1.00" min="0" placeholder="150.00">
                       <span class="config-suffix">/m²</span>
                     </div>
                   </td>
-                  <td style="padding: 10px 14px;">
+                  <td>
                     <div class="config-input-group">
                       <span class="config-prefix">R$</span>
                       <input type="number" id="preco_m2_internacional_especial" class="config-input" step="1.00" min="0" placeholder="185.00">
@@ -236,7 +251,7 @@
               </svg>
               <div>
                 <strong>Regras Oficiais de Composição (Seção 9.1):</strong>
-                <ul style="margin: 4px 0 0 16px; padding: 0; font-size: 11.5px; line-height: 1.5;">
+                <ul class="config-rule-notes">
                   <li>As <strong>peças de acabamento</strong> (BP11, C3, boleadas, quebra-cantos) <strong>não têm valor próprio</strong>: já estão incluídas no preço do m² do revestimento. O sistema apenas informa as quantidades.</li>
                   <li>A <strong>área de laminação</strong> <strong>não tem valor</strong>: é apenas informativa no orçamento.</li>
                   <li>O <strong>volume interno</strong> também é apenas informativo.</li>
@@ -400,9 +415,9 @@
       <div class="users-table-card">
         <div class="users-table-header-bar">
           <div>
-            <strong style="font-size: 15px; color: #0f172a;">Usuários Cadastrados na Equipe</strong>
+            <strong class="users-section-title">Usuários Cadastrados na Equipe</strong>
             <span class="users-count-tag" id="lblTotalUsuarios">0 usuários</span>
-            <p style="font-size: 11.5px; color: #64748b; margin-top: 3px;">
+            <p class="users-section-sub">
               Controle quais divisões (Sob Medida, Incorporadora, Internacional) e etapas cada colaborador pode acessar.
             </p>
           </div>
@@ -477,6 +492,12 @@
             </div>
           </div>
 
+          <div class="form-group" id="grpEditUserPassword" style="margin-bottom: 12px;">
+            <label class="form-label" id="lblEditUserPassword">Senha Inicial (mínimo 8 caracteres):</label>
+            <input type="password" id="editUserPassword" class="form-control" placeholder="••••••••" minlength="8">
+            <span class="form-helper-note">A criação de conta usa Supabase Auth com validação de senha.</span>
+          </div>
+
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
             <div class="form-group">
               <label class="form-label">Perfil / Papel:</label>
@@ -498,15 +519,15 @@
           <div style="margin-bottom: 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
             <label class="form-label" style="font-weight: 700; margin-bottom: 6px;">1. Divisões Autorizadas:</label>
             <div style="display: flex; flex-direction: column; gap: 6px;">
-              <label style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; cursor: pointer;">
+              <label class="checkbox-item-label">
                 <input type="checkbox" id="chkDivSobMedida" value="sob_medida">
-                <span><strong>iGUi Sob Medida</strong> (1 orçamento = 1 piscina personalizada)</span>
+                <span><strong>iGUi Sob Medida</strong> (Projetos unitários / personalizados)</span>
               </label>
-              <label style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; cursor: pointer;">
+              <label class="checkbox-item-label">
                 <input type="checkbox" id="chkDivIncorporadora" value="incorporadora">
                 <span><strong>iGUi Incorporadora</strong> (Multi-modelos, regras de molde e desmembramento)</span>
               </label>
-              <label style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; cursor: pointer;">
+              <label class="checkbox-item-label">
                 <input type="checkbox" id="chkDivInternacional" value="internacional">
                 <span><strong>iGUi Internacional</strong> (Exportação e cotações globais)</span>
               </label>
@@ -517,15 +538,15 @@
           <div style="margin-bottom: 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
             <label class="form-label" style="font-weight: 700; margin-bottom: 6px;">2. Páginas / Etapas Autorizadas:</label>
             <div style="display: flex; gap: 16px; flex-wrap: wrap;">
-              <label style="display: flex; align-items: center; gap: 6px; font-size: 12.5px; cursor: pointer;">
+              <label class="checkbox-item-label">
                 <input type="checkbox" id="chkStagePrevia" value="previa">
                 <span>1. Prévia (+5% margem)</span>
               </label>
-              <label style="display: flex; align-items: center; gap: 6px; font-size: 12.5px; cursor: pointer;">
+              <label class="checkbox-item-label">
                 <input type="checkbox" id="chkStageGalga" value="galga">
                 <span>2. Galga (0% pré-venda)</span>
               </label>
-              <label style="display: flex; align-items: center; gap: 6px; font-size: 12.5px; cursor: pointer;">
+              <label class="checkbox-item-label">
                 <input type="checkbox" id="chkStageDesenho" value="desenho_tecnico">
                 <span>3. Desenho Técnico (Venda)</span>
               </label>
@@ -534,7 +555,7 @@
 
           <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
             <input type="checkbox" id="chkUserAtivo" checked>
-            <label for="chkUserAtivo" style="font-size: 12.5px; font-weight: 600; cursor: pointer;">
+            <label for="chkUserAtivo" class="checkbox-item-label" style="font-weight: 600;">
               Usuário Ativo no Sistema (Permitir Login e Atribuição de Orçamentos)
             </label>
           </div>
@@ -555,9 +576,10 @@
   <!-- Scripts -->
   <script src="js/config.js"></script>
   <script src="js/dialog.js"></script>
+  <script src="js/sync.js"></script>
+  <script src="js/supabase.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/pricing.js"></script>
-  <script src="js/supabase.js"></script>
   <script src="js/precos.js"></script>
 </body>
 </html>

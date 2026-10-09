@@ -1,19 +1,15 @@
 -- ==============================================================================
--- SCHEMA SUPABASE: SISTEMA DE ORÇAMENTOS iGUi + PLUGIN SKETCHUP
--- Seções 12 e 13: Autenticação Supabase, RLS (Row Level Security) e Sincronização
--- Divisões: iGUi Sob Medida | iGUi Incorporadora | iGUi Internacional
--- Fluxo por Páginas: Prévia -> Galga (pré-venda) -> Desenho Técnico (venda)
+-- MIGRATION: RLS, AUTH & REALTIME (PAPASYS / iGUi)
+-- Execute no SQL Editor do Supabase Dashboard
 -- ==============================================================================
 
--- 1. TABELA DE USUÁRIOS E PERMISSÕES (Seção 3 e 12)
+-- 1. Garante que app_users use o ID de auth.users
 CREATE TABLE IF NOT EXISTS public.app_users (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
     role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user')),
-    -- Divisões permitidas: 'sob_medida', 'incorporadora', 'internacional'
     allowed_divisions JSONB NOT NULL DEFAULT '["sob_medida"]'::jsonb,
-    -- Páginas/etapas permitidas: 'previa', 'galga', 'desenho_tecnico'
     allowed_stages JSONB NOT NULL DEFAULT '["previa", "galga", "desenho_tecnico"]'::jsonb,
     avatar_color TEXT DEFAULT '#f97316',
     active BOOLEAN NOT NULL DEFAULT true,
@@ -21,39 +17,7 @@ CREATE TABLE IF NOT EXISTS public.app_users (
     updated_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 2. TABELA DE CONFIGURAÇÕES DE PREÇO E PARÂMETROS GERAIS (Seção 9 e 12.5)
-CREATE TABLE IF NOT EXISTS public.system_settings (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    key TEXT UNIQUE NOT NULL,
-    value JSONB NOT NULL,
-    description TEXT,
-    updated_at TIMESTAMPTZ DEFAULT now()
-);
-
--- 3. TABELA PRINCIPAL DE ORÇAMENTOS (Seções 1, 2, 5, 12.5)
-CREATE TABLE IF NOT EXISTS public.budgets (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    budget_code TEXT NOT NULL,
-    client_name TEXT NOT NULL DEFAULT 'Cliente Geral',
-    project_name TEXT NOT NULL DEFAULT 'Novo Empreendimento',
-    division TEXT NOT NULL CHECK (division IN ('sob_medida', 'incorporadora', 'internacional')),
-    stage TEXT NOT NULL CHECK (stage IN ('previa', 'galga', 'desenho_tecnico')),
-    status TEXT NOT NULL DEFAULT 'em_aberto' CHECK (status IN ('em_aberto', 'em_analise', 'aprovado', 'finalizado', 'arquivado')),
-    created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
-    assigned_user_id UUID REFERENCES public.app_users(id) ON DELETE SET NULL,
-    assigned_user_name TEXT DEFAULT 'Não atribuído',
-    total_price NUMERIC(14, 2) NOT NULL DEFAULT 0.00,
-    total_base_cost NUMERIC(14, 2) NOT NULL DEFAULT 0.00,
-    total_area_revestimento NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
-    total_area_laminacao NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
-    total_volume_m3 NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
-    total_volume_liters NUMERIC(14, 2) NOT NULL DEFAULT 0.00,
-    notes TEXT,
-    created_at TIMESTAMPTZ DEFAULT now(),
-    updated_at TIMESTAMPTZ DEFAULT now()
-);
-
--- Garante que coluna created_by exista caso a tabela já tenha sido criada anteriormente
+-- 2. Garante coluna created_by na tabela budgets
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -64,83 +28,7 @@ BEGIN
     END IF;
 END $$;
 
--- 4. TABELA DE MODELOS DE PISCINAS DO ORÇAMENTO (Seções 5, 6, 7, 8, 10, 11)
-CREATE TABLE IF NOT EXISTS public.budget_pools (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    budget_id UUID NOT NULL REFERENCES public.budgets(id) ON DELETE CASCADE,
-    model_name TEXT NOT NULL,
-    units_count INT NOT NULL DEFAULT 1 CHECK (units_count >= 1),
-    pool_type TEXT NOT NULL DEFAULT 'convencional' CHECK (pool_type IN ('convencional', 'especial')),
-    structure_type TEXT NOT NULL DEFAULT 'nao_autoportante' CHECK (structure_type IN ('autoportante', 'nao_autoportante')),
-    coating_type TEXT NOT NULL CHECK (coating_type IN (
-        'pastilha_5x5',
-        'pastilha_7_5x7_5',
-        'pastilha_10x10',
-        'pastilha_15x15',
-        'porcelanato_villagres',
-        'personalizado'
-    )),
-    has_mold BOOLEAN NOT NULL DEFAULT false,
-    mold_auto BOOLEAN NOT NULL DEFAULT true,
-    
-    -- Quantitativos obtidos do SketchUp (Seções 7 e 8)
-    internal_area_m2 NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
-    lamination_area_m2 NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
-    internal_volume_m3 NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
-    internal_volume_liters NUMERIC(14, 2) NOT NULL DEFAULT 0.00,
-    linear_corners_m NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
-    alive_corners_count INT NOT NULL DEFAULT 0,
-    
-    -- Detalhamento das peças de acabamento
-    finishes_details JSONB NOT NULL DEFAULT '{}'::jsonb,
-    is_custom_coating BOOLEAN NOT NULL DEFAULT false,
-    
-    -- Dimensões da piscina
-    pool_length_m NUMERIC(8, 2) DEFAULT 0.00,
-    pool_width_m NUMERIC(8, 2) DEFAULT 0.00,
-    pool_depth_m NUMERIC(8, 2) DEFAULT 0.00,
-    
-    -- Precificação unitária e total do modelo (Seção 11)
-    unit_base_value NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
-    unit_autoportante_value NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
-    unit_stage_margin_value NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
-    unit_final_value NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
-    total_model_value NUMERIC(14, 2) NOT NULL DEFAULT 0.00,
-    
-    created_at TIMESTAMPTZ DEFAULT now(),
-    updated_at TIMESTAMPTZ DEFAULT now()
-);
-
--- 5. TABELA DE ITENS EXTRAS / DOCUMENTAÇÃO TÉCNICA
-CREATE TABLE IF NOT EXISTS public.budget_technical_items (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    budget_id UUID NOT NULL REFERENCES public.budgets(id) ON DELETE CASCADE,
-    category TEXT NOT NULL CHECK (category IN ('equipamento', 'hidraulica', 'eletrica', 'acessorio', 'servico', 'desenho_doc')),
-    title TEXT NOT NULL,
-    description TEXT,
-    quantity NUMERIC(10, 2) NOT NULL DEFAULT 1.00,
-    unit TEXT NOT NULL DEFAULT 'un',
-    unit_price NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
-    total_price NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
-    technical_specs JSONB DEFAULT '{}'::jsonb,
-    created_at TIMESTAMPTZ DEFAULT now()
-);
-
--- 6. TABELA DE ATUALIZAÇÕES DO PLUGIN SKETCHUP
-CREATE TABLE IF NOT EXISTS public.plugin_releases (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    version TEXT NOT NULL UNIQUE,
-    download_url TEXT NOT NULL,
-    changelog TEXT,
-    mandatory BOOLEAN DEFAULT false,
-    created_at TIMESTAMPTZ DEFAULT now()
-);
-
--- ==============================================================================
--- FUNÇÕES AUXILIARES DE SEGURANÇA E RLS (Seção 12.5)
--- ==============================================================================
-
--- Checa se o usuário atual autenticado tem papel de admin e está ativo
+-- 3. Funções de Apoio RLS
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS boolean AS $$
 BEGIN
@@ -151,7 +39,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
 
--- Retorna a lista de divisões autorizadas para o usuário ativo
 CREATE OR REPLACE FUNCTION public.user_allowed_divisions()
 RETURNS jsonb AS $$
 DECLARE
@@ -164,7 +51,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
 
--- Trigger para criar perfil em app_users automaticamente quando um usuário é criado no Supabase Auth
+-- 4. Trigger de Criação Automática de Perfil em app_users
 CREATE OR REPLACE FUNCTION public.handle_new_auth_user()
 RETURNS trigger AS $$
 BEGIN
@@ -200,9 +87,7 @@ CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_auth_user();
 
--- ==============================================================================
--- HABILITAR ROW LEVEL SECURITY (RLS) - SEÇÃO 12.5
--- ==============================================================================
+-- 5. Ativação de RLS
 ALTER TABLE public.app_users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.system_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.budgets ENABLE ROW LEVEL SECURITY;
@@ -210,9 +95,8 @@ ALTER TABLE public.budget_pools ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.budget_technical_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.plugin_releases ENABLE ROW LEVEL SECURITY;
 
--- ------------------------------------------------------------------------------
--- POLICIES: app_users
--- ------------------------------------------------------------------------------
+-- 6. Políticas de RLS
+-- app_users
 DROP POLICY IF EXISTS "Allow authenticated read app_users" ON public.app_users;
 CREATE POLICY "Allow authenticated read app_users" ON public.app_users
     FOR SELECT TO authenticated USING (true);
@@ -229,10 +113,7 @@ CREATE POLICY "Allow user update self in app_users" ON public.app_users
     USING (id = auth.uid())
     WITH CHECK (id = auth.uid());
 
--- ------------------------------------------------------------------------------
--- POLICIES: system_settings (Preços - Seção 12.5)
--- "Configurações de preço: leitura para todos os usuários logados, edição somente Admin"
--- ------------------------------------------------------------------------------
+-- system_settings (Preços - Leitura por todos, edição por Admin)
 DROP POLICY IF EXISTS "Allow authenticated read system_settings" ON public.system_settings;
 CREATE POLICY "Allow authenticated read system_settings" ON public.system_settings
     FOR SELECT TO authenticated USING (true);
@@ -243,11 +124,7 @@ CREATE POLICY "Allow admin write system_settings" ON public.system_settings
     USING (public.is_admin())
     WITH CHECK (public.is_admin());
 
--- ------------------------------------------------------------------------------
--- POLICIES: budgets (Orçamentos - Seção 12.5)
--- "Admin: vê e edita todos os orçamentos de todas as divisões"
--- "Usuário: vê e edita somente os orçamentos que ele criou, e apenas nas divisões liberadas"
--- ------------------------------------------------------------------------------
+-- budgets (Admin vê tudo / Usuário vê apenas seus orçamentos nas divisões permitidas)
 DROP POLICY IF EXISTS "Budgets admin full access" ON public.budgets;
 CREATE POLICY "Budgets admin full access" ON public.budgets
     FOR ALL TO authenticated
@@ -287,10 +164,7 @@ CREATE POLICY "Budgets user delete own" ON public.budgets
     FOR DELETE TO authenticated
     USING (created_by = auth.uid());
 
--- ------------------------------------------------------------------------------
--- POLICIES: budget_pools (Modelos de Piscinas)
--- Vinculado ao orçamento pai
--- ------------------------------------------------------------------------------
+-- budget_pools
 DROP POLICY IF EXISTS "Budget pools admin full access" ON public.budget_pools;
 CREATE POLICY "Budget pools admin full access" ON public.budget_pools
     FOR ALL TO authenticated
@@ -317,9 +191,7 @@ CREATE POLICY "Budget pools user access via budget" ON public.budget_pools
         )
     );
 
--- ------------------------------------------------------------------------------
--- POLICIES: budget_technical_items
--- ------------------------------------------------------------------------------
+-- budget_technical_items
 DROP POLICY IF EXISTS "Budget technical items access" ON public.budget_technical_items;
 CREATE POLICY "Budget technical items access" ON public.budget_technical_items
     FOR ALL TO authenticated
@@ -340,9 +212,7 @@ CREATE POLICY "Budget technical items access" ON public.budget_technical_items
         )
     );
 
--- ------------------------------------------------------------------------------
--- POLICIES: plugin_releases
--- ------------------------------------------------------------------------------
+-- plugin_releases
 DROP POLICY IF EXISTS "Plugin releases public read" ON public.plugin_releases;
 CREATE POLICY "Plugin releases public read" ON public.plugin_releases
     FOR SELECT TO public USING (true);
@@ -353,10 +223,7 @@ CREATE POLICY "Plugin releases admin write" ON public.plugin_releases
     USING (public.is_admin())
     WITH CHECK (public.is_admin());
 
--- ==============================================================================
--- HABILITAR REALTIME NO SUPABASE (Seção 13.2)
--- Adiciona a tabela budgets à publicação supabase_realtime
--- ==============================================================================
+-- 7. Realtime na tabela budgets
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -367,6 +234,142 @@ BEGIN
     END IF;
 EXCEPTION
     WHEN OTHERS THEN
-        -- Silencioso caso a publicação não exista no ambiente
         NULL;
+END $$;
+
+-- ==============================================================================
+-- 8. CRIAÇÃO DOS USUÁRIOS PADRÃO EM auth.users (Senha padrão: 123456)
+-- Permite login imediato no sistema web e plugin SketchUp
+-- ==============================================================================
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+DO $$
+DECLARE
+    pwd_hash TEXT := crypt('123456', gen_salt('bf'));
+    admin_id UUID := '77b65d92-3aa2-47a6-9dbb-033fd48f7b30';
+    user_id UUID  := 'a0f528a8-ce32-4f4e-85b1-6c15612fda18';
+    inc_id UUID   := 'b1f528a8-ce32-4f4e-85b1-6c15612fda19';
+    int_id UUID   := 'c2f528a8-ce32-4f4e-85b1-6c15612fda20';
+BEGIN
+    -- 1. Administrador (Acesso Total)
+    INSERT INTO auth.users (
+        instance_id, id, aud, role, email, encrypted_password,
+        email_confirmed_at, recovery_sent_at, last_sign_in_at,
+        raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+        confirmation_token, email_change, email_change_token_new, recovery_token
+    )
+    VALUES (
+        '00000000-0000-0000-0000-000000000000', admin_id, 'authenticated', 'authenticated',
+        'admin@papa.com', pwd_hash, now(), now(), now(),
+        '{"provider":"email","providers":["email"]}'::jsonb,
+        '{"name":"Administrador (PapaSys)","role":"admin"}'::jsonb,
+        now(), now(), '', '', '', ''
+    )
+    ON CONFLICT (id) DO UPDATE SET
+        encrypted_password = pwd_hash,
+        email_confirmed_at = now(),
+        raw_app_meta_data = '{"provider":"email","providers":["email"]}'::jsonb,
+        raw_user_meta_data = '{"name":"Administrador (PapaSys)","role":"admin"}'::jsonb,
+        updated_at = now();
+
+    INSERT INTO auth.identities (id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at)
+    VALUES (admin_id, admin_id, jsonb_build_object('sub', admin_id, 'email', 'admin@papa.com'), 'email', admin_id, now(), now(), now())
+    ON CONFLICT DO NOTHING;
+
+    -- 2. Victor Lourenço (Sob Medida)
+    INSERT INTO auth.users (
+        instance_id, id, aud, role, email, encrypted_password,
+        email_confirmed_at, recovery_sent_at, last_sign_in_at,
+        raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+        confirmation_token, email_change, email_change_token_new, recovery_token
+    )
+    VALUES (
+        '00000000-0000-0000-0000-000000000000', user_id, 'authenticated', 'authenticated',
+        'usuario@papa.com', pwd_hash, now(), now(), now(),
+        '{"provider":"email","providers":["email"]}'::jsonb,
+        '{"name":"Victor Lourenço","role":"user","allowed_divisions":["sob_medida"]}'::jsonb,
+        now(), now(), '', '', '', ''
+    )
+    ON CONFLICT (id) DO UPDATE SET
+        encrypted_password = pwd_hash,
+        email_confirmed_at = now(),
+        raw_app_meta_data = '{"provider":"email","providers":["email"]}'::jsonb,
+        raw_user_meta_data = '{"name":"Victor Lourenço","role":"user","allowed_divisions":["sob_medida"]}'::jsonb,
+        updated_at = now();
+
+    INSERT INTO auth.identities (id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at)
+    VALUES (user_id, user_id, jsonb_build_object('sub', user_id, 'email', 'usuario@papa.com'), 'email', user_id, now(), now(), now())
+    ON CONFLICT DO NOTHING;
+
+    -- 3. Engenharia Incorporadora
+    INSERT INTO auth.users (
+        instance_id, id, aud, role, email, encrypted_password,
+        email_confirmed_at, recovery_sent_at, last_sign_in_at,
+        raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+        confirmation_token, email_change, email_change_token_new, recovery_token
+    )
+    VALUES (
+        '00000000-0000-0000-0000-000000000000', inc_id, 'authenticated', 'authenticated',
+        'incorporadora@papa.com', pwd_hash, now(), now(), now(),
+        '{"provider":"email","providers":["email"]}'::jsonb,
+        '{"name":"Engenharia Incorporadora","role":"user","allowed_divisions":["incorporadora"]}'::jsonb,
+        now(), now(), '', '', '', ''
+    )
+    ON CONFLICT (id) DO UPDATE SET
+        encrypted_password = pwd_hash,
+        email_confirmed_at = now(),
+        raw_app_meta_data = '{"provider":"email","providers":["email"]}'::jsonb,
+        raw_user_meta_data = '{"name":"Engenharia Incorporadora","role":"user","allowed_divisions":["incorporadora"]}'::jsonb,
+        updated_at = now();
+
+    INSERT INTO auth.identities (id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at)
+    VALUES (inc_id, inc_id, jsonb_build_object('sub', inc_id, 'email', 'incorporadora@papa.com'), 'email', inc_id, now(), now(), now())
+    ON CONFLICT DO NOTHING;
+
+    -- 4. Comercial Internacional
+    INSERT INTO auth.users (
+        instance_id, id, aud, role, email, encrypted_password,
+        email_confirmed_at, recovery_sent_at, last_sign_in_at,
+        raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+        confirmation_token, email_change, email_change_token_new, recovery_token
+    )
+    VALUES (
+        '00000000-0000-0000-0000-000000000000', int_id, 'authenticated', 'authenticated',
+        'internacional@papa.com', pwd_hash, now(), now(), now(),
+        '{"provider":"email","providers":["email"]}'::jsonb,
+        '{"name":"Comercial Internacional","role":"user","allowed_divisions":["internacional"]}'::jsonb,
+        now(), now(), '', '', '', ''
+    )
+    ON CONFLICT (id) DO UPDATE SET
+        encrypted_password = pwd_hash,
+        email_confirmed_at = now(),
+        raw_app_meta_data = '{"provider":"email","providers":["email"]}'::jsonb,
+        raw_user_meta_data = '{"name":"Comercial Internacional","role":"user","allowed_divisions":["internacional"]}'::jsonb,
+        updated_at = now();
+
+    INSERT INTO auth.identities (id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at)
+    VALUES (int_id, int_id, jsonb_build_object('sub', int_id, 'email', 'internacional@papa.com'), 'email', int_id, now(), now(), now())
+    ON CONFLICT DO NOTHING;
+
+    -- 5. Atualiza tabela public.app_users
+    INSERT INTO public.app_users (id, name, email, role, allowed_divisions, allowed_stages, avatar_color, active)
+    VALUES
+        (admin_id, 'Administrador (PapaSys)', 'admin@papa.com', 'admin', '["sob_medida", "incorporadora", "internacional"]'::jsonb, '["previa", "galga", "desenho_tecnico"]'::jsonb, '#0284c7', true),
+        (user_id, 'Victor Lourenço', 'usuario@papa.com', 'user', '["sob_medida"]'::jsonb, '["previa", "galga", "desenho_tecnico"]'::jsonb, '#ea580c', true),
+        (inc_id, 'Engenharia Incorporadora', 'incorporadora@papa.com', 'user', '["incorporadora"]'::jsonb, '["previa", "galga", "desenho_tecnico"]'::jsonb, '#10b981', true),
+        (int_id, 'Comercial Internacional', 'internacional@papa.com', 'user', '["internacional"]'::jsonb, '["previa", "galga", "desenho_tecnico"]'::jsonb, '#8b5cf6', true)
+    ON CONFLICT (id) DO UPDATE SET
+        name = EXCLUDED.name,
+        email = EXCLUDED.email,
+        role = EXCLUDED.role,
+        allowed_divisions = EXCLUDED.allowed_divisions,
+        allowed_stages = EXCLUDED.allowed_stages,
+        avatar_color = EXCLUDED.avatar_color,
+        active = EXCLUDED.active;
+
+    -- 6. Atualiza orçamentos existentes para vincular created_by = assigned_user_id
+    UPDATE public.budgets
+    SET created_by = assigned_user_id
+    WHERE created_by IS NULL AND assigned_user_id IS NOT NULL;
+
 END $$;

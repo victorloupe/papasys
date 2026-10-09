@@ -60,6 +60,31 @@ module PapaSys
         Sketchup.write_default(PREFS_KEY, 'current_user_role', role.to_s)
       end
 
+      # Tokens de Sessão Supabase Auth (Seção 12.6)
+      def self.access_token
+        Sketchup.read_default(PREFS_KEY, 'access_token', '')
+      end
+
+      def self.access_token=(token)
+        Sketchup.write_default(PREFS_KEY, 'access_token', token.to_s)
+      end
+
+      def self.refresh_token
+        Sketchup.read_default(PREFS_KEY, 'refresh_token', '')
+      end
+
+      def self.refresh_token=(token)
+        Sketchup.write_default(PREFS_KEY, 'refresh_token', token.to_s)
+      end
+
+      def self.token_expires_at
+        Sketchup.read_default(PREFS_KEY, 'token_expires_at', 0).to_i
+      end
+
+      def self.token_expires_at=(ts)
+        Sketchup.write_default(PREFS_KEY, 'token_expires_at', ts.to_i)
+      end
+
       def self.allowed_divisions
         raw = Sketchup.read_default(PREFS_KEY, 'allowed_divisions', '["sob_medida"]')
         JSON.parse(raw) rescue ['sob_medida']

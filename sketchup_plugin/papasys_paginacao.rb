@@ -27,11 +27,11 @@ end
 module PapaSys
   module Paginacao
     unless file_loaded?(__FILE__)
-      extension = SketchupExtension.new('PapaSys Paginação Inteligente', File.join(File.dirname(__FILE__), 'papasys_paginacao', '__init__.rb'))
-      extension.description = 'Ajuste modular sem recortes para piscinas, quantitativos automáticos (m² e borda) e integração direta com o sistema orçamentário web PapaSys.'
-      extension.version     = '1.1.0'
-      extension.creator     = 'PapaSys'
-      extension.copyright   = '2026 PapaSys'
+      extension = SketchupExtension.new('iGUi Orçamentos 3D', File.join(File.dirname(__FILE__), 'papasys_paginacao', '__init__.rb'))
+      extension.description = 'Extensão oficial iGUi para cálculo modular sem recortes, quantitativos automáticos (m² e laminação) e integração com o sistema web iGUi.'
+      extension.version     = '2.1.0'
+      extension.creator     = 'iGUi'
+      extension.copyright   = '2026 iGUi'
       
       Sketchup.register_extension(extension, true)
       file_loaded?(__FILE__)

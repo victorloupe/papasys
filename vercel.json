@@ -2,11 +2,15 @@
   "version": 2,
   "rewrites": [
     {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    },
+    {
       "source": "/",
       "destination": "/sistema_web/index.html"
     },
     {
-      "source": "/((?!sistema_web/).*)",
+      "source": "/((?!sistema_web/|api/).*)",
       "destination": "/sistema_web/$1"
     }
   ]

@@ -4,10 +4,18 @@
 // ==============================================================================
 
 document.addEventListener("DOMContentLoaded", async () => {
+  // 1. Guarda de autenticação da página (Seção 12.2)
+  const user = await Auth.requireAuth();
+  if (!user) return;
+
   const urlParams = new URLSearchParams(window.location.search);
   const budgetId = urlParams.get("id");
 
   await carregarProposta(budgetId);
+
+  if (typeof Auth !== "undefined" && Auth.updateUserUI) {
+    Auth.updateUserUI();
+  }
 });
 
 async function carregarProposta(budgetId) {
@@ -155,11 +163,30 @@ function renderizarProposta(b) {
     elEtapa.textContent = totalEtapa > 0 ? `+ ${PricingEngine.formatBRL(totalEtapa)} (${pctEtapaStr})` : `R$ 0,00 (${pctEtapaStr})`;
   }
 
+  // Linha de Ajuste Comercial Dinâmico (Sugestão 2)
+  const rowAdj = document.getElementById("rowPropAjusteComercial");
+  const elAdjVal = document.getElementById("propValorAjusteComercial");
+  const lblAdj = document.getElementById("lblPropAjusteComercial");
+  if (rowAdj && elAdjVal) {
+    const adj = b.commercial_adjustment || calcConsolidado.commercial_adjustment;
+    if (adj && parseFloat(adj.value) > 0) {
+      rowAdj.style.display = "flex";
+      const isDesc = adj.type && adj.type.startsWith("discount");
+      const descTxt = adj.description ? ` (${adj.description})` : '';
+      if (lblAdj) lblAdj.textContent = `5. ${isDesc ? 'Desconto Comercial' : 'Acréscimo de Serviços'}${descTxt}:`;
+      const sinal = isDesc ? "- " : "+ ";
+      elAdjVal.textContent = `${sinal}${PricingEngine.formatBRL(Math.abs(calcConsolidado.commercial_adjustment_val || 0))}`;
+      elAdjVal.style.color = isDesc ? "var(--emerald-600)" : "var(--amber-600)";
+    } else {
+      rowAdj.style.display = "none";
+    }
+  }
+
   const elGrand = document.getElementById("propGrandTotal");
   if (elGrand) elGrand.textContent = PricingEngine.formatBRL(valorFinal);
 
   // Cronograma de Desembolso
-  const total = b.total_price || 0;
+  const total = valorFinal || b.total_price || 0;
   document.getElementById("cronoEntrada").textContent = PricingEngine.formatBRL(total * 0.40);
   document.getElementById("cronoCasco").textContent = PricingEngine.formatBRL(total * 0.30);
   document.getElementById("cronoEntrega").textContent = PricingEngine.formatBRL(total * 0.30);
@@ -167,5 +194,28 @@ function renderizarProposta(b) {
   // Notas
   if (b.notes) {
     document.getElementById("propNotas").textContent = b.notes;
+  }
+
+  // Assinaturas Dinâmicas
+  const sigTec = document.getElementById("sigNomeTecnico");
+  if (sigTec) sigTec.textContent = `iGUi Piscinas - ${b.assigned_user_name || 'Engenharia'}`;
+
+  const sigCli = document.getElementById("sigNomeCliente");
+  if (sigCli) sigCli.textContent = `${b.client_name || 'De Acordo do Cliente'}`;
+}
+
+// Alternar entre Visão Comercial (Cliente) e Visão Técnica
+let modoCliente = false;
+function alternarVisaoCliente() {
+  modoCliente = !modoCliente;
+  const secPreco = document.getElementById("propSecaoComposicaoPreco");
+  const txtBtn = document.getElementById("txtBtnVisao");
+
+  if (modoCliente) {
+    if (secPreco) secPreco.style.display = "none";
+    if (txtBtn) txtBtn.textContent = "Modo Técnico (Engenharia)";
+  } else {
+    if (secPreco) secPreco.style.display = "block";
+    if (txtBtn) txtBtn.textContent = "Modo Cliente (Comercial)";
   }
 }

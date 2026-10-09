@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>iGUi - Redefinição de Senha</title>
+  <link rel="icon" type="image/png" href="img/Icone.png">
+  <link rel="shortcut icon" href="favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    .reset-page-wrapper {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at 50% 20%, #f1f5f9 0%, #e2e8f0 100%);
+      padding: 24px;
+      position: relative;
+    }
+
+    .reset-card {
+      background: #ffffff;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      border-radius: 20px;
+      box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.12);
+      width: 100%;
+      max-width: 440px;
+      padding: 36px 32px;
+      position: relative;
+      z-index: 10;
+      animation: modalEnter 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .reset-header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .reset-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: #0f172a;
+      margin: 0;
+    }
+
+    .reset-sub {
+      font-size: 13px;
+      color: #64748b;
+      margin-top: 6px;
+      line-height: 1.4;
+    }
+
+    .reset-form-group {
+      margin-bottom: 16px;
+    }
+
+    .reset-label {
+      display: block;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #334155;
+      margin-bottom: 6px;
+    }
+
+    .reset-input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .reset-input-icon {
+      position: absolute;
+      left: 12px;
+      color: #94a3b8;
+      display: flex;
+      align-items: center;
+      pointer-events: none;
+    }
+
+    .reset-input {
+      width: 100%;
+      padding: 11px 14px 11px 38px;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 10px;
+      font-size: 14px;
+      color: #0f172a;
+      background: #f8fafc;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .reset-input:focus {
+      border-color: #0284c7;
+      background: #ffffff;
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+    }
+
+    .reset-btn-submit {
+      width: 100%;
+      padding: 12px 18px;
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      color: #ffffff;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
+      margin-top: 14px;
+      transition: all 0.2s ease;
+    }
+
+    .reset-btn-submit:hover {
+      background: linear-gradient(135deg, #0369a1 0%, #075985 100%);
+      transform: translateY(-1px);
+    }
+
+    .reset-btn-submit:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .reset-alert {
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 12.5px;
+      margin-bottom: 16px;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      line-height: 1.4;
+    }
+
+    .reset-alert.error {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #b91c1c;
+    }
+
+    .reset-alert.success {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      color: #15803d;
+    }
+
+    .reset-alert.info {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #1e40af;
+    }
+
+    .password-hint {
+      font-size: 11px;
+      color: #64748b;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="reset-page-wrapper">
+    <div class="reset-card">
+      
+      <div class="reset-header">
+        <img src="img/Logo_Oficial_iGUi.png" alt="iGUi" style="height: 48px; width: auto; object-fit: contain; margin-bottom: 12px;">
+        <h1 class="reset-title">Criar Nova Senha</h1>
+        <p class="reset-sub">Defina uma nova senha de acesso segura para a sua conta corporativa.</p>
+      </div>
+
+      <div id="resetStatusAlert" class="reset-alert">
+        <span id="resetStatusMsg">Aguardando validação do link...</span>
+      </div>
+
+      <form id="formNovaSenha" onsubmit="handleRedefinirSenha(event)">
+        
+        <div class="reset-form-group">
+          <label class="reset-label" for="novaSenha">Nova Senha:</label>
+          <div class="reset-input-wrap">
+            <span class="reset-input-icon">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+            </span>
+            <input type="password" id="novaSenha" class="reset-input" placeholder="Mínimo 8 caracteres" required minlength="8" autocomplete="new-password">
+          </div>
+          <div class="password-hint">A senha deve ter no mínimo 8 caracteres.</div>
+        </div>
+
+        <div class="reset-form-group">
+          <label class="reset-label" for="confirmaSenha">Confirmar Nova Senha:</label>
+          <div class="reset-input-wrap">
+            <span class="reset-input-icon">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+            </span>
+            <input type="password" id="confirmaSenha" class="reset-input" placeholder="Repita a nova senha" required minlength="8" autocomplete="new-password">
+          </div>
+        </div>
+
+        <button type="submit" class="reset-btn-submit" id="btnSalvarNovaSenha">
+          <span>Salvar Nova Senha</span>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        </button>
+
+      </form>
+
+      <div style="text-align: center; margin-top: 20px;">
+        <a href="login.html" style="font-size: 12.5px; color: #64748b; font-weight: 600; text-decoration: none;">&larr; Voltar para a tela de login</a>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/sync.js"></script>
+  <script src="js/supabase.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    let isRecoveryMode = false;
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      const alertBox = document.getElementById("resetStatusAlert");
+      const alertMsg = document.getElementById("resetStatusMsg");
+
+      const client = DB.getClient();
+      if (!client || !client.auth) {
+        mostrarAlerta("error", "Serviço de autenticação não inicializado. Recarregue a página.");
+        return;
+      }
+
+      // Verifica se a URL contém hash de recuperação do Supabase (#access_token=...&type=recovery)
+      const hash = window.location.hash;
+      if (hash && (hash.includes("type=recovery") || hash.includes("access_token"))) {
+        isRecoveryMode = true;
+        mostrarAlerta("info", "Link de recuperação validado com sucesso. Digite sua nova senha abaixo.");
+      }
+
+      // Escuta evento PASSWORD_RECOVERY
+      client.auth.onAuthStateChange((event, session) => {
+        if (event === "PASSWORD_RECOVERY") {
+          isRecoveryMode = true;
+          mostrarAlerta("info", "Sessão de recuperação ativa. Digite sua nova senha.");
+        }
+      });
+
+      // Checa sessão atual
+      const { data } = await client.auth.getSession();
+      if (data && data.session) {
+        isRecoveryMode = true;
+      }
+    });
+
+    function mostrarAlerta(tipo, texto) {
+      const alertBox = document.getElementById("resetStatusAlert");
+      const alertMsg = document.getElementById("resetStatusMsg");
+      alertBox.className = `reset-alert ${tipo}`;
+      alertBox.style.display = "flex";
+      alertMsg.textContent = texto;
+    }
+
+    async function handleRedefinirSenha(e) {
+      e.preventDefault();
+      const s1 = document.getElementById("novaSenha").value;
+      const s2 = document.getElementById("confirmaSenha").value;
+      const btn = document.getElementById("btnSalvarNovaSenha");
+
+      if (s1.length < 8) {
+        mostrarAlerta("error", "A senha deve ter no mínimo 8 caracteres.");
+        return;
+      }
+
+      if (s1 !== s2) {
+        mostrarAlerta("error", "As senhas informadas não coincidem. Digite novamente.");
+        return;
+      }
+
+      btn.disabled = true;
+      btn.style.opacity = "0.7";
+
+      try {
+        const res = await Auth.updatePassword(s1);
+        if (res.success) {
+          mostrarAlerta("success", "Senha redefinida com sucesso! Redirecionando para a tela de login...");
+          setTimeout(() => {
+            window.location.href = "login.html";
+          }, 2000);
+        } else {
+          mostrarAlerta("error", res.message || "Erro ao redefinir senha.");
+          btn.disabled = false;
+          btn.style.opacity = "1";
+        }
+      } catch (err) {
+        mostrarAlerta("error", "Falha de conexão ao salvar a nova senha.");
+        btn.disabled = false;
+        btn.style.opacity = "1";
+      }
+    }
+  </script>
+</body>
+</html>

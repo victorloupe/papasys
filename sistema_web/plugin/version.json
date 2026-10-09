@@ -1,6 +1,6 @@
 ﻿{
     "download_url":  "plugin/papasys_paginacao.rbz",
-    "changelog":  "Versao iGUi v2.0.9: Reestruturacao por paginas (Previa, Galga, Desenho Tecnico), 3 divisoes independentes, autenticacao e permissoes de usuario, quantitativos de materiais e acabamentos BP11/C3/Boleadas/Quebra-cantos.",
+    "changelog":  "Versao iGUi v2.1.0: Reestruturacao por paginas (Previa, Galga, Desenho Tecnico), 3 divisoes independentes, autenticacao e permissoes de usuario, quantitativos de materiais e acabamentos BP11/C3/Boleadas/Quebra-cantos.",
     "mandatory":  false,
-    "version":  "2.0.9"
+    "version":  "2.1.0"
 }

@@ -18,7 +18,11 @@ const AVATAR_COLORS = [
 ];
 
 document.addEventListener("DOMContentLoaded", async () => {
-  // 1. Verifica se o usuário ativo é administrador
+  // 1. Guarda de autenticação da página (Seção 12.2)
+  const user = await Auth.requireAuth();
+  if (!user) return;
+
+  // Verifica se o usuário ativo é administrador
   if (!Auth.isAdmin()) {
     if (typeof PapaSysDialog !== "undefined") {
       await PapaSysDialog.alert({
@@ -265,13 +269,13 @@ async function restaurarPadroes() {
 // SEÇÃO B: GESTÃO DE USUÁRIOS & PERMISSÕES (SEÇÃO 3)
 // ==============================================================================
 
-function carregarTabelaUsuarios() {
+async function carregarTabelaUsuarios() {
   const tbody = document.getElementById("tbodyUsuarios");
   const lblTotal = document.getElementById("lblTotalUsuarios");
   if (!tbody) return;
 
-  const users = Auth.getAllUsers();
-  const current = Auth.getCurrentUser();
+  const users = await Auth.fetchUsers();
+  const current = Auth.getCurrentUser() || {};
 
   if (lblTotal) {
     lblTotal.textContent = `${users.length} ${users.length === 1 ? 'colaborador' : 'colaboradores'}`;
@@ -314,7 +318,7 @@ function carregarTabelaUsuarios() {
       : '<span class="status-indicator-pill inactive">○ Inativo</span>';
 
     return `
-      <tr>
+      <tr style="${u.active === false ? 'opacity: 0.65;' : ''}">
         <td>
           <div class="user-cell-wrap">
             <div class="user-circle-avatar" style="background: ${u.avatar_color || '#0284c7'};">
@@ -339,7 +343,7 @@ function carregarTabelaUsuarios() {
         </td>
         <td>${statusPill}</td>
         <td style="text-align: right;">
-          <div class="users-actions-cell" style="justify-content: flex-end;">
+          <div class="users-actions-cell" style="justify-content: flex-end; gap: 4px; flex-wrap: wrap;">
             <button type="button" class="btn btn-secondary btn-sm" onclick="abrirModalEditarUsuario('${u.id}')" title="Editar permissões">
               <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
@@ -348,14 +352,19 @@ function carregarTabelaUsuarios() {
               Editar
             </button>
 
+            <!-- Botão Enviar Redefinição de Senha (Seção 12.4) -->
+            <button type="button" class="btn btn-secondary btn-sm" onclick="enviarRedefinicaoSenha('${u.email}')" title="Enviar e-mail para redefinir senha">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+              Senha
+            </button>
+
             ${!isCurrent ? `
-              <button type="button" class="btn btn-secondary btn-sm" onclick="alternarSessaoPara('${u.id}')" title="Conectar como este usuário para testar">
-                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
-                  <polyline points="10 17 15 12 10 7"></polyline>
-                  <line x1="15" y1="12" x2="3" y2="12"></line>
-                </svg>
-                Entrar
+              <!-- Botão Desativar / Reativar Usuário (Seção 12.4) -->
+              <button type="button" class="btn btn-secondary btn-sm" onclick="alternarAtivoUsuario('${u.id}', ${u.active === false})" title="${u.active !== false ? 'Desativar acesso' : 'Reativar acesso'}">
+                ${u.active !== false ? 'Desativar' : 'Reativar'}
               </button>
 
               <button type="button" class="btn btn-danger-ghost" onclick="excluirUsuario('${u.id}')" title="Remover usuário">
@@ -396,6 +405,14 @@ function abrirModalNovoUsuario() {
   document.getElementById("editUserRole").value = "user";
   document.getElementById("chkUserAtivo").checked = true;
 
+  const grpPass = document.getElementById("grpEditUserPassword");
+  if (grpPass) grpPass.style.display = "block";
+  const inputPass = document.getElementById("editUserPassword");
+  if (inputPass) {
+    inputPass.value = "";
+    inputPass.required = true;
+  }
+
   document.getElementById("chkDivSobMedida").checked = true;
   document.getElementById("chkDivIncorporadora").checked = false;
   document.getElementById("chkDivInternacional").checked = false;
@@ -422,6 +439,14 @@ function abrirModalEditarUsuario(id) {
   document.getElementById("editUserRole").value = user.role || "user";
   document.getElementById("chkUserAtivo").checked = user.active !== false;
 
+  const grpPass = document.getElementById("grpEditUserPassword");
+  if (grpPass) grpPass.style.display = "none";
+  const inputPass = document.getElementById("editUserPassword");
+  if (inputPass) {
+    inputPass.value = "";
+    inputPass.required = false;
+  }
+
   const divs = user.allowed_divisions || [];
   document.getElementById("chkDivSobMedida").checked = divs.includes("sob_medida");
   document.getElementById("chkDivIncorporadora").checked = divs.includes("incorporadora");
@@ -446,7 +471,6 @@ function fecharModalUserForm() {
 
 function aoMudarRoleUsuario(role) {
   if (role === "admin") {
-    // Admin tem acesso a todas as divisões e etapas
     document.getElementById("chkDivSobMedida").checked = true;
     document.getElementById("chkDivIncorporadora").checked = true;
     document.getElementById("chkDivInternacional").checked = true;
@@ -464,6 +488,7 @@ async function salvarUsuario(event) {
   const email = document.getElementById("editUserEmail").value.trim().toLowerCase();
   const role = document.getElementById("editUserRole").value;
   const active = document.getElementById("chkUserAtivo").checked;
+  const pass = document.getElementById("editUserPassword") ? document.getElementById("editUserPassword").value : "";
 
   const allowed_divisions = [];
   if (document.getElementById("chkDivSobMedida").checked) allowed_divisions.push("sob_medida");
@@ -504,10 +529,94 @@ async function salvarUsuario(event) {
     active
   };
 
-  Auth.saveUser(userData);
-  fecharModalUserForm();
+  const btnSubmit = document.getElementById("btnSalvarUsuario");
+  btnSubmit.disabled = true;
+  btnSubmit.style.opacity = "0.7";
+
+  try {
+    if (!id) {
+      // Criação de Usuário (Seção 12.4: Supabase Edge Function ou Vercel API)
+      if (!pass || pass.length < 8) {
+        await PapaSysDialog.alert({
+          title: "Senha Curta",
+          message: "Para cadastrar um novo usuário, informe uma senha inicial com no mínimo 8 caracteres.",
+          type: "warning"
+        });
+        btnSubmit.disabled = false;
+        btnSubmit.style.opacity = "1";
+        return;
+      }
+
+      const res = await Auth.adminCreateUser(userData, pass);
+      if (!res.success) {
+        await PapaSysDialog.alert({
+          title: "Erro ao Cadastrar Usuário",
+          message: res.message || "Não foi possível criar o usuário no Supabase Auth.",
+          type: "danger"
+        });
+        btnSubmit.disabled = false;
+        btnSubmit.style.opacity = "1";
+        return;
+      }
+    } else {
+      // Edição de Usuário Existente
+      await Auth.saveUser(userData);
+    }
+
+    fecharModalUserForm();
+    carregarTabelaUsuarios();
+    showToast(`Usuário "${name}" salvo com sucesso!`, "success");
+  } catch (err) {
+    console.error("[precos.js] Erro ao salvar usuário:", err);
+    showToast("Erro ao processar usuário.", "error");
+  } finally {
+    btnSubmit.disabled = false;
+    btnSubmit.style.opacity = "1";
+  }
+}
+
+// Seção 12.4: Desativar e Reativar Usuário
+async function alternarAtivoUsuario(userId, novoStatus) {
+  const user = Auth.getUserById(userId);
+  if (!user) return;
+  const acao = novoStatus ? "reativar" : "desativar";
+  const ok = await PapaSysDialog.confirm({
+    title: `${novoStatus ? 'Reativar' : 'Desativar'} Usuário`,
+    message: `Deseja realmente ${acao} o usuário "${user.name}" (${user.email})?`,
+    confirmText: `Sim, ${novoStatus ? 'Reativar' : 'Desativar'}`,
+    cancelText: "Cancelar",
+    type: novoStatus ? "info" : "warning"
+  });
+
+  if (!ok) return;
+
+  await Auth.toggleUserActive(userId, novoStatus);
   carregarTabelaUsuarios();
-  showToast(`Usuário "${name}" salvo com sucesso!`, "success");
+  showToast(`Usuário "${user.name}" foi ${novoStatus ? 'reativado' : 'desativado'}.`, "info");
+}
+
+// Seção 12.4: Enviar redefinição de senha para o usuário
+async function enviarRedefinicaoSenha(email) {
+  const ok = await PapaSysDialog.confirm({
+    title: "Enviar Redefinição de Senha",
+    message: `Deseja enviar um link de redefinição de senha para ${email}?`,
+    confirmText: "Enviar E-mail",
+    cancelText: "Cancelar",
+    type: "info"
+  });
+
+  if (!ok) return;
+
+  const res = await Auth.sendPasswordResetToUser(email);
+  if (res.success) {
+    showToast(`E-mail de redefinição enviado para ${email}!`, "success");
+  } else {
+    PapaSysDialog.alert({
+      title: "Falha no Envio",
+      message: res.message || "Não foi possível enviar o e-mail.",
+      type: "warning"
+    });
+  }
 }
 
 async function excluirUsuario(userId) {
@@ -567,3 +676,6 @@ function showToast(msg, type = "info") {
   container.appendChild(t);
   setTimeout(() => t.remove(), 3500);
 }
+
+// Atualiza a tabela sempre que houver sincronização remota com Supabase
+window.addEventListener("igui-users-synced", () => carregarTabelaUsuarios());

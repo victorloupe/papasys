@@ -133,16 +133,25 @@ const PricingEngine = {
     return parseFloat(divTable[tipo] !== undefined ? divTable[tipo] : (tipo === "especial" ? 175.0 : 140.0)) || 140.0;
   },
 
+  // Método utilitário para normalizar IDs e identificadores de revestimento
+  normalizarCoating(c) {
+    if (!c) return "pastilha_15x15";
+    return String(c)
+      .trim()
+      .toLowerCase()
+      .replace(/[\s\.\,\-]+/g, "_");
+  },
+
   // 4. Quantitativos de Peças de Acabamento (BP11, C3, Boleadas, Quebra-cantos)
   // "As peças de acabamento não têm valor próprio: já estão incluídas no preço do m² do revestimento.
   // O plugin apenas informa as quantidades." (Seção 9.1)
   calcularAcabamentosPiscina(revestimento, cantosLinearesM, quinasVivasCount) {
-    const rev = (revestimento || "pastilha_15x15").toLowerCase();
+    const rev = PricingEngine.normalizarCoating(revestimento);
     const cantosCm = (parseFloat(cantosLinearesM) || 0) * 100.0;
     const quinas = Math.max(0, parseInt(quinasVivasCount) || 0);
 
     // Porcelanato ou Personalizado
-    if (rev === "porcelanato_villagres" || rev === "personalizado") {
+    if (rev.includes("porcelanato") || rev.includes("personalizado")) {
       return {
         tipo_regra: "personalizado",
         peca_linear: { nome: "Cantos Lineares informados", qtd: (cantosCm / 100).toFixed(2), unit: "m", unit_price: 0, total_price: 0 },
@@ -244,25 +253,30 @@ const PricingEngine = {
     // 6. Soma de todos os modelos = valor total do orçamento
     // ==============================================================================
 
-    // 1. Preço base do m² (conforme divisão e tipo)
+    // 1. Preço base do m² (conforme divisão e tipo, ou customizado manualmente no orçamento)
     const precoM2Padrao = PricingEngine.getPrecoM2(currentDivision, poolType);
-    let precoM2Efetivo = precoM2Padrao;
+    const hasManualM2 = pool.manual_m2_price != null && pool.manual_m2_price !== "" && !isNaN(parseFloat(pool.manual_m2_price));
+    const precoM2Base = hasManualM2 ? Math.max(0, parseFloat(pool.manual_m2_price)) : precoM2Padrao;
+    let precoM2Efetivo = precoM2Base;
     let descontoMoldeM2 = 0.0;
     let valorDescontoMoldeUnit = 0.0;
 
     // 2. Regra de Molde (Incorporadora): se com molde (≥ 10 unidades ou selecionado),
     // usa diretamente o valor que a piscina vai ser quando tiver mais de 10 unidades
     if (isIncorporadora && hasMold) {
-      if (poolType === "especial") {
+      if (hasManualM2) {
+        const descTabela = parseFloat(settings.molde?.desconto_m2) || 20.0;
+        precoM2Efetivo = Math.max(0, precoM2Base - descTabela);
+      } else if (poolType === "especial") {
         precoM2Efetivo = parseFloat(settings.molde?.preco_m2_especial) || (precoM2Padrao - (parseFloat(settings.molde?.desconto_m2) || 20.0));
       } else {
         precoM2Efetivo = parseFloat(settings.molde?.preco_m2_convencional) || (precoM2Padrao - (parseFloat(settings.molde?.desconto_m2) || 20.0));
       }
-      descontoMoldeM2 = Math.max(0, parseFloat((precoM2Padrao - precoM2Efetivo).toFixed(2)));
+      descontoMoldeM2 = Math.max(0, parseFloat((precoM2Base - precoM2Efetivo).toFixed(2)));
       valorDescontoMoldeUnit = parseFloat((areaRevest * descontoMoldeM2).toFixed(2));
     }
 
-    const valorBaseRevest = parseFloat((areaRevest * precoM2Padrao).toFixed(2));
+    const valorBaseRevest = parseFloat((areaRevest * precoM2Base).toFixed(2));
     const valorAposMolde = parseFloat((areaRevest * precoM2Efetivo).toFixed(2));
 
     // 3. + Acréscimo de autoportante (se aplicável, +50%)
@@ -295,7 +309,9 @@ const PricingEngine = {
       structure_type: structureType,
       coating_type: coatingType,
       preco_m2: precoM2Efetivo,
+      preco_m2_base: precoM2Base,
       preco_m2_padrao: precoM2Padrao,
+      is_manual_m2: hasManualM2,
       area_revestimento: areaRevest.toFixed(2),
       area_laminacao: areaLamina.toFixed(2),
       volume_m3: volumeM3.toFixed(2),
@@ -351,8 +367,31 @@ const PricingEngine = {
       };
     });
 
+    // Ajuste comercial dinâmico (% ou R$, desconto ou acréscimo)
+    const subtotalModelos = parseFloat(totalPrice.toFixed(2));
+    let valorAjusteComercial = 0.0;
+    const adj = budget.commercial_adjustment || null;
+
+    if (adj && parseFloat(adj.value) > 0) {
+      const valNum = parseFloat(adj.value);
+      if (adj.type === "discount_pct") {
+        valorAjusteComercial = -(subtotalModelos * (valNum / 100.0));
+      } else if (adj.type === "discount_fixed") {
+        valorAjusteComercial = -valNum;
+      } else if (adj.type === "surcharge_pct") {
+        valorAjusteComercial = +(subtotalModelos * (valNum / 100.0));
+      } else if (adj.type === "surcharge_fixed") {
+        valorAjusteComercial = +valNum;
+      }
+    }
+
+    const finalPrice = Math.max(0, parseFloat((subtotalModelos + valorAjusteComercial).toFixed(2)));
+
     return {
-      total_price: parseFloat(totalPrice.toFixed(2)),
+      subtotal_modelos: subtotalModelos,
+      commercial_adjustment_val: parseFloat(valorAjusteComercial.toFixed(2)),
+      commercial_adjustment: adj,
+      total_price: finalPrice,
       total_base_cost: parseFloat(totalBaseCost.toFixed(2)),
       total_base_revest: parseFloat(totalBaseRevest.toFixed(2)),
       total_desconto_molde: parseFloat(totalDescontoMolde.toFixed(2)),

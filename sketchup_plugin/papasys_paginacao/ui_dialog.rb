@@ -293,7 +293,8 @@ module PapaSys
             largura_cm: Config.largura_cm,
             altura_cm: Config.altura_cm,
             rejunte_cm: Config.rejunte_cm,
-            info_selecao: obter_info_selecao
+            info_selecao: obter_info_selecao,
+            pendentes_count: ApiClient.fila_local_contar
           }
           dialog.execute_script("initApp(#{dados_iniciais.to_json});")
         end
@@ -344,11 +345,28 @@ module PapaSys
           end
         end
 
+        dialog.add_action_callback('login_supabase') do |_action_context, creds|
+          if creds && creds.is_a?(Hash)
+            email = creds['email'].to_s
+            pass = creds['password'].to_s
+            ApiClient.login_supabase(email, pass) do |sucesso, res_data, code|
+              if sucesso
+                dialog.execute_script("onLoginSucesso(#{res_data.to_json});")
+              else
+                err_msg = res_data.is_a?(Hash) ? (res_data['error'] || "Falha HTTP #{code}") : "Credenciais inválidas."
+                dialog.execute_script("onLoginErro(#{err_msg.to_json});")
+              end
+            end
+          end
+        end
+
         dialog.add_action_callback('logout') do |_action_context|
           Config.current_user_id = ''
           Config.current_user_name = ''
           Config.current_user_email = ''
           Config.current_user_role = 'user'
+          Config.access_token = ''
+          Config.refresh_token = ''
           Config.allowed_divisions = ['sob_medida']
           dialog.execute_script("onLogoutSucesso();")
         end
@@ -461,8 +479,14 @@ module PapaSys
             if sucesso
               dialog.execute_script("onEnvioSucesso(#{resposta.to_json});")
             else
-              dialog.execute_script("onEnvioErro(#{resposta[:error].to_json});")
+              dialog.execute_script("onEnvioErro(#{resposta.to_json});")
             end
+          end
+        end
+
+        dialog.add_action_callback('reenviar_pendentes') do |_action_context|
+          ApiClient.reenviar_pendentes do |sucesso, resposta|
+            dialog.execute_script("onReenvioPendentes(#{resposta.to_json});")
           end
         end
 

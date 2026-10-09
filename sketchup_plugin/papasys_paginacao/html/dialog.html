@@ -12,7 +12,7 @@
     <!-- Topbar: Branding + Versão + Usuário Ativo -->
     <header class="header">
       <div class="brand">
-        <img src="Logo_Oficial_iGUi.png" alt="iGUi" style="height: 32px; width: auto; object-fit: contain;">
+        <img src="Logo_Oficial_iGUi.png" alt="iGUi" style="height: 34px; width: auto; object-fit: contain;">
         <div>
           <h1 class="title"><span class="title-blue">iGUi</span> <span class="title-dark">ORÇAMENTOS</span></h1>
           <p class="subtitle">Integração 3D SketchUp &amp; Sistema Web</p>
@@ -20,7 +20,7 @@
       </div>
 
       <div class="header-right">
-        <span id="versionBadge" class="badge badge-version">v2.0.0</span>
+        <span id="versionBadge" class="badge badge-version">v2.1.0</span>
         <button id="btnToggleUser" class="btn-icon" title="Alternar Usuário / Permissões" onclick="toggleModalUser()">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
@@ -54,7 +54,7 @@
             </svg>
           </div>
           <div class="div-name">iGUi Sob Medida</div>
-          <div class="div-hint">1 piscina / orçamento</div>
+          <div class="div-hint">Projetos Unitários / Custom</div>
         </button>
 
         <button type="button" id="btnDivIncorporadora" class="btn-division" onclick="selecionarDivisao('incorporadora')">
@@ -88,6 +88,17 @@
         </button>
       </div>
       <div id="divisionPermissionNotice" class="division-notice" style="display: none;"></div>
+
+      <!-- Status de Sincronização & Pendências (Seção 14.1) -->
+      <div id="pluginSyncBanner" class="plugin-sync-banner" style="display: none;">
+        <div class="sync-banner-content">
+          <span id="pluginSyncIcon">⏳</span>
+          <span id="pluginSyncText">Orçamentos pendentes na fila local</span>
+        </div>
+        <button type="button" id="btnPluginReenviarTop" class="btn-sync-retry" onclick="solicitarReenvioPendentes()">
+          Reenviar (<span id="topPendentesCount">0</span>)
+        </button>
+      </div>
     </div>
 
     <!-- Live Preview da Seleção do SketchUp -->
@@ -580,6 +591,17 @@
             <span id="lblTextoBotaoEnvio">Enviar para iGUi Sob Medida</span>
           </button>
         </div>
+
+        <!-- Status de Sincronização & Fila Offline do Plugin (Seção 14.1) -->
+        <div id="syncStatusStrip" class="plugin-sync-status-strip" style="display: none;">
+          <div class="sync-status-left">
+            <span id="syncStatusIcon">✅</span>
+            <span id="syncStatusText">Enviado com sucesso</span>
+          </div>
+          <button type="button" id="btnReenviarPendentes" class="btn-sync-retry" onclick="solicitarReenvioPendentes()" style="display: none;">
+            Reenviar (<span id="countPendentes">0</span>)
+          </button>
+        </div>
       </section>
 
     </main>
@@ -598,7 +620,26 @@
           <button type="button" class="btn-modal-close" onclick="fecharModalUser()">&times;</button>
         </div>
         <div class="modal-body">
-          <p class="modal-desc">Selecione o usuário autenticado para carregar as divisões e orçamentos permitidos:</p>
+          <!-- Login com E-mail e Senha via Supabase Auth (Seção 12.6) -->
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 14px;">
+            <div style="font-weight: 700; font-size: 12px; color: #0f172a; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+              Login com Supabase Auth (API REST):
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <input type="email" id="skLoginEmail" placeholder="seu-email@papa.com" style="width: 100%; padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 11.5px; outline: none; background: #ffffff;">
+              <input type="password" id="skLoginPassword" placeholder="Senha" value="123456" style="width: 100%; padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 11.5px; outline: none; background: #ffffff;">
+              <button type="button" class="btn btn-primary btn-sm" id="btnSkLogin" onclick="executarLoginSupabase()" style="margin-top: 4px; width: 100%; justify-content: center;">
+                Autenticar no Supabase
+              </button>
+              <div id="skLoginErrorMsg" style="color: #b91c1c; font-size: 11px; display: none; line-height: 1.3;"></div>
+            </div>
+          </div>
+
+          <p class="modal-desc" style="font-size: 11px; color: #64748b; margin-bottom: 6px;">Ou selecione um colaborador para acesso rápido:</p>
           <div id="listaUsuariosLogin" class="users-list-select">
             <!-- Usuários injetados via JS -->
           </div>

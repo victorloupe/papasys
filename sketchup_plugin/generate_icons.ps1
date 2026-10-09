@@ -2,48 +2,67 @@
 Add-Type -AssemblyName System.Drawing
 
 $CurrentDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$LogoPath = Join-Path (Split-Path -Parent $CurrentDir) "LogoSite.png"
+$BaseDir = Split-Path -Parent $CurrentDir
+$LogoPath = Join-Path $BaseDir "Logo_Oficial_iGUi.png"
+if (-not (Test-Path $LogoPath)) {
+    $LogoPath = Join-Path $BaseDir "LogoSite.png"
+}
 $IconsDir = Join-Path $CurrentDir "papasys_paginacao\icons"
 
 if (-not (Test-Path $IconsDir)) {
     New-Item -ItemType Directory -Path $IconsDir -Force | Out-Null
 }
 
-function Resize-Image {
+function Resize-Image-Fit {
     param(
         [System.Drawing.Image]$Image,
-        [int]$Width,
-        [int]$Height,
+        [int]$Size,
         [string]$OutputPath
     )
-    $destRect = New-Object System.Drawing.Rectangle(0, 0, $Width, $Height)
-    $destImage = New-Object System.Drawing.Bitmap($Width, $Height, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
+    $destImage = New-Object System.Drawing.Bitmap($Size, $Size, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
     $destImage.SetResolution($Image.HorizontalResolution, $Image.VerticalResolution)
 
     $graphics = [System.Drawing.Graphics]::FromImage($destImage)
+    $graphics.Clear([System.Drawing.Color]::Transparent)
     $graphics.CompositingMode = [System.Drawing.Drawing2D.CompositingMode]::SourceOver
     $graphics.CompositingQuality = [System.Drawing.Drawing2D.CompositingQuality]::HighQuality
     $graphics.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
     $graphics.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::HighQuality
     $graphics.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
 
-    $wrapMode = New-Object System.Drawing.Imaging.ImageAttributes
-    $wrapMode.SetWrapMode([System.Drawing.Drawing2D.WrapMode]::TileFlipXY)
-    $graphics.DrawImage($Image, $destRect, 0, 0, $Image.Width, $Image.Height, [System.Drawing.GraphicsUnit]::Pixel, $wrapMode)
+    # Ajusta preservando a proporção exata sem distorção
+    $scale = [Math]::Min($Size / $Image.Width, $Size / $Image.Height)
+    $w = [Math]::Max(1, [int]($Image.Width * $scale))
+    $h = [Math]::Max(1, [int]($Image.Height * $scale))
+    $x = [int](($Size - $w) / 2)
+    $y = [int](($Size - $h) / 2)
+
+    $destRect = New-Object System.Drawing.Rectangle($x, $y, $w, $h)
+    $graphics.DrawImage($Image, $destRect, 0, 0, $Image.Width, $Image.Height, [System.Drawing.GraphicsUnit]::Pixel)
     $graphics.Dispose()
 
     $destImage.Save($OutputPath, [System.Drawing.Imaging.ImageFormat]::Png)
     $destImage.Dispose()
 }
 
-# 1. Ícones do Painel PapaSys (Baseados no LogoSite)
+Write-Host "-> Gerando ícones iGUi a partir de $LogoPath..." -ForegroundColor Cyan
 $logoImg = [System.Drawing.Image]::FromFile($LogoPath)
-Resize-Image -Image $logoImg -Width 24 -Height 24 -OutputPath (Join-Path $IconsDir "painel_24.png")
-Resize-Image -Image $logoImg -Width 32 -Height 32 -OutputPath (Join-Path $IconsDir "painel_32.png")
-Resize-Image -Image $logoImg -Width 48 -Height 48 -OutputPath (Join-Path $IconsDir "painel_48.png")
+
+# 1. Ícones principais da barra do SketchUp (icon_16, icon_24, icon_32, icon_48)
+Resize-Image-Fit -Image $logoImg -Size 16 -OutputPath (Join-Path $IconsDir "icon_16.png")
+Resize-Image-Fit -Image $logoImg -Size 24 -OutputPath (Join-Path $IconsDir "icon_24.png")
+Resize-Image-Fit -Image $logoImg -Size 32 -OutputPath (Join-Path $IconsDir "icon_32.png")
+Resize-Image-Fit -Image $logoImg -Size 48 -OutputPath (Join-Path $IconsDir "icon_48.png")
+
+# 2. Ícones de Painel (painel_16, painel_24, painel_32, painel_48)
+Resize-Image-Fit -Image $logoImg -Size 16 -OutputPath (Join-Path $IconsDir "painel_16.png")
+Resize-Image-Fit -Image $logoImg -Size 24 -OutputPath (Join-Path $IconsDir "painel_24.png")
+Resize-Image-Fit -Image $logoImg -Size 32 -OutputPath (Join-Path $IconsDir "painel_32.png")
+Resize-Image-Fit -Image $logoImg -Size 48 -OutputPath (Join-Path $IconsDir "painel_48.png")
+
 $logoImg.Dispose()
 
-# 2. Ícones de Ajuste Rápido (Raio/Lightning) e Atualização
+# 3. Ícones de Ajuste Rápido (Raio/Lightning) e Atualização
 function Draw-Icon {
     param(
         [int]$Size,
@@ -107,4 +126,4 @@ Draw-Icon -Size 24 -Type "update" -OutputPath (Join-Path $IconsDir "update_24.pn
 Draw-Icon -Size 32 -Type "update" -OutputPath (Join-Path $IconsDir "update_32.png")
 Draw-Icon -Size 48 -Type "update" -OutputPath (Join-Path $IconsDir "update_48.png")
 
-Write-Host "Todos os icones foram gerados com sucesso em $IconsDir" -ForegroundColor Green
+Write-Host "✅ Todos os ícones oficiais iGUi foram gerados com sucesso em $IconsDir" -ForegroundColor Green

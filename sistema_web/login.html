@@ -3,101 +3,168 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>iGUi - Acesso ao Sistema de Orçamentos</title>
+  <title>iGUi - Acesso ao Sistema de Orçamentos (Supabase Auth)</title>
   <link rel="icon" type="image/png" href="img/Icone.png">
   <link rel="shortcut icon" href="favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    ::selection {
+      background: #e0f2fe;
+      color: #0369a1;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #f1f5f9;
+      color: #0f172a;
+      caret-color: #0284c7;
+    }
+
     .login-page-wrapper {
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: radial-gradient(circle at 50% 20%, #f1f5f9 0%, #e2e8f0 100%);
-      padding: 24px;
+      background: radial-gradient(circle at 50% 15%, #ffffff 0%, #f1f5f9 60%, #e2e8f0 100%);
+      padding: 32px 16px;
       position: relative;
       overflow: hidden;
     }
 
-    .login-page-bg-deco {
+    /* Ambient Background Orbs */
+    .login-orb-1 {
       position: absolute;
-      width: 600px;
-      height: 600px;
-      background: radial-gradient(circle, rgba(2, 132, 199, 0.08) 0%, rgba(2, 132, 199, 0) 70%);
-      top: -100px;
-      right: -100px;
+      width: 650px;
+      height: 650px;
+      background: radial-gradient(circle, rgba(2, 132, 199, 0.09) 0%, rgba(2, 132, 199, 0) 70%);
+      top: -120px;
+      right: -120px;
       border-radius: 50%;
       pointer-events: none;
     }
 
-    .login-page-bg-deco-2 {
+    .login-orb-2 {
       position: absolute;
-      width: 500px;
-      height: 500px;
-      background: radial-gradient(circle, rgba(234, 88, 12, 0.06) 0%, rgba(234, 88, 12, 0) 70%);
-      bottom: -80px;
-      left: -80px;
+      width: 550px;
+      height: 550px;
+      background: radial-gradient(circle, rgba(234, 88, 12, 0.07) 0%, rgba(234, 88, 12, 0) 70%);
+      bottom: -100px;
+      left: -100px;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .login-orb-3 {
+      position: absolute;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.05) 0%, rgba(16, 185, 129, 0) 70%);
+      top: 50%;
+      left: 15%;
       border-radius: 50%;
       pointer-events: none;
     }
 
     .login-card {
-      background: #ffffff;
+      background: rgba(255, 255, 255, 0.98);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
       border: 1px solid rgba(226, 232, 240, 0.9);
-      border-radius: 20px;
-      box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.12), 0 0 0 1px rgba(15, 23, 42, 0.04);
+      border-radius: 24px;
+      box-shadow: 
+        0 20px 45px -12px rgba(15, 23, 42, 0.12),
+        0 0 0 1px rgba(15, 23, 42, 0.03),
+        0 1px 3px rgba(0, 0, 0, 0.02);
       width: 100%;
       max-width: 440px;
-      padding: 36px 32px;
+      padding: 38px 32px 30px;
       position: relative;
       z-index: 10;
-      animation: modalEnter 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      animation: loginCardEnter 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
+    @keyframes loginCardEnter {
+      from {
+        opacity: 0;
+        transform: translateY(14px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    /* Brand Header */
     .login-brand-header {
       text-align: center;
-      margin-bottom: 28px;
+      margin-bottom: 24px;
     }
 
-    .login-brand-logo {
+    .login-logo-wrap {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
-      color: #ffffff;
-      font-weight: 900;
-      font-size: 22px;
-      letter-spacing: -0.5px;
-      padding: 6px 20px;
-      border-radius: 12px;
       margin-bottom: 12px;
-      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25);
+      position: relative;
+    }
+
+    .login-logo-img {
+      height: 48px;
+      width: auto;
+      object-fit: contain;
+      filter: drop-shadow(0 2px 6px rgba(2, 132, 199, 0.15));
+    }
+
+    .login-badge-version {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: #0369a1;
+      background: #e0f2fe;
+      border: 1px solid #bae6fd;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      margin-bottom: 10px;
     }
 
     .login-title {
-      font-size: 19px;
+      font-size: 21px;
       font-weight: 800;
       color: #0f172a;
-      letter-spacing: -0.3px;
+      letter-spacing: -0.4px;
       margin: 0;
+      line-height: 1.2;
     }
 
     .login-subtitle {
       font-size: 13px;
       color: #64748b;
-      margin-top: 5px;
+      margin: 6px 0 0 0;
+      font-weight: 500;
     }
 
+    /* Form Fields */
     .login-form-group {
-      margin-bottom: 18px;
+      margin-bottom: 16px;
     }
 
     .login-form-label {
-      display: block;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       font-size: 12.5px;
       font-weight: 700;
       color: #334155;
@@ -112,82 +179,223 @@
 
     .login-input-icon {
       position: absolute;
-      left: 12px;
+      left: 13px;
       color: #94a3b8;
       display: flex;
       align-items: center;
       pointer-events: none;
+      transition: color 0.15s ease;
     }
 
     .login-input {
       width: 100%;
-      padding: 11px 14px 11px 38px;
+      height: 44px;
+      padding: 0 42px 0 40px;
       border: 1.5px solid #cbd5e1;
-      border-radius: 10px;
+      border-radius: 12px;
       font-size: 14px;
       color: #0f172a;
       background: #f8fafc;
-      transition: all 0.2s ease;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
       outline: none;
+      font-family: inherit;
+    }
+
+    .login-input::placeholder {
+      color: #94a3b8;
     }
 
     .login-input:focus {
       border-color: #0284c7;
       background: #ffffff;
-      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
     }
 
-    .login-btn-submit {
-      width: 100%;
-      padding: 12px 18px;
-      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
-      color: #ffffff;
+    .login-input:focus + .login-input-icon,
+    .login-input-wrap:focus-within .login-input-icon {
+      color: #0284c7;
+    }
+
+    /* Highlight Pulse Animation for Focus */
+    .login-input.highlight-pulse {
+      animation: inputHighlight 0.8s ease;
+    }
+
+    @keyframes inputHighlight {
+      0%, 100% {
+        border-color: #cbd5e1;
+        box-shadow: none;
+      }
+      50% {
+        border-color: #0284c7;
+        box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15), 0 1px 2px rgba(15, 23, 42, 0.05);
+        background: #f8fafc;
+      }
+    }
+
+    /* Password Visibility Toggle */
+    .btn-toggle-eye {
+      position: absolute;
+      right: 10px;
+      background: transparent;
       border: none;
-      border-radius: 10px;
-      font-size: 14px;
-      font-weight: 700;
-      cursor: pointer;
+      color: #94a3b8;
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
-      transition: all 0.2s ease;
-      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
-      margin-top: 8px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      padding: 0;
     }
 
-    .login-btn-submit:hover {
+    .btn-toggle-eye:hover {
+      color: #0f172a;
+      background: #f1f5f9;
+    }
+
+    /* Row: Lembrar de mim + Esqueci minha senha */
+    .login-row-options {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 4px;
+      margin-bottom: 18px;
+      font-size: 12.5px;
+    }
+
+    .login-remember-me {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      cursor: pointer;
+      user-select: none;
+      color: #475569;
+      font-weight: 600;
+    }
+
+    .login-remember-me input[type="checkbox"] {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 17px;
+      height: 17px;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 5px;
+      background: #ffffff;
+      cursor: pointer;
+      display: inline-grid;
+      place-content: center;
+      transition: all 0.15s ease;
+      margin: 0;
+    }
+
+    .login-remember-me input[type="checkbox"]:hover {
+      border-color: #0284c7;
+      background: #f0f9ff;
+    }
+
+    .login-remember-me input[type="checkbox"]:checked {
+      background: #0284c7;
+      border-color: #0284c7;
+    }
+
+    .login-remember-me input[type="checkbox"]:checked::before {
+      content: "";
+      width: 9px;
+      height: 5px;
+      border-left: 2px solid #ffffff;
+      border-bottom: 2px solid #ffffff;
+      transform: rotate(-45deg) translate(1px, -1px);
+    }
+
+    .login-forgot-link {
+      color: #0284c7;
+      text-decoration: none;
+      font-weight: 600;
+      transition: color 0.15s ease;
+    }
+
+    .login-forgot-link:hover {
+      color: #0369a1;
+      text-decoration: underline;
+    }
+
+    /* Submit Button */
+    .login-btn-submit {
+      width: 100%;
+      height: 46px;
+      padding: 0 20px;
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      color: #ffffff;
+      border: none;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1), 0 4px 12px -2px rgba(15, 23, 42, 0.08);
+      font-family: inherit;
+    }
+
+    .login-btn-submit:hover:not(:disabled) {
       background: linear-gradient(135deg, #0369a1 0%, #075985 100%);
       transform: translateY(-1px);
-      box-shadow: 0 6px 16px rgba(2, 132, 199, 0.35);
+      box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.1), 0 8px 18px -2px rgba(15, 23, 42, 0.12);
     }
 
-    .login-btn-submit:active {
+    .login-btn-submit:active:not(:disabled) {
       transform: translateY(0);
     }
 
+    .login-btn-submit:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+    }
+
+    /* Alert Banner */
     .login-alert-banner {
       background: #fef2f2;
       border: 1px solid #fecaca;
       color: #b91c1c;
       padding: 10px 14px;
-      border-radius: 8px;
+      border-radius: 10px;
       font-size: 12.5px;
-      margin-bottom: 18px;
+      margin-bottom: 16px;
       display: none;
-      align-items: center;
-      gap: 8px;
+      align-items: flex-start;
+      gap: 10px;
+      line-height: 1.4;
+      animation: alertEnter 0.2s ease;
     }
 
+    @keyframes alertEnter {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .login-alert-banner.success {
+      background: #f0fdf4;
+      border-color: #bbf7d0;
+      color: #15803d;
+    }
+
+    /* Quick Access Section */
     .login-divider-line {
       display: flex;
       align-items: center;
-      margin: 22px 0 16px;
+      margin: 22px 0 14px;
       color: #94a3b8;
       font-size: 11px;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.6px;
     }
 
     .login-divider-line::before,
@@ -202,6 +410,14 @@
       padding: 0 10px;
     }
 
+    .quick-access-helper {
+      font-size: 11px;
+      color: #64748b;
+      text-align: center;
+      margin-top: -6px;
+      margin-bottom: 10px;
+    }
+
     .quick-access-list {
       display: flex;
       flex-direction: column;
@@ -212,16 +428,18 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 9px 14px;
+      padding: 10px 12px;
       border: 1px solid #e2e8f0;
       background: #f8fafc;
-      border-radius: 8px;
+      border-radius: 10px;
       cursor: pointer;
       font-size: 12.5px;
       color: #334155;
       font-weight: 600;
-      transition: all 0.15s ease;
+      transition: all 0.18s ease;
       text-align: left;
+      font-family: inherit;
+      width: 100%;
     }
 
     .quick-access-btn:hover {
@@ -229,50 +447,121 @@
       border-color: #0284c7;
       color: #0284c7;
       transform: translateY(-1px);
-      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+      box-shadow: 0 3px 8px rgba(15, 23, 42, 0.05);
+    }
+
+    .quick-user-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .quick-avatar {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 800;
+      color: #ffffff;
+      flex-shrink: 0;
+    }
+
+    .quick-avatar.admin {
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+    }
+
+    .quick-avatar.user {
+      background: linear-gradient(135deg, #ea580c, #c2410c);
+    }
+
+    .quick-info-text {
+      line-height: 1.25;
+    }
+
+    .quick-info-email {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .quick-info-sub {
+      font-size: 11px;
+      color: #64748b;
     }
 
     .quick-role-badge {
-      font-size: 10.5px;
+      font-size: 10px;
       padding: 2px 7px;
-      border-radius: 4px;
-      font-weight: 700;
+      border-radius: 5px;
+      font-weight: 800;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
     }
 
     .quick-role-badge.admin {
-      background: #0f172a;
-      color: #38bdf8;
+      background: #fef3c7;
+      color: #b45309;
+      border: 1px solid #fde68a;
     }
 
     .quick-role-badge.user {
-      background: #e2e8f0;
-      color: #475569;
+      background: #e0f2fe;
+      color: #0369a1;
+      border: 1px solid #bae6fd;
     }
 
     .login-footer-meta {
       text-align: center;
-      margin-top: 24px;
-      font-size: 11.5px;
+      margin-top: 22px;
+      font-size: 11px;
       color: #94a3b8;
+      font-weight: 500;
+    }
+
+    /* Modal Reset */
+    .modal-overlay-reset {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 16px;
     }
   </style>
 </head>
 <body>
 
   <div class="login-page-wrapper">
-    <div class="login-page-bg-deco"></div>
-    <div class="login-page-bg-deco-2"></div>
+    <div class="login-orb-1"></div>
+    <div class="login-orb-2"></div>
+    <div class="login-orb-3"></div>
 
     <div class="login-card">
       
+      <!-- Brand Header -->
       <div class="login-brand-header">
-        <img src="img/Logo_Oficial_iGUi.png" alt="iGUi" style="height: 52px; width: auto; object-fit: contain; margin-bottom: 12px;">
+        <div class="login-logo-wrap">
+          <img src="img/Logo_Oficial_iGUi.png" alt="iGUi" class="login-logo-img">
+        </div>
+        <div class="login-badge-version">
+          <svg viewBox="0 0 24 24" width="10" height="10" fill="currentColor">
+            <circle cx="12" cy="12" r="10"></circle>
+          </svg>
+          iGUi &bull; v2.1.0
+        </div>
         <h1 class="login-title">Sistema de Orçamentos</h1>
-        <p class="login-subtitle">Comercial &bull; Engenharia &bull; SketchUp 3D</p>
+        <p class="login-subtitle">Acesso corporativo seguro via Supabase Auth</p>
       </div>
 
+      <!-- Error / Success Alert -->
       <div id="loginAlertBox" class="login-alert-banner">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0;">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0; margin-top: 1px;">
           <circle cx="12" cy="12" r="10"></circle>
           <line x1="12" y1="8" x2="12" y2="12"></line>
           <line x1="12" y1="16" x2="12.01" y2="16"></line>
@@ -280,10 +569,14 @@
         <span id="loginAlertMsg">Mensagem de erro</span>
       </div>
 
+      <!-- Login Form -->
       <form id="loginForm" onsubmit="handleLoginSubmit(event)">
         
+        <!-- E-mail -->
         <div class="login-form-group">
-          <label class="login-form-label" for="loginEmail">E-mail de Acesso:</label>
+          <label class="login-form-label" for="loginEmail">
+            <span>E-mail Corporativo:</span>
+          </label>
           <div class="login-input-wrap">
             <span class="login-input-icon">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
@@ -295,8 +588,11 @@
           </div>
         </div>
 
-        <div class="login-form-group">
-          <label class="login-form-label" for="loginPassword">Senha:</label>
+        <!-- Senha -->
+        <div class="login-form-group" style="margin-bottom: 8px;">
+          <label class="login-form-label" for="loginPassword">
+            <span>Senha de Acesso:</span>
+          </label>
           <div class="login-input-wrap">
             <span class="login-input-icon">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
@@ -304,91 +600,294 @@
                 <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
               </svg>
             </span>
-            <input type="password" id="loginPassword" class="login-input" placeholder="••••••••" autocomplete="current-password" value="123456">
+            <input type="password" id="loginPassword" class="login-input" placeholder="Digite sua senha" required autocomplete="current-password" value="">
+            
+            <!-- Botão Mostrar / Ocultar Senha -->
+            <button type="button" class="btn-toggle-eye" onclick="togglePasswordVisibility()" title="Mostrar/ocultar senha" tabindex="-1">
+              <svg id="eyeIconOpen" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <svg id="eyeIconClosed" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+              </svg>
+            </button>
           </div>
         </div>
 
+        <!-- Opções: Lembrar de mim + Esqueci minha senha -->
+        <div class="login-row-options">
+          <label class="login-remember-me" for="rememberMeCheckbox">
+            <input type="checkbox" id="rememberMeCheckbox">
+            <span>Lembrar de mim</span>
+          </label>
+          <a href="javascript:void(0)" class="login-forgot-link" onclick="abrirModalEsqueciSenha()">Esqueci minha senha</a>
+        </div>
+
+        <!-- Botão Entrar -->
         <button type="submit" class="login-btn-submit" id="btnSubmitLogin">
-          <span>Acessar o Painel</span>
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5">
+          <span>Entrar no Sistema</span>
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5">
             <polyline points="9 18 15 12 9 6"></polyline>
           </svg>
         </button>
       </form>
 
+      <!-- Divisor: Acesso Rápido -->
       <div class="login-divider-line">
-        <span>Acesso Rápido para Demonstração</span>
+        <span>Acesso Rápido</span>
+      </div>
+      <div class="quick-access-helper">
+        Clique em um usuário para preencher o e-mail:
       </div>
 
+      <!-- Lista de Acesso Rápido -->
       <div class="quick-access-list">
-        <button type="button" class="quick-access-btn" onclick="quickFill('admin@papa.com')">
-          <div>
-            <strong>admin@papa.com</strong>
-            <div style="font-size: 11px; color: #64748b;">Administrador / Diretor (Acesso Total)</div>
+        <button type="button" class="quick-access-btn" onclick="quickFill('admin@papa.com')" title="Clique para preencher admin@papa.com">
+          <div class="quick-user-left">
+            <div class="quick-avatar admin">AD</div>
+            <div class="quick-info-text">
+              <div class="quick-info-email">admin@papa.com</div>
+              <div class="quick-info-sub">Administrador / Diretor (Acesso Total)</div>
+            </div>
           </div>
           <span class="quick-role-badge admin">ADMIN</span>
         </button>
 
-        <button type="button" class="quick-access-btn" onclick="quickFill('usuario@papa.com')">
-          <div>
-            <strong>usuario@papa.com</strong>
-            <div style="font-size: 11px; color: #64748b;">Victor Lourenço (iGUi Sob Medida)</div>
+        <button type="button" class="quick-access-btn" onclick="quickFill('usuario@papa.com')" title="Clique para preencher usuario@papa.com">
+          <div class="quick-user-left">
+            <div class="quick-avatar user">VL</div>
+            <div class="quick-info-text">
+              <div class="quick-info-email">usuario@papa.com</div>
+              <div class="quick-info-sub">Victor Lourenço (iGUi Sob Medida)</div>
+            </div>
           </div>
           <span class="quick-role-badge user">PROJETISTA</span>
         </button>
       </div>
 
+      <!-- Footer Meta -->
       <div class="login-footer-meta">
-        iGUi Piscinas &bull; PapaSys v2.0.0
+        iGUi Piscinas &bull; v2.1.0 &bull; Supabase Auth & RLS
       </div>
 
     </div>
   </div>
 
+  <!-- MODAL: ESQUECI MINHA SENHA (SEÇÃO 12.1) -->
+  <div id="modalResetPassword" class="modal-overlay-reset" onclick="fecharModalEsqueciSenha()">
+    <div class="modal-card" style="max-width: 420px;" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          Recuperação de Senha
+        </h3>
+        <button class="btn-close-modal" onclick="fecharModalEsqueciSenha()">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding-top: 6px;">
+        <p style="font-size: 13px; color: #64748b; line-height: 1.5; margin-bottom: 14px;">
+          Digite seu e-mail cadastrado. Enviaremos um link seguro para você redefinir sua senha na página <strong>redefinir-senha.html</strong>.
+        </p>
+
+        <div id="resetAlertBox" class="login-alert-banner" style="margin-bottom: 14px;">
+          <span id="resetAlertMsg">Mensagem</span>
+        </div>
+
+        <form id="formResetPassword" onsubmit="handleResetPasswordSubmit(event)">
+          <div class="login-form-group">
+            <label class="login-form-label" for="resetEmail">E-mail Cadastrado:</label>
+            <div class="login-input-wrap">
+              <span class="login-input-icon">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                  <polyline points="22,6 12,13 2,6"></polyline>
+                </svg>
+              </span>
+              <input type="email" id="resetEmail" class="login-input" placeholder="seu-email@papa.com" required>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="fecharModalEsqueciSenha()">Cancelar</button>
+            <button type="submit" class="btn btn-primary btn-sm" id="btnSubmitReset">Enviar Link de Recuperação</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <!-- Scripts -->
   <script src="js/config.js"></script>
+  <script src="js/sync.js"></script>
+  <script src="js/supabase.js"></script>
   <script src="js/auth.js"></script>
   <script>
-    // Se já estiver logado, redireciona para index.html
-    document.addEventListener("DOMContentLoaded", () => {
-      const user = Auth.getCurrentUser();
-      if (user) {
-        window.location.href = "index.html";
+    // Inicialização da tela de login
+    document.addEventListener("DOMContentLoaded", async () => {
+      // 1. Restaura "Lembrar de mim" se salvo anteriormente
+      const rememberedEmail = localStorage.getItem("igui_remember_email") || localStorage.getItem("papasys_remember_email");
+      const isRemembered = (localStorage.getItem("igui_remember_me") || localStorage.getItem("papasys_remember_me")) === "true";
+      const chkRemember = document.getElementById("rememberMeCheckbox");
+      const txtEmail = document.getElementById("loginEmail");
+      const txtPass = document.getElementById("loginPassword");
+
+      if (rememberedEmail && isRemembered) {
+        txtEmail.value = rememberedEmail;
+        chkRemember.checked = true;
+        // Se e-mail já preenchido, foca na senha para o usuário digitar
+        setTimeout(() => txtPass.focus(), 150);
+      }
+
+      // 2. Se já estiver logado com sessão ativa válida no Supabase, redireciona
+      const client = DB.getClient();
+      if (client && client.auth) {
+        try {
+          const { data } = await client.auth.getSession();
+          if (data && data.session && data.session.user) {
+            const user = Auth.getCurrentUser();
+            if (user && user.role === "admin") {
+              window.location.href = "index.html?divisao=dashboard_geral";
+            } else if (user && user.allowed_divisions && user.allowed_divisions.length > 0) {
+              window.location.href = `index.html?divisao=${user.allowed_divisions[0]}`;
+            } else {
+              window.location.href = "index.html";
+            }
+          }
+        } catch (_e) {}
       }
     });
 
-    function quickFill(email) {
-      document.getElementById("loginEmail").value = email;
-      document.getElementById("loginPassword").value = "123456";
-      handleLogin(email, "123456");
+    // Alternar visibilidade da senha (olho)
+    function togglePasswordVisibility() {
+      const passInput = document.getElementById("loginPassword");
+      const eyeOpen = document.getElementById("eyeIconOpen");
+      const eyeClosed = document.getElementById("eyeIconClosed");
+      
+      if (passInput.type === "password") {
+        passInput.type = "text";
+        eyeOpen.style.display = "none";
+        eyeClosed.style.display = "block";
+      } else {
+        passInput.type = "password";
+        eyeOpen.style.display = "block";
+        eyeClosed.style.display = "none";
+      }
     }
 
+    // Acesso Rápido: Preenche apenas o e-mail, limpa a senha e foca para digitação
+    function quickFill(email) {
+      const emailInput = document.getElementById("loginEmail");
+      const passInput = document.getElementById("loginPassword");
+
+      emailInput.value = email;
+      passInput.value = "";
+      passInput.focus();
+
+      // Feedback visual suave no campo de senha
+      passInput.classList.add("highlight-pulse");
+      setTimeout(() => {
+        passInput.classList.remove("highlight-pulse");
+      }, 800);
+    }
+
+    // Submit do formulário de login
     async function handleLoginSubmit(e) {
       e.preventDefault();
       const email = document.getElementById("loginEmail").value.trim();
       const pass = document.getElementById("loginPassword").value;
+      const rememberMe = document.getElementById("rememberMeCheckbox").checked;
+
+      // Grava ou limpa preferência do "Lembrar de mim"
+      if (rememberMe) {
+        localStorage.setItem("igui_remember_email", email);
+        localStorage.setItem("igui_remember_me", "true");
+      } else {
+        localStorage.removeItem("igui_remember_email");
+        localStorage.removeItem("igui_remember_me");
+        localStorage.removeItem("papasys_remember_email");
+        localStorage.removeItem("papasys_remember_me");
+      }
+
       await handleLogin(email, pass);
     }
 
+    // Executa a autenticação via Supabase Auth
     async function handleLogin(email, password) {
       const alertBox = document.getElementById("loginAlertBox");
       const alertMsg = document.getElementById("loginAlertMsg");
       const btn = document.getElementById("btnSubmitLogin");
 
+      alertBox.style.display = "none";
+      alertBox.classList.remove("success");
       btn.disabled = true;
       btn.style.opacity = "0.7";
 
       try {
         const res = await Auth.login(email, password);
         if (res.success) {
-          window.location.href = "index.html";
+          // Seção 12.1: Redirecionar para a primeira divisão liberada (ou Dashboard se Admin)
+          window.location.href = res.redirectUrl || "index.html";
         } else {
           alertBox.style.display = "flex";
           alertMsg.textContent = res.message || "E-mail ou senha incorretos.";
+          document.getElementById("loginPassword").focus();
         }
       } catch (err) {
         alertBox.style.display = "flex";
-        alertMsg.textContent = "Erro ao autenticar. Tente novamente.";
+        alertMsg.textContent = "Erro ao autenticar. Verifique sua conexão e tente novamente.";
+      } finally {
+        btn.disabled = false;
+        btn.style.opacity = "1";
+      }
+    }
+
+    // Modal Esqueci Minha Senha (Seção 12.1)
+    function abrirModalEsqueciSenha() {
+      const loginEmail = document.getElementById("loginEmail").value.trim();
+      if (loginEmail) {
+        document.getElementById("resetEmail").value = loginEmail;
+      }
+      document.getElementById("resetAlertBox").style.display = "none";
+      document.getElementById("modalResetPassword").style.display = "flex";
+    }
+
+    function fecharModalEsqueciSenha() {
+      document.getElementById("modalResetPassword").style.display = "none";
+    }
+
+    async function handleResetPasswordSubmit(e) {
+      e.preventDefault();
+      const email = document.getElementById("resetEmail").value.trim();
+      const alertBox = document.getElementById("resetAlertBox");
+      const alertMsg = document.getElementById("resetAlertMsg");
+      const btn = document.getElementById("btnSubmitReset");
+
+      btn.disabled = true;
+      btn.style.opacity = "0.7";
+      alertBox.style.display = "none";
+
+      try {
+        const res = await Auth.resetPasswordForEmail(email);
+        alertBox.style.display = "flex";
+        if (res.success) {
+          alertBox.classList.add("success");
+          alertMsg.textContent = res.message;
+          setTimeout(() => {
+            fecharModalEsqueciSenha();
+          }, 3500);
+        } else {
+          alertBox.classList.remove("success");
+          alertMsg.textContent = res.message;
+        }
+      } catch (err) {
+        alertBox.style.display = "flex";
+        alertBox.classList.remove("success");
+        alertMsg.textContent = "Falha ao enviar e-mail de redefinição.";
       } finally {
         btn.disabled = false;
         btn.style.opacity = "1";

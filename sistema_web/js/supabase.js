@@ -1,7 +1,6 @@
 // ==============================================================================
 // CAMADA DE DADOS E INTEGRAÇÃO SUPABASE - SISTEMA DE ORÇAMENTOS iGUi
-// Divisões: iGUi Sob Medida | iGUi Incorporadora | iGUi Internacional
-// Fluxo por Páginas: Prévia -> Galga (pré-venda) -> Desenho Técnico (venda)
+// Seções 12 e 13: Suporte a RLS, Offline Queue (IndexedDB), e Sincronização
 // ==============================================================================
 
 const DB = {
@@ -13,7 +12,14 @@ const DB = {
   getClient() {
     if (!supabaseClient && window.supabase) {
       try {
-        supabaseClient = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+        supabaseClient = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
+          auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: true,
+            storage: window.localStorage
+          }
+        });
       } catch (e) {
         console.warn("[DB] Erro ao instanciar Supabase:", e);
       }
@@ -21,29 +27,34 @@ const DB = {
     return supabaseClient;
   },
 
-  // 2. Obter orçamentos (com filtro opcional por divisão e etapa)
+  // 2. Obter orçamentos (com filtro por divisão, etapa e regras de RLS)
   async getBudgets(division = null, stage = null) {
     let allBudgets = [];
     const client = DB.getClient();
+    const currentUser = typeof Auth !== "undefined" ? Auth.getCurrentUser() : null;
+    const isAdmin = typeof Auth !== "undefined" ? Auth.isAdmin() : false;
 
-    if (client) {
+    if (client && navigator.onLine) {
       try {
         let query = client.from("budgets").select("*").order("created_at", { ascending: false });
         if (division) query = query.eq("division", division);
         if (stage) query = query.eq("stage", stage);
 
-        const { data, error } = await query;
-        if (!error && Array.isArray(data) && data.length > 0) {
-          // Busca os modelos de cada orçamento
+        // Se for usuário comum, o Supabase já aplica o RLS no servidor.
+        const { data, error, status, statusText } = await query;
+        if (!error && Array.isArray(data)) {
+          // Busca os modelos vinculados aos orçamentos retornados
           for (let b of data) {
-            const { data: pools } = await client.from("budget_pools").select("*").eq("budget_id", b.id);
-            b.pools = pools || [];
+            const { data: pools, error: poolErr } = await client.from("budget_pools").select("*").eq("budget_id", b.id);
+            b.pools = (!poolErr && pools) ? pools : [];
           }
           localStorage.setItem(DB.STORAGE_KEY_BUDGETS, JSON.stringify(data));
           allBudgets = data;
+        } else if (error) {
+          console.error(`[PapaSys Sync] Falha ao carregar orçamentos: Status HTTP ${status} (${statusText}) - Mensagem: ${error.message} - Detalhes: ${error.details || 'N/A'}`);
         }
       } catch (e) {
-        console.warn("[DB] Supabase budgets fallback para local:", e);
+        console.warn("[DB] Erro de rede ou firewall. Usando cache local:", e);
       }
     }
 
@@ -51,9 +62,22 @@ const DB = {
       allBudgets = DB.getLocalBudgets();
     }
 
-    // Filtragem local conforme divisão e etapa ativas
+    // Filtragem local conforme divisão, etapa e permissões do usuário logado (RLS Client-Side)
     let filtered = allBudgets;
-    if (division) {
+
+    if (!isAdmin && currentUser) {
+      const allowedDivs = currentUser.allowed_divisions || ["sob_medida"];
+      // Regra Seção 12.5: Usuário vê apenas os orçamentos que criou ou atribuídos a ele, nas divisões liberadas
+      filtered = filtered.filter(b => {
+        const isDivisionAllowed = allowedDivs.includes(b.division);
+        const isOwnerOrAssigned = b.created_by === currentUser.id ||
+                                  b.assigned_user_id === currentUser.id ||
+                                  (b.assigned_user_name && b.assigned_user_name.toLowerCase() === (currentUser.name || '').toLowerCase());
+        return isDivisionAllowed && isOwnerOrAssigned;
+      });
+    }
+
+    if (division && division !== "dashboard_geral") {
       filtered = filtered.filter(b => b.division === division);
     }
     if (stage) {
@@ -68,12 +92,25 @@ const DB = {
     if (!id) return null;
     const client = DB.getClient();
 
-    if (client) {
+    if (client && navigator.onLine) {
       try {
         const { data: b, error } = await client.from("budgets").select("*").eq("id", id).single();
         if (!error && b) {
           const { data: pools } = await client.from("budget_pools").select("*").eq("budget_id", id);
-          b.pools = pools || [];
+          b.pools = (pools || []).map((p, pIndex) => {
+            if (p.finishes_details && typeof p.finishes_details === "object") {
+              if (p.finishes_details.manual_m2_price != null) p.manual_m2_price = p.finishes_details.manual_m2_price;
+              if (p.finishes_details.manual_finishes) p.manual_finishes = p.finishes_details.manual_finishes;
+              if (p.finishes_details.manual_model_value != null) p.manual_model_value = p.finishes_details.manual_model_value;
+              if (p.finishes_details.price_edited_by) p.price_edited_by = p.finishes_details.price_edited_by;
+              if (p.finishes_details.price_edited_at) p.price_edited_at = p.finishes_details.price_edited_at;
+              if (pIndex === 0) {
+                if (p.finishes_details.commercial_adjustment) b.commercial_adjustment = p.finishes_details.commercial_adjustment;
+                if (p.finishes_details.budget_revision) b.budget_revision = p.finishes_details.budget_revision;
+              }
+            }
+            return p;
+          });
           return b;
         }
       } catch (e) {
@@ -110,8 +147,11 @@ const DB = {
     let bId = (budgetData.id && DB.isUUID(budgetData.id)) ? budgetData.id : DB.generateUUID();
     let budgetCode = budgetData.budget_code || `ORC-${new Date().getFullYear().toString().slice(-2)}${(new Date().getMonth()+1).toString().padStart(2, '0')}-${Math.floor(1000 + Math.random() * 9000)}`;
 
+    const currentUser = typeof Auth !== "undefined" ? Auth.getCurrentUser() : null;
+    const currentUserId = currentUser ? currentUser.id : null;
+
     // Normaliza os pools garantindo UUIDs válidos e removendo calc anterior
-    const normalizedPools = (pools || []).map((p, idx) => {
+    const normalizedPools = (pools || []).map((p) => {
       const poolCopy = { ...p };
       delete poolCopy.calc;
       return {
@@ -130,6 +170,9 @@ const DB = {
       id: bId,
       budget_code: budgetCode,
       status: budgetData.status || "em_aberto",
+      created_by: budgetData.created_by || (DB.isUUID(currentUserId) ? currentUserId : null),
+      assigned_user_id: budgetData.assigned_user_id || (DB.isUUID(currentUserId) ? currentUserId : null),
+      assigned_user_name: budgetData.assigned_user_name || (currentUser ? currentUser.name : "Não atribuído"),
       total_base_cost: calc.total_base_cost,
       total_price: calc.total_price,
       total_area_revestimento: calc.total_area_revestimento,
@@ -144,7 +187,7 @@ const DB = {
       updated_at: new Date().toISOString()
     };
 
-    // Salva no LocalStorage
+    // Salva imediatamente no LocalStorage para resposta instantânea na UI
     const localBudgets = DB.getLocalBudgets();
     let updated;
     if (isNew) {
@@ -157,53 +200,96 @@ const DB = {
     }
     localStorage.setItem(DB.STORAGE_KEY_BUDGETS, JSON.stringify(updated));
 
-    // Sincroniza com Supabase se disponível
+    // Monta payload do budget para Supabase
+    const allowedBudgetCols = [
+      "id", "budget_code", "client_name", "project_name", "division", 
+      "stage", "status", "created_by", "assigned_user_id", "assigned_user_name", 
+      "total_price", "total_base_cost", "total_area_revestimento", 
+      "total_area_laminacao", "total_volume_m3", "total_volume_liters", 
+      "notes", "created_at", "updated_at"
+    ];
+    const budgetPayload = {};
+    for (const col of allowedBudgetCols) {
+      if (fullBudget[col] !== undefined) {
+        budgetPayload[col] = fullBudget[col];
+      }
+    }
+    if (!DB.isUUID(budgetPayload.assigned_user_id)) {
+      budgetPayload.assigned_user_id = null;
+    }
+    if (!DB.isUUID(budgetPayload.created_by)) {
+      budgetPayload.created_by = null;
+    }
+
     const client = DB.getClient();
-    if (client) {
+    let sentSuccessfully = false;
+
+    if (client && navigator.onLine) {
       try {
-        const allowedBudgetCols = [
-          "id", "budget_code", "client_name", "project_name", "division", 
-          "stage", "status", "assigned_user_id", "assigned_user_name", 
-          "total_price", "total_base_cost", "total_area_revestimento", 
-          "total_area_laminacao", "total_volume_m3", "total_volume_liters", 
-          "notes", "created_at", "updated_at"
-        ];
-        const budgetPayload = {};
-        for (const col of allowedBudgetCols) {
-          if (fullBudget[col] !== undefined) {
-            budgetPayload[col] = fullBudget[col];
-          }
-        }
-        if (!DB.isUUID(budgetPayload.assigned_user_id)) {
-          budgetPayload.assigned_user_id = null;
+        let { error: bErr, status, statusText } = await client.from("budgets").upsert([budgetPayload]);
+        if (bErr && (bErr.code === '42703' || (bErr.message && bErr.message.includes('created_by')))) {
+          console.warn("[PapaSys Sync] Coluna created_by ainda não existe no Supabase. Retentando upsert sem created_by...");
+          const fallbackPayload = { ...budgetPayload };
+          delete fallbackPayload.created_by;
+          const retry = await client.from("budgets").upsert([fallbackPayload]);
+          bErr = retry.error;
         }
 
-        const { error: bErr } = await client.from("budgets").upsert([budgetPayload]);
         if (bErr) {
-          console.warn("[DB] Erro no upsert de budget Supabase:", bErr);
-        }
-
-        if (fullBudget.pools && fullBudget.pools.length > 0) {
-          const allowedPoolCols = [
-            "id", "budget_id", "model_name", "units_count", "pool_type",
-            "structure_type", "coating_type", "has_mold", "mold_auto",
-            "internal_area_m2", "lamination_area_m2", "internal_volume_m3",
-            "internal_volume_liters", "linear_corners_m", "alive_corners_count"
-          ];
-          const poolsPayload = fullBudget.pools.map(p => {
-            const row = {};
-            for (const col of allowedPoolCols) {
-              if (p[col] !== undefined) row[col] = p[col];
+          console.error(`[PapaSys Sync] Erro no upsert de budget Supabase: Status HTTP ${status} (${statusText}) - ${bErr.message}`, bErr);
+        } else {
+          sentSuccessfully = true;
+          if (fullBudget.pools && fullBudget.pools.length > 0) {
+            const allowedPoolCols = [
+              "id", "budget_id", "model_name", "units_count", "pool_type",
+              "structure_type", "coating_type", "has_mold", "mold_auto",
+              "internal_area_m2", "lamination_area_m2", "internal_volume_m3",
+              "internal_volume_liters", "linear_corners_m", "alive_corners_count",
+              "finishes_details", "unit_base_value", "unit_autoportante_value",
+              "unit_final_value", "total_model_value"
+            ];
+            const poolsPayload = fullBudget.pools.map((p, pIndex) => {
+              const row = {};
+              for (const col of allowedPoolCols) {
+                if (p[col] !== undefined) row[col] = p[col];
+              }
+              let finishesObj = typeof p.finishes_details === "object" && p.finishes_details ? { ...p.finishes_details } : {};
+              if (p.manual_m2_price != null) finishesObj.manual_m2_price = p.manual_m2_price;
+              if (p.manual_finishes) finishesObj.manual_finishes = p.manual_finishes;
+              if (p.manual_model_value != null) finishesObj.manual_model_value = p.manual_model_value;
+              if (p.price_edited_by) finishesObj.price_edited_by = p.price_edited_by;
+              if (p.price_edited_at) finishesObj.price_edited_at = p.price_edited_at;
+              if (pIndex === 0) {
+                if (fullBudget.commercial_adjustment) finishesObj.commercial_adjustment = fullBudget.commercial_adjustment;
+                if (fullBudget.budget_revision) finishesObj.budget_revision = fullBudget.budget_revision;
+              }
+              row.finishes_details = finishesObj;
+              if (p.manual_model_value != null) row.total_model_value = p.manual_model_value;
+              return row;
+            });
+            const { error: pErr, status: pStatus } = await client.from("budget_pools").upsert(poolsPayload);
+            if (pErr) {
+              console.error(`[PapaSys Sync] Erro no upsert de budget_pools Supabase: Status HTTP ${pStatus} - ${pErr.message}`, pErr);
+              if (typeof PapaSysSync !== "undefined") {
+                for (const poolRow of poolsPayload) {
+                  await PapaSysSync.enqueueItem("budget_pools", poolRow);
+                }
+              }
             }
-            return row;
-          });
-          const { error: pErr } = await client.from("budget_pools").upsert(poolsPayload);
-          if (pErr) {
-            console.warn("[DB] Erro no upsert de budget_pools Supabase:", pErr);
           }
         }
       } catch (e) {
-        console.warn("[DB] Falha no upsert Supabase:", e);
+        console.warn("[DB] Exceção de rede no envio Supabase. Gravando na fila offline...", e);
+      }
+    }
+
+    // Se não enviou com sucesso ao Supabase (offline ou bloqueio de proxy), adiciona à fila IndexedDB (Seção 13.2)
+    if (!sentSuccessfully && typeof PapaSysSync !== "undefined") {
+      await PapaSysSync.enqueueItem("budgets", budgetPayload);
+      if (fullBudget.pools && fullBudget.pools.length > 0) {
+        for (const p of fullBudget.pools) {
+          await PapaSysSync.enqueueItem("budget_pools", p);
+        }
       }
     }
 
@@ -218,12 +304,11 @@ const DB = {
     budget.stage = nextStage;
     budget.updated_at = new Date().toISOString();
 
-    // Recalcula totais com base na nova margem da etapa (+5% Prévia, 0% Galga/Desenho Técnico)
     const updatedBudget = await DB.saveBudget(budget, budget.pools || []);
     return updatedBudget;
   },
 
-  // 6. Atribuir Responsável ("Visualiza quem está fazendo o quê" - Seção 3)
+  // 6. Atribuir Responsável
   async reassignBudget(budgetId, userId, userName) {
     const budget = await DB.getBudgetById(budgetId);
     if (!budget) return null;
@@ -238,18 +323,14 @@ const DB = {
 
   // ==============================================================================
   // SEÇÃO 10.1: DIVISÃO DE ORÇAMENTOS (INCORPORADORA) - MULTI-MODELOS SIMULTÂNEOS
-  // Permite desmembrar quantidades de múltiplos modelos ao mesmo tempo em um lote.
-  // Ex: 2 do Modelo A + 1 do Modelo B -> criam juntos um novo orçamento filho.
   // ==============================================================================
   async splitBudgetMulti(budgetId, itemsToMove = [], options = {}) {
-    // 1. Obter orçamento original
     const originalBudget = await DB.getBudgetById(budgetId);
     if (!originalBudget || !originalBudget.pools || originalBudget.pools.length === 0) {
       console.error("[DB] Orçamento original não encontrado ou sem piscinas:", budgetId);
       return null;
     }
 
-    // 2. Validação dos itens a mover
     const validMoves = (itemsToMove || []).map(item => ({
       poolId: item.poolId,
       unitsToMove: Math.max(0, parseInt(item.unitsToMove) || 0)
@@ -267,7 +348,6 @@ const DB = {
       return null;
     }
 
-    // Checa se as unidades selecionadas não ultrapassam as unidades disponíveis
     let totalRemainingUnits = 0;
     const remainingPools = [];
     const newPools = [];
@@ -300,7 +380,6 @@ const DB = {
           units_count: unitsRemaining
         });
       } else {
-        // Todas as unidades deste modelo foram transferidas
         poolsToDeleteFromDb.push(pool.id);
       }
 
@@ -315,7 +394,6 @@ const DB = {
       }
     }
 
-    // Validação: o orçamento original não pode ficar completamente vazio (0 unidades no total)
     if (totalRemainingUnits <= 0) {
       if (typeof PapaSysDialog !== "undefined") {
         PapaSysDialog.alert({
@@ -327,9 +405,8 @@ const DB = {
       return null;
     }
 
-    // 3. Deleta do Supabase os modelos que foram 100% transferidos para o novo orçamento
     const client = DB.getClient();
-    if (client && poolsToDeleteFromDb.length > 0) {
+    if (client && poolsToDeleteFromDb.length > 0 && navigator.onLine) {
       try {
         await client.from("budget_pools").delete().in("id", poolsToDeleteFromDb);
       } catch (e) {
@@ -337,11 +414,9 @@ const DB = {
       }
     }
 
-    // 4. Salva o orçamento original com as unidades remanescentes
     originalBudget.pools = remainingPools;
     const updatedSource = await DB.saveBudget(originalBudget, remainingPools);
 
-    // 5. Criação do novo orçamento com os modelos desmembrados
     const newBudgetCode = options.budgetCode && options.budgetCode.trim()
       ? options.budgetCode.trim().toUpperCase()
       : undefined;
@@ -377,7 +452,6 @@ const DB = {
     };
   },
 
-  // Suporte retrocompatível para desmembrar um único modelo
   async splitBudgetUnits(budgetId, poolId, unitsToMove, destinationBudgetId = null) {
     return await DB.splitBudgetMulti(budgetId, [{ poolId, unitsToMove }]);
   },
@@ -388,17 +462,27 @@ const DB = {
     localStorage.setItem(DB.STORAGE_KEY_BUDGETS, JSON.stringify(local));
 
     const client = DB.getClient();
-    if (client) {
+    if (client && navigator.onLine) {
       try {
-        await client.from("budgets").delete().eq("id", id);
+        const { error, status } = await client.from("budgets").delete().eq("id", id);
+        if (error) {
+          console.error(`[PapaSys Sync] Erro ao deletar budget ${id}: Status HTTP ${status} - ${error.message}`);
+          if (typeof PapaSysSync !== "undefined") {
+            await PapaSysSync.enqueueItem("budgets", { id }, "delete");
+          }
+        }
       } catch (e) {
-        // Silencioso
+        if (typeof PapaSysSync !== "undefined") {
+          await PapaSysSync.enqueueItem("budgets", { id }, "delete");
+        }
       }
+    } else if (typeof PapaSysSync !== "undefined") {
+      await PapaSysSync.enqueueItem("budgets", { id }, "delete");
     }
     return true;
   },
 
-  // 8. Obter orçamentos salvos (sem dados mockados no front-end)
+  // 8. Obter orçamentos locais
   getLocalBudgets() {
     try {
       const stored = localStorage.getItem(DB.STORAGE_KEY_BUDGETS);

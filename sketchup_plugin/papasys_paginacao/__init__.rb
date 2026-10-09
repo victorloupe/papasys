@@ -59,13 +59,13 @@ module PapaSys
       icons_dir = File.join(dir, 'icons')
 
       # 1. Comando: Painel Principal Interativo
-      cmd_abrir = UI::Command.new('Painel PapaSys') do
+      cmd_abrir = UI::Command.new('iGUi Orçamentos 3D') do
         UiDialog.show
       end
-      cmd_abrir.tooltip = 'PapaSys: Painel de Paginação e Orçamentos'
-      cmd_abrir.status_bar_text = 'Abrir painel interativo PapaSys com quantitativos e envio para a nuvem'
-      cmd_abrir.small_icon = File.join(icons_dir, 'painel_24.png')
-      cmd_abrir.large_icon = File.join(icons_dir, 'painel_32.png')
+      cmd_abrir.tooltip = 'iGUi: Painel 3D de Orçamentos e Quantitativos'
+      cmd_abrir.status_bar_text = 'Abrir painel interativo iGUi com quantitativos e envio direto para o sistema web'
+      cmd_abrir.small_icon = File.join(icons_dir, 'icon_16.png')
+      cmd_abrir.large_icon = File.join(icons_dir, 'icon_24.png')
 
       # 2. Comando: ⚡ Ajuste Rápido & Envio Imediato (1 Clique direto na barra de ferramentas)
       cmd_rapido = UI::Command.new('Ajuste Rápido (1 Clique)') do
@@ -77,12 +77,12 @@ module PapaSys
         if modelo.selection.length != 1
           UI.messagebox("Por favor, selecione UM grupo ou componente (a pele da piscina) antes de clicar.")
         else
-          res = GeomEngine.ajustar_piscina(larg, alt, rej, { projeto: 'Piscina PapaSys 3D' })
+          res = GeomEngine.ajustar_piscina(larg, alt, rej, { projeto: 'Piscina iGUi 3D' })
           if res[:success]
             ApiClient.enviar_projeto(res) do |ok, msg|
               UI.start_timer(0.05, false) do
                 if ok
-                  UI.messagebox("⚡ PapaSys: Piscina modulada pelo centro e enviada com SUCESSO!\n\nÁrea: #{res[:area_interna_m2]} m²\nBorda: #{res[:borda_perimetro_linear_m]} m linear\n\nAbra o painel web PapaSys para visualizar o orçamento completo.")
+                  UI.messagebox("⚡ iGUi: Piscina modulada pelo centro e enviada com SUCESSO!\n\nÁrea: #{res[:area_interna_m2]} m²\nBorda: #{res[:borda_perimetro_linear_m]} m linear\n\nAbra o sistema web iGUi para visualizar o orçamento completo.")
                 else
                   UI.messagebox("Ajuste concluído no 3D, mas falhou o envio para nuvem: #{msg[:error]}")
                 end
@@ -93,8 +93,8 @@ module PapaSys
           end
         end
       end
-      cmd_rapido.tooltip = 'PapaSys: Ajuste Modular e Envio para Nuvem em 1 Clique'
-      cmd_rapido.status_bar_text = 'Ajusta a piscina selecionada sem recortes e envia direto para o Supabase'
+      cmd_rapido.tooltip = 'iGUi: Ajuste Modular e Envio para Nuvem em 1 Clique'
+      cmd_rapido.status_bar_text = 'Ajusta a piscina selecionada sem recortes e envia direto para o sistema iGUi'
       cmd_rapido.small_icon = File.join(icons_dir, 'rapido_24.png')
       cmd_rapido.large_icon = File.join(icons_dir, 'rapido_32.png')
 
@@ -102,21 +102,21 @@ module PapaSys
       cmd_update = UI::Command.new('Verificar Atualizações') do
         Updater.check(silent: false, auto_install: true)
       end
-      cmd_update.tooltip = 'PapaSys: Verificar Atualizações do Plugin'
-      cmd_update.status_bar_text = 'Verifica e atualiza o plugin PapaSys automaticamente'
+      cmd_update.tooltip = 'iGUi: Verificar Atualizações do Plugin'
+      cmd_update.status_bar_text = 'Verifica e atualiza o plugin iGUi automaticamente'
       cmd_update.small_icon = File.join(icons_dir, 'update_24.png')
       cmd_update.large_icon = File.join(icons_dir, 'update_32.png')
 
-      # Menus Superiores (Extensões > PapaSys Paginação)
+      # Menus Superiores (Extensões > iGUi Orçamentos 3D)
       menu_plugins = UI.menu('Plugins') || UI.menu('Extensions')
-      sub_menu = menu_plugins.add_submenu('PapaSys Paginação')
+      sub_menu = menu_plugins.add_submenu('iGUi Orçamentos 3D')
       sub_menu.add_item(cmd_abrir)
       sub_menu.add_item(cmd_rapido)
       sub_menu.add_separator
       sub_menu.add_item(cmd_update)
 
       # Barra de Ferramentas (Toolbar) com Ícones Nítidos
-      toolbar = UI::Toolbar.new('PapaSys')
+      toolbar = UI::Toolbar.new('iGUi Orçamentos')
       toolbar.add_item(cmd_abrir)
       toolbar.add_item(cmd_rapido)
       toolbar.add_item(cmd_update)

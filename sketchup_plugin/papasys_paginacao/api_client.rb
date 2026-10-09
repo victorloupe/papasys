@@ -3,21 +3,104 @@ require 'net/http'
 require 'uri'
 require 'json'
 require 'openssl'
+require 'fileutils'
 
 module PapaSys
   module Paginacao
     module ApiClient
+      # Helper: Gera UUID v4 único no plugin (Seção 14.1)
+      def self.gerar_uuid
+        begin
+          require 'securerandom'
+          return SecureRandom.uuid
+        rescue => _e
+          sprintf('%08x-%04x-4%03x-%04x-%012x',
+            rand(0..0xffffffff),
+            rand(0..0xffff),
+            rand(0..0x0fff),
+            rand(0x8000..0xbfff),
+            rand(0..0xffffffffffff)
+          )
+        end
+      end
+
+      # Local da fila offline e logs de erros (Seção 14.1)
+      def self.caminho_fila_local
+        base_dir = File.expand_path('../../sistema_web/plugin', File.dirname(__FILE__))
+        FileUtils.mkdir_p(base_dir) rescue nil
+        File.join(base_dir, 'plugin_offline_queue.json')
+      end
+
+      def self.caminho_log_erros
+        base_dir = File.expand_path('../../sistema_web/plugin', File.dirname(__FILE__))
+        FileUtils.mkdir_p(base_dir) rescue nil
+        File.join(base_dir, 'sync_errors.log')
+      end
+
+      def self.registrar_log_erro(contexto, status_code, mensagem)
+        linha = "[#{Time.now.strftime('%Y-%m-%d %H:%M:%S')}] [Status #{status_code}] #{contexto}: #{mensagem}\n"
+        puts "[PapaSys Sync Error] #{linha}"
+        File.open(caminho_log_erros, 'a:UTF-8') do |f|
+          f.write(linha)
+        end
+      rescue => _e
+      end
+
+      def self.fila_local_ler
+        path = caminho_fila_local
+        return [] unless File.exist?(path)
+        begin
+          content = File.read(path, encoding: 'UTF-8')
+          data = JSON.parse(content)
+          data.is_a?(Array) ? data : []
+        rescue => _e
+          []
+        end
+      end
+
+      def self.fila_local_salvar(itens)
+        path = caminho_fila_local
+        File.open(path, 'w:UTF-8') do |f|
+          f.write(JSON.pretty_generate(itens))
+        end
+      rescue => _e
+      end
+
+      def self.fila_local_adicionar(item)
+        itens = fila_local_ler
+        item_id = item['id'] || item[:id]
+        itens.reject! { |i| (i['id'] || i[:id]) == item_id }
+        itens << item
+        fila_local_salvar(itens)
+        itens.size
+      end
+
+      def self.fila_local_remover(id)
+        itens = fila_local_ler
+        itens.reject! { |i| (i['id'] || i[:id]) == id }
+        fila_local_salvar(itens)
+        itens.size
+      end
+
+      def self.fila_local_contar
+        fila_local_ler.size
+      end
+
       # Executa requisição HTTP compatível com Sketchup::Http::Request e Net::HTTP fallback
-      def self.http_request(method, endpoint, payload = nil, &callback)
+      # Respeita proxies corporativos da empresa (ENV['http_proxy'] / ENV['https_proxy']) - Seção 14.1
+      def self.http_request(method, endpoint, payload = nil, retry_count = 0, &callback)
         base_url = Config.server_url.to_s.strip.chomp('/')
         base_url = Config::DEFAULT_SERVER_URL if base_url.empty? || base_url.include?('localhost')
         full_url = endpoint.start_with?('http') ? endpoint : "#{base_url}#{endpoint}"
 
+        bearer = Config.access_token.to_s.strip
+        bearer = Config.supabase_key if bearer.empty?
+
         headers = {
           'apikey' => Config.supabase_key,
-          'Authorization' => "Bearer #{Config.supabase_key}",
+          'Authorization' => "Bearer #{bearer}",
           'Content-Type' => 'application/json',
-          'Prefer' => 'return=representation'
+          'Prefer' => 'resolution=merge-duplicates,return=representation'
         }
 
         if defined?(Sketchup::Http::Request)
@@ -35,7 +118,16 @@ module PapaSys
 
           req.start do |_request, response|
             code = response.status_code
-            if code >= 200 && code < 300
+            if code == 401 && retry_count == 0 && !Config.refresh_token.empty?
+              # Token expirou durante requisição - tenta renovar e retenta
+              renovar_token do |ok_renova, _novo_tok|
+                if ok_renova
+                  http_request(method, endpoint, payload, retry_count + 1, &callback)
+                else
+                  callback.call(false, { error: "HTTP 401: Sessão expirada" }, 401) if callback
+                end
+              end
+            elsif code >= 200 && code < 300
               data = JSON.parse(response.body) rescue response.body
               callback.call(true, data, code) if callback
             else
@@ -45,11 +137,20 @@ module PapaSys
         else
           begin
             uri = URI.parse(full_url)
-            http = Net::HTTP.new(uri.host, uri.port)
+            
+            # Respeitar configurações de proxy do SO / ambiente da empresa (Seção 14.1)
+            proxy_url = ENV['https_proxy'] || ENV['http_proxy'] || ENV['HTTPS_PROXY'] || ENV['HTTP_PROXY']
+            if proxy_url && !proxy_url.to_s.strip.empty?
+              p_uri = URI.parse(proxy_url)
+              http = Net::HTTP.new(uri.host, uri.port, p_uri.host, p_uri.port, p_uri.user, p_uri.password)
+            else
+              http = Net::HTTP.new(uri.host, uri.port)
+            end
+
             http.use_ssl = (uri.scheme == 'https')
             http.verify_mode = OpenSSL::SSL::VERIFY_NONE
-            http.open_timeout = 6
-            http.read_timeout = 6
+            http.open_timeout = 8
+            http.read_timeout = 8
 
             net_req = case method.to_s.upcase
                       when 'GET' then Net::HTTP::Get.new(uri.request_uri)
@@ -64,15 +165,39 @@ module PapaSys
 
             response = http.request(net_req)
             code = response.code.to_i
-            if code >= 200 && code < 300
+
+            if code == 401 && retry_count == 0 && !Config.refresh_token.empty?
+              renovar_token do |ok_renova, _novo_tok|
+                if ok_renova
+                  http_request(method, endpoint, payload, retry_count + 1, &callback)
+                else
+                  callback.call(false, { error: "HTTP 401: Sessão expirada" }, 401) if callback
+                end
+              end
+            elsif code >= 200 && code < 300
               data = JSON.parse(response.body) rescue response.body
               callback.call(true, data, code) if callback
             else
               callback.call(false, { error: "HTTP #{code}: #{response.body}" }, code) if callback
             end
           rescue => e
-            callback.call(false, { error: "Falha de rede: #{e.message}" }, 0) if callback
+            callback.call(false, { error: "Falha de rede / proxy: #{e.message}" }, 0) if callback
           end
+        end
+      end
+
+      # Verifica se o token expirou e renova automaticamente com o refresh_token (Seção 14.1)
+      def self.garantir_token_valido(&bloco)
+        ref_tok = Config.refresh_token.to_s.strip
+        expira_em = Config.token_expires_at.to_i
+
+        if !ref_tok.empty? && (expira_em > 0 && Time.now.to_i >= (expira_em - 120))
+          puts "[PapaSys Sync] Token próximo do vencimento (#{expira_em}). Renovando automaticamente com refresh_token..."
+          renovar_token do |ok_renova, _novo_tok|
+            bloco.call(ok_renova) if bloco
+          end
+        else
+          bloco.call(true) if bloco
         end
       end
 
@@ -85,7 +210,6 @@ module PapaSys
           if sucesso && dados.is_a?(Array)
             callback.call(true, dados) if callback
           else
-            # Fallback para cache local / vazio
             callback.call(false, []) if callback
           end
         end
@@ -171,24 +295,112 @@ module PapaSys
         ]
       end
 
+      # Autenticação Supabase via API REST com E-mail e Senha (Seção 12.6)
+      def self.login_supabase(email, password, &callback)
+        clean_email = email.to_s.strip.downcase
+        endpoint = '/auth/v1/token?grant_type=password'
+        payload = { email: clean_email, password: password.to_s }
+
+        http_request('POST', endpoint, payload) do |sucesso, dados, code|
+          if sucesso && dados.is_a?(Hash) && dados['access_token']
+            Config.access_token = dados['access_token']
+            Config.refresh_token = dados['refresh_token'] || ''
+            exp_in = (dados['expires_in'] || 3600).to_i
+            Config.token_expires_at = Time.now.to_i + exp_in
+
+            user_obj = dados['user'] || {}
+            Config.current_user_id = user_obj['id'] || ''
+            Config.current_user_email = user_obj['email'] || clean_email
+
+            buscar_perfil_usuario(Config.current_user_id) do |_ok_prof, prof|
+              if prof
+                Config.current_user_name = prof['name'] || user_obj.dig('user_metadata', 'name') || clean_email.split('@').first
+                Config.current_user_role = prof['role'] || 'user'
+                divs = prof['allowed_divisions'] || ['sob_medida']
+                divs = ['sob_medida', 'incorporadora', 'internacional'] if Config.current_user_role == 'admin'
+                Config.allowed_divisions = divs
+                unless divs.include?(Config.selected_division)
+                  Config.selected_division = divs.first || 'sob_medida'
+                end
+              end
+
+              callback.call(true, {
+                id: Config.current_user_id,
+                name: Config.current_user_name,
+                email: Config.current_user_email,
+                role: Config.current_user_role,
+                allowed_divisions: Config.allowed_divisions,
+                selected_division: Config.selected_division
+              }) if callback
+            end
+          else
+            err_msg = dados.is_a?(Hash) ? (dados['error_description'] || dados['msg'] || dados['error'] || "HTTP #{code}") : "Credenciais inválidas."
+            registrar_log_erro("login_supabase (#{clean_email})", code, err_msg)
+            callback.call(false, { error: err_msg }, code) if callback
+          end
+        end
+      end
+
+      # Renova token de sessão via refresh_token (Seção 12.6 & 14.1)
+      def self.renovar_token(&callback)
+        ref_tok = Config.refresh_token.to_s.strip
+        if ref_tok.empty?
+          callback.call(false, nil) if callback
+          return
+        end
+
+        endpoint = '/auth/v1/token?grant_type=refresh_token'
+        payload = { refresh_token: ref_tok }
+
+        http_request('POST', endpoint, payload) do |sucesso, dados, code|
+          if sucesso && dados.is_a?(Hash) && dados['access_token']
+            Config.access_token = dados['access_token']
+            Config.refresh_token = dados['refresh_token'] if dados['refresh_token']
+            exp_in = (dados['expires_in'] || 3600).to_i
+            Config.token_expires_at = Time.now.to_i + exp_in
+            puts "[PapaSys Sync] Token renovado com sucesso! Válido por #{exp_in}s."
+            callback.call(true, dados['access_token']) if callback
+          else
+            err = dados.is_a?(Hash) ? (dados['error_description'] || dados['msg'] || "HTTP #{code}") : "Falha na renovação"
+            registrar_log_erro("renovar_token", code, err)
+            callback.call(false, nil) if callback
+          end
+        end
+      end
+
+      def self.buscar_perfil_usuario(user_id, &callback)
+        endpoint = "/rest/v1/app_users?id=eq.#{user_id}&select=*"
+        http_request('GET', endpoint) do |sucesso, dados, _code|
+          if sucesso && dados.is_a?(Array) && !dados.empty?
+            callback.call(true, dados.first) if callback
+          else
+            callback.call(false, nil) if callback
+          end
+        end
+      end
+
       # 2. Busca lista de usuários cadastrados para a tela de login
       def self.buscar_usuarios(&callback)
         endpoint = "/rest/v1/app_users?active=eq.true&order=name.asc"
         http_request('GET', endpoint) do |sucesso, dados, _code|
           if sucesso && dados.is_a?(Array) && !dados.empty?
-            # Garante que Admin esteja presente na lista
             tem_admin = dados.any? { |u| (u['role'] == 'admin') || (u['email'] == 'admin@papa.com') }
             lista = tem_admin ? dados : (usuarios_padroes + dados)
             callback.call(true, lista) if callback
           else
-            # Retorna usuários padrão de fábrica incluindo Administrador
             callback.call(true, usuarios_padroes) if callback
           end
         end
       end
 
-      # 3. Envia o orçamento completo / adiciona piscina (Seções 5, 6, 7, 8, 10, 11)
+      # 3. Envia o orçamento completo / adiciona piscina (Seções 14.1 e 14.4)
       def self.enviar_piscina_orcamento(dados, &callback)
+        garantir_token_valido do |_ok_tok|
+          executar_envio_piscina(dados, &callback)
+        end
+      end
+
+      def self.executar_envio_piscina(dados, &callback)
         modo = dados['modo_orcamento'] || dados[:modo_orcamento] || 'novo'
         budget_id = dados['budget_id'] || dados[:budget_id]
 
@@ -197,8 +409,9 @@ module PapaSys
         proj_nome = (dados['project_name'] || dados[:project_name] || 'Piscina iGUi').to_s
         cli_nome = (dados['client_name'] || dados[:client_name] || 'Cliente Geral').to_s
         modelo_nome = (dados['model_name'] || dados[:model_name] || 'Modelo iGUi').to_s
+        
+        # 14.4 Quantidade no Sob Medida: padrão 1, mas editável! (Substitui regra anterior)
         qtd_unidades = [dados['units_count'].to_i, 1].max
-        qtd_unidades = 1 if divisao == 'sob_medida' # Regra: Sob Medida: 1 orçamento = 1 piscina
 
         pool_type = dados['pool_type'] || 'convencional'
         structure_type = dados['structure_type'] || 'nao_autoportante'
@@ -224,7 +437,13 @@ module PapaSys
         val_final = (dados['unit_final_value'] || (etapa == 'previa' ? val_auto * 1.05 : val_auto)).to_f
         val_total_modelo = (val_final * qtd_unidades).round(2)
 
+        # UUIDs gerados no cliente para evitar duplicidade em reenvios (Seção 14.1)
+        pool_uuid = dados['pool_id'] || dados[:pool_id] || gerar_uuid
+        client_budget_uuid = (budget_id && !budget_id.to_s.empty?) ? budget_id.to_s : (dados['id'] || dados[:id] || gerar_uuid)
+
         pool_payload = {
+          id: pool_uuid,
+          budget_id: client_budget_uuid,
           model_name: modelo_nome,
           units_count: qtd_unidades,
           pool_type: pool_type,
@@ -249,7 +468,7 @@ module PapaSys
         # Salva em arquivo de cache compartilhado (Bridge com sistema web)
         salvar_cache_local({
           modo: modo,
-          budget_id: budget_id,
+          budget_id: client_budget_uuid,
           project_name: proj_nome,
           client_name: cli_nome,
           division: divisao,
@@ -259,15 +478,37 @@ module PapaSys
           timestamp: Time.now.to_s
         })
 
+        tratar_falha = lambda do |erro_msg, http_code|
+          item_fila = {
+            'id' => client_budget_uuid,
+            'dados' => dados,
+            'tentativas' => 1,
+            'ultimo_erro' => erro_msg,
+            'timestamp' => Time.now.strftime('%Y-%m-%d %H:%M:%S'),
+            'status' => 'pendente'
+          }
+          fila_local_adicionar(item_fila)
+          registrar_log_erro("enviar_piscina_orcamento (#{divisao})", http_code, erro_msg)
+
+          callback.call(false, {
+            error: erro_msg,
+            pendente: true,
+            queue_count: fila_local_contar,
+            budget_id: client_budget_uuid,
+            message: "Falha de rede/proxy. Salvo na fila local para reenvio automático: #{erro_msg}"
+          }, http_code) if callback
+        end
+
         if modo == 'galga' && budget_id && !budget_id.empty?
-          # MODO GALGA: Substitui a piscina do orçamento existente e avança para a etapa 'galga' (0% de margem)
           pool_payload[:budget_id] = budget_id
-          
-          # Remove piscinas antigas do orçamento para substituição completa pela galga
+
           http_request('DELETE', "/rest/v1/budget_pools?budget_id=eq.#{budget_id}") do |_ok_del, _res_del, _code_del|
-            # Insere a nova piscina confirmada na galga
-            http_request('POST', '/rest/v1/budget_pools', pool_payload) do |_ok_p, _res_p, _code_p|
-              # Atualiza dados consolidados e etapa do orçamento para 'galga'
+            http_request('POST', '/rest/v1/budget_pools', pool_payload) do |ok_p, res_p, code_p|
+              if !ok_p
+                tratar_falha.call(res_p[:error] || "Erro ao salvar piscina da galga", code_p)
+                next
+              end
+
               patch_budget = {
                 stage: 'galga',
                 total_price: val_total_modelo,
@@ -278,46 +519,58 @@ module PapaSys
                 total_volume_liters: (vol_litros * qtd_unidades).round(0),
                 notes: "Orçamento atualizado para GALGA técnica (medidas da piscina substituídas via SketchUp 3D)."
               }
-              http_request('PATCH', "/rest/v1/budgets?id=eq.#{budget_id}", patch_budget) do |_ok_b, _res_b, _code_b|
-                sincronizar_tabela_legada(proj_nome, cli_nome, area_revest, cantos_m, val_total_modelo, 'galga', user_name)
-
-                callback.call(true, {
-                  success: true,
-                  budget_id: budget_id,
-                  message: "Piscina '#{modelo_nome}' substituída e orçamento atualizado para GALGA (0% de margem) com sucesso!",
-                  project_url: "orcamento.html?id=#{budget_id}"
-                }) if callback
+              http_request('PATCH', "/rest/v1/budgets?id=eq.#{budget_id}", patch_budget) do |ok_b, res_b, code_b|
+                if ok_b
+                  fila_local_remover(budget_id)
+                  sincronizar_tabela_legada(proj_nome, cli_nome, area_revest, cantos_m, val_total_modelo, 'galga', user_name)
+                  callback.call(true, {
+                    success: true,
+                    budget_id: budget_id,
+                    queue_count: fila_local_contar,
+                    message: "Piscina '#{modelo_nome}' substituída e orçamento atualizado para GALGA (0% margem) com sucesso!",
+                    project_url: "orcamento.html?id=#{budget_id}"
+                  }) if callback
+                else
+                  tratar_falha.call(res_b[:error] || "Erro ao atualizar cabeçalho do orçamento na galga", code_b)
+                end
               end
             end
           end
+
         elsif modo == 'existente' && budget_id && !budget_id.empty?
-          # Adiciona piscina ao orçamento existente
           pool_payload[:budget_id] = budget_id
           endpoint_pools = '/rest/v1/budget_pools'
 
-          http_request('POST', endpoint_pools, pool_payload) do |ok_pool, res_pool, _code|
-            # Também sincroniza com projects (para compatibilidade retroativa)
-            sincronizar_tabela_legada(proj_nome, cli_nome, area_revest, cantos_m, val_total_modelo, etapa, user_name)
-
-            callback.call(true, {
-              success: true,
-              budget_id: budget_id,
-              message: "Piscina '#{modelo_nome}' (#{qtd_unidades} un) adicionada ao orçamento existente com sucesso!",
-              project_url: "orcamento.html?id=#{budget_id}"
-            }) if callback
+          http_request('POST', endpoint_pools, pool_payload) do |ok_pool, res_pool, code_pool|
+            if ok_pool
+              fila_local_remover(budget_id)
+              sincronizar_tabela_legada(proj_nome, cli_nome, area_revest, cantos_m, val_total_modelo, etapa, user_name)
+              callback.call(true, {
+                success: true,
+                budget_id: budget_id,
+                queue_count: fila_local_contar,
+                message: "Piscina '#{modelo_nome}' (#{qtd_unidades} un) adicionada ao orçamento existente com sucesso!",
+                project_url: "orcamento.html?id=#{budget_id}"
+              }) if callback
+            else
+              tratar_falha.call(res_pool[:error] || "Erro ao adicionar piscina ao orçamento existente", code_pool)
+            end
           end
+
         else
-          # Cria NOVO orçamento preservando o número digitado pelo usuário (vem do e-mail)
+          # Cria NOVO orçamento com UUID gerado no plugin para idempotência e sem duplicação
           cod_digitado = (dados['budget_code'] || dados[:budget_code] || '').to_s.strip
           cod_final = cod_digitado.empty? ? "ORC-#{Time.now.strftime('%y%m')}-#{rand(1000..9999)}" : cod_digitado
 
           budget_payload = {
+            id: client_budget_uuid,
             budget_code: cod_final,
             client_name: cli_nome,
             project_name: proj_nome,
             division: divisao,
             stage: etapa,
             status: 'em_aberto',
+            created_by: user_id.empty? ? nil : user_id,
             assigned_user_id: user_id.empty? ? nil : user_id,
             assigned_user_name: user_name,
             total_price: val_total_modelo,
@@ -331,32 +584,70 @@ module PapaSys
 
           endpoint_budgets = '/rest/v1/budgets'
           http_request('POST', endpoint_budgets, budget_payload) do |ok_b, res_b, code_b|
-            created_id = nil
             if ok_b
-              b_data = res_b.is_a?(Array) ? res_b.first : res_b
-              created_id = b_data['id'] if b_data
+              pool_payload[:budget_id] = client_budget_uuid
+              http_request('POST', '/rest/v1/budget_pools', pool_payload) do |ok_p, res_p, code_p|
+                if ok_p
+                  fila_local_remover(client_budget_uuid)
+                  sincronizar_tabela_legada(proj_nome, cli_nome, area_revest, cantos_m, val_total_modelo, etapa, user_name)
+
+                  callback.call(true, {
+                    success: true,
+                    budget_id: client_budget_uuid,
+                    budget_code: cod_final,
+                    queue_count: fila_local_contar,
+                    message: "Orçamento #{cod_final} criado com sucesso na divisão #{divisao.upcase} (#{etapa.capitalize})!",
+                    project_url: "orcamento.html?id=#{client_budget_uuid}"
+                  }) if callback
+                else
+                  tratar_falha.call(res_p[:error] || "Orçamento criado, mas falha ao salvar piscina", code_p)
+                end
+              end
+            else
+              tratar_falha.call(res_b[:error] || "Falha ao registrar novo orçamento", code_b)
             end
-
-            created_id ||= "local-#{Time.now.to_i}"
-
-            # Se criou o budget no Supabase, anexa o budget_pool
-            if ok_b && created_id && !created_id.start_with?('local')
-              pool_payload[:budget_id] = created_id
-              http_request('POST', '/rest/v1/budget_pools', pool_payload)
-            end
-
-            # Sincroniza tabela legada
-            sincronizar_tabela_legada(proj_nome, cli_nome, area_revest, cantos_m, val_total_modelo, etapa, user_name)
-
-            callback.call(true, {
-              success: true,
-              budget_id: created_id,
-              budget_code: cod_final,
-              message: "Orçamento #{cod_final} criado com sucesso na divisão #{divisao.upcase} (#{etapa.capitalize})!",
-              project_url: "orcamento.html?id=#{created_id}"
-            }) if callback
           end
         end
+      end
+
+      # Reenvio em lote de todos os orçamentos pendentes na fila local (Seção 14.1)
+      def self.reenviar_pendentes(&callback)
+        pendentes = fila_local_ler
+        if pendentes.empty?
+          callback.call(true, { message: "Nenhum orçamento pendente na fila.", reenviados: 0, falhas: 0, restantes: 0 }) if callback
+          return
+        end
+
+        total_itens = pendentes.size
+        reenviados = 0
+        falhas = 0
+
+        processar_item = lambda do |lista|
+          if lista.empty?
+            restantes = fila_local_contar
+            callback.call(true, {
+              success: true,
+              message: "Processamento concluído: #{reenviados} reenviado(s) com sucesso. Pendentes: #{restantes}.",
+              reenviados: reenviados,
+              falhas: falhas,
+              restantes: restantes
+            }) if callback
+            return
+          end
+
+          item = lista.shift
+          dados_item = item['dados'] || item
+          executar_envio_piscina(dados_item) do |sucesso, _resp, _code|
+            if sucesso
+              reenviados += 1
+            else
+              falhas += 1
+            end
+            processar_item.call(lista)
+          end
+        end
+
+        processar_item.call(pendentes.dup)
       end
 
       # Sincroniza com a tabela 'projects' original para total compatibilidade retroativa
@@ -388,7 +679,6 @@ module PapaSys
           f.write(JSON.pretty_generate(obj))
         end
       rescue => _e
-        # Silencioso
       end
     end
   end

@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>iGUi - Meu Perfil & Segurança</title>
+  <link rel="icon" type="image/png" href="img/Icone.png">
+  <link rel="shortcut icon" href="favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    .profile-page-wrapper {
+      max-width: 960px;
+      margin: 32px auto;
+      padding: 0 20px 40px;
+    }
+
+    .profile-master-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.07), 0 4px 6px -2px rgba(15, 23, 42, 0.03);
+      overflow: hidden;
+    }
+
+    /* Top Hero Banner */
+    .profile-hero-banner {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      padding: 32px 36px;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      flex-wrap: wrap;
+      position: relative;
+    }
+
+    .profile-hero-banner::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 40%;
+      background: radial-gradient(circle at top right, rgba(30, 111, 217, 0.25), transparent 70%);
+      pointer-events: none;
+    }
+
+    .profile-hero-left {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      z-index: 1;
+    }
+
+    .profile-avatar-giant {
+      width: 76px;
+      height: 76px;
+      border-radius: 50%;
+      background: #1E6FD9;
+      color: #ffffff;
+      font-size: 28px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 3.5px solid rgba(255, 255, 255, 0.25);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+      flex-shrink: 0;
+      letter-spacing: -0.5px;
+    }
+
+    .profile-hero-meta h1 {
+      font-size: 22px;
+      font-weight: 800;
+      margin: 0;
+      color: #ffffff;
+      letter-spacing: -0.3px;
+    }
+
+    .profile-hero-meta p {
+      font-size: 13.5px;
+      color: #94a3b8;
+      margin: 4px 0 0 0;
+    }
+
+    .profile-hero-badges {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+      align-items: center;
+    }
+
+    /* Two Columns Grid */
+    .profile-columns-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+      padding: 32px 36px;
+    }
+
+    @media (max-width: 820px) {
+      .profile-columns-grid {
+        grid-template-columns: 1fr;
+        padding: 24px 20px;
+        gap: 28px;
+      }
+      .profile-hero-banner {
+        padding: 24px 20px;
+      }
+    }
+
+    .profile-panel-box {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .profile-panel-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 4px 0;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .profile-panel-title svg {
+      color: #1E6FD9;
+    }
+
+    .form-field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-field-label {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #475569;
+    }
+
+    .form-field-input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .form-field-icon {
+      position: absolute;
+      left: 12px;
+      color: #94a3b8;
+      pointer-events: none;
+    }
+
+    .form-field-input {
+      width: 100%;
+      padding: 10px 14px 10px 38px;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 10px;
+      font-size: 13.5px;
+      color: #0f172a;
+      background: #f8fafc;
+      outline: none;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .form-field-input:focus {
+      border-color: #1E6FD9;
+      background: #ffffff;
+      box-shadow: 0 0 0 3px rgba(30, 111, 217, 0.12);
+    }
+
+    .form-field-input[readonly] {
+      background: #f1f5f9;
+      color: #64748b;
+      cursor: not-allowed;
+      border-color: #e2e8f0;
+    }
+
+    .btn-toggle-eye {
+      position: absolute;
+      right: 10px;
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-toggle-eye:hover {
+      color: #0f172a;
+    }
+
+    /* Badges & Chips */
+    .role-badge-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 700;
+      background: rgba(255, 255, 255, 0.15);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .role-badge-tag.admin {
+      background: rgba(30, 111, 217, 0.3);
+      color: #60a5fa;
+      border-color: rgba(96, 165, 250, 0.4);
+    }
+
+    .division-chip-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      transition: transform 0.15s ease;
+    }
+
+    .division-chip-pill.sob_medida {
+      background: var(--color-sob-medida-light, #eff6ff);
+      color: var(--color-sob-medida, #1E6FD9);
+      border: 1px solid var(--color-sob-medida-border, #bfdbfe);
+    }
+
+    .division-chip-pill.incorporadora {
+      background: var(--color-incorporadora-light, #f0fdf4);
+      color: var(--color-incorporadora, #1F9D55);
+      border: 1px solid var(--color-incorporadora-border, #bbf7d0);
+    }
+
+    .division-chip-pill.internacional {
+      background: var(--color-internacional-light, #fff7ed);
+      color: var(--color-internacional, #E8792B);
+      border: 1px solid var(--color-internacional-border, #fed7aa);
+    }
+
+    /* Password strength indicator */
+    .password-strength-container {
+      margin-top: 4px;
+    }
+
+    .password-strength-bar {
+      height: 4px;
+      border-radius: 2px;
+      background: #e2e8f0;
+      overflow: hidden;
+      margin-bottom: 4px;
+    }
+
+    .password-strength-fill {
+      height: 100%;
+      width: 0%;
+      transition: width 0.3s ease, background 0.3s ease;
+    }
+
+    .password-strength-text {
+      font-size: 11px;
+      color: #64748b;
+    }
+
+    /* Feedback Alert */
+    .profile-alert-banner {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+      line-height: 1.4;
+      font-weight: 600;
+    }
+
+    .profile-alert-banner.error {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #b91c1c;
+    }
+
+    .profile-alert-banner.success {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      color: #15803d;
+    }
+
+    .btn-update-profile-pass {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #1E6FD9 0%, #1557b0 100%);
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(30, 111, 217, 0.25);
+      transition: all 0.2s ease;
+    }
+
+    .btn-update-profile-pass:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(30, 111, 217, 0.35);
+    }
+
+    .btn-save-inline {
+      position: absolute;
+      right: 6px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: #1E6FD9;
+      color: #ffffff;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 6px rgba(30, 111, 217, 0.2);
+    }
+    .btn-save-inline:hover {
+      background: #1557ad;
+      box-shadow: 0 4px 10px rgba(30, 111, 217, 0.35);
+    }
+  </style>
+</head>
+<body style="background-color: var(--slate-100, #f8fafc);">
+
+  <!-- Navbar Superior -->
+  <nav class="navbar">
+    <div class="nav-left">
+      <a href="index.html" class="brand">
+        <img src="img/Logo_Oficial_iGUi.png" alt="iGUi" class="brand-logo-img">
+        <div class="brand-text">
+          <span class="brand-title">SISTEMA DE ORÇAMENTOS</span>
+          <span class="brand-sub">Meu Perfil & Segurança</span>
+        </div>
+      </a>
+    </div>
+
+    <div class="nav-right">
+      <!-- Sincronizar Dados com Supabase (Ícone ao lado das ações) -->
+      <button type="button" id="btnSyncNow" class="btn-nav-sync" onclick="SyncManager.manualSync()" title="Sincronizar dados com o Supabase agora">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="23 4 23 10 17 10"></polyline>
+          <polyline points="1 20 1 14 7 14"></polyline>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+        </svg>
+      </button>
+
+      <a href="index.html" class="btn btn-secondary btn-sm" title="Voltar ao Painel Principal">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+        <span>Voltar ao Painel</span>
+      </a>
+
+      <!-- Botão Sair -->
+      <button type="button" class="btn btn-outline btn-sm" onclick="Auth.logout()" title="Encerrar Sessão e Sair do Sistema">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+          <polyline points="16 17 21 12 16 7"></polyline>
+          <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
+        <span>Sair</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Conteúdo Principal -->
+  <main class="profile-page-wrapper">
+    
+    <div class="profile-master-card">
+      
+      <!-- Top Hero Banner -->
+      <div class="profile-hero-banner">
+        <div class="profile-hero-left">
+          <div class="profile-avatar-giant" id="profileBigAvatar">VL</div>
+          <div class="profile-hero-meta">
+            <h1 id="profileHeaderName">Victor Lourenço</h1>
+            <p id="profileHeaderEmail">usuario@papa.com</p>
+            <div class="profile-hero-badges">
+              <span id="profileRoleBadge" class="role-badge-tag">Projetista</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Duas Colunas Integradas -->
+      <div class="profile-columns-grid">
+        
+        <!-- Coluna 1: Informações da Conta e Acessos -->
+        <div class="profile-panel-box">
+          <h3 class="profile-panel-title">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            Informações da Conta
+          </h3>
+
+          <div class="form-field-group">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <label class="form-field-label" style="margin-bottom: 0;">Nome Completo:</label>
+              <span id="nameStatusFeedback" style="font-size: 11px; font-weight: 700; color: #10b981; display: none;">✓ Salvo com sucesso!</span>
+            </div>
+            <div class="form-field-input-wrap">
+              <span class="form-field-icon">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+              </span>
+              <input type="text" id="inputProfileName" class="form-field-input" placeholder="Digite seu nome completo" style="padding-right: 95px; font-weight: 600;" onkeydown="if(event.key==='Enter') salvarNomePerfil()">
+              <button type="button" id="btnSalvarNome" class="btn-save-inline" onclick="salvarNomePerfil()" title="Salvar alteração do nome">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                <span>Salvar</span>
+              </button>
+            </div>
+            <p style="font-size: 11.5px; color: #64748b; margin-top: 4px; line-height: 1.3;">Nome corporativo exibido no menu superior, nos orçamentos criados e nas propostas técnicas.</p>
+          </div>
+
+          <div class="form-field-group">
+            <label class="form-field-label">E-mail de Acesso (Login SketchUp & Web):</label>
+            <div class="form-field-input-wrap">
+              <span class="form-field-icon">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                  <polyline points="22,6 12,13 2,6"></polyline>
+                </svg>
+              </span>
+              <input type="email" id="inputProfileEmail" class="form-field-input" readonly title="O e-mail de acesso é gerenciado pelo administrador.">
+            </div>
+          </div>
+
+          <div class="form-field-group" style="margin-top: 6px;">
+            <label class="form-field-label">Divisões Liberadas no Sistema (Seção 14.5):</label>
+            <div id="profileDivisionsBadges" style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px;">
+              <!-- Badges de Divisão injetados via JS com cores oficiais -->
+            </div>
+          </div>
+
+          <div class="form-field-group" style="margin-top: 6px;">
+            <label class="form-field-label">Páginas de Fluxo Autorizadas:</label>
+            <div id="profileStagesBadges" style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px;">
+              <!-- Badges de Etapas injetados via JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Coluna 2: Segurança & Alteração de Senha -->
+        <div class="profile-panel-box">
+          <h3 class="profile-panel-title">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            Alterar Senha de Acesso (Seção 12.3)
+          </h3>
+
+          <p style="font-size: 13px; color: #64748b; margin: 0; line-height: 1.45;">
+            Defina uma nova senha para seu login no sistema web e no plugin SketchUp. A nova senha deve ter no mínimo <strong>8 caracteres</strong>.
+          </p>
+
+          <!-- Banner de Mensagens de Sucesso ou Erro (Inicia Oculto) -->
+          <div id="alertPasswordChange" class="profile-alert-banner">
+            <svg id="iconAlertError" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" style="display: none; flex-shrink: 0;">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <svg id="iconAlertSuccess" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" style="display: none; flex-shrink: 0;">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+            <span id="msgPasswordChange"></span>
+          </div>
+
+          <form id="formChangePassword" onsubmit="handleSalvarNovaSenha(event)" style="display: flex; flex-direction: column; gap: 14px;">
+            <div class="form-field-group">
+              <label class="form-field-label" for="profileNewPass">Nova Senha:</label>
+              <div class="form-field-input-wrap">
+                <span class="form-field-icon">
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                  </svg>
+                </span>
+                <input type="password" id="profileNewPass" class="form-field-input" placeholder="Mínimo 8 caracteres" required minlength="8" autocomplete="new-password" oninput="avaliarForcaSenha(this.value)">
+                <button type="button" class="btn-toggle-eye" onclick="alternarVisibilidadeSenha('profileNewPass', this)" title="Mostrar / ocultar senha">
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                </button>
+              </div>
+
+              <!-- Indicador de força -->
+              <div class="password-strength-container">
+                <div class="password-strength-bar">
+                  <div id="passStrengthFill" class="password-strength-fill"></div>
+                </div>
+                <span id="passStrengthText" class="password-strength-text">Digite a nova senha</span>
+              </div>
+            </div>
+
+            <div class="form-field-group">
+              <label class="form-field-label" for="profileConfirmPass">Confirmar Nova Senha:</label>
+              <div class="form-field-input-wrap">
+                <span class="form-field-icon">
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                  </svg>
+                </span>
+                <input type="password" id="profileConfirmPass" class="form-field-input" placeholder="Repita a nova senha" required minlength="8" autocomplete="new-password">
+                <button type="button" class="btn-toggle-eye" onclick="alternarVisibilidadeSenha('profileConfirmPass', this)" title="Mostrar / ocultar senha">
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <button type="submit" class="btn-update-profile-pass" id="btnSalvarSenha" style="margin-top: 4px;">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              <span>Atualizar Senha de Acesso</span>
+            </button>
+          </form>
+
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/sync.js"></script>
+  <script src="js/supabase.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", async () => {
+      // Guarda de autenticação da página (Seção 12.2)
+      const user = await Auth.requireAuth();
+      if (!user) return;
+
+      carregarDadosPerfil(user);
+    });
+
+    function carregarDadosPerfil(user) {
+      document.getElementById("profileHeaderName").textContent = user.name;
+      document.getElementById("profileHeaderEmail").textContent = user.email;
+      document.getElementById("inputProfileName").value = user.name;
+      document.getElementById("inputProfileEmail").value = user.email;
+
+      const avatar = document.getElementById("profileBigAvatar");
+      const parts = (user.name || "U").trim().split(" ");
+      avatar.textContent = parts.length > 1 ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase() : parts[0].slice(0, 2).toUpperCase();
+      if (user.avatar_color) avatar.style.background = user.avatar_color;
+
+      const isAdmin = user.role === "admin";
+      const roleBadge = document.getElementById("profileRoleBadge");
+      roleBadge.textContent = isAdmin ? "Administrador / Diretor" : "Projetista / Colaborador";
+      roleBadge.className = `role-badge-tag ${isAdmin ? 'admin' : ''}`;
+
+      // Divisões Liberadas com cores oficiais (Seção 14.5)
+      const divContainer = document.getElementById("profileDivisionsBadges");
+      divContainer.innerHTML = "";
+
+      const allowedDivs = isAdmin ? ["sob_medida", "incorporadora", "internacional"] : (user.allowed_divisions || ["sob_medida"]);
+      const divLabels = {
+        sob_medida: "iGUi Sob Medida",
+        incorporadora: "iGUi Incorporadora",
+        internacional: "iGUi Internacional"
+      };
+
+      allowedDivs.forEach(divKey => {
+        const span = document.createElement("span");
+        span.className = `division-chip-pill ${divKey}`;
+        span.textContent = divLabels[divKey] || divKey;
+        divContainer.appendChild(span);
+      });
+
+      // Etapas autorizadas
+      const stageContainer = document.getElementById("profileStagesBadges");
+      stageContainer.innerHTML = "";
+      const allowedStages = isAdmin ? ["previa", "galga", "desenho_tecnico"] : (user.allowed_stages || ["previa", "galga", "desenho_tecnico"]);
+      const stageLabels = {
+        previa: "1. Prévia (+5%)",
+        galga: "2. Galga (0%)",
+        desenho_tecnico: "3. Desenho Técnico"
+      };
+
+      allowedStages.forEach(stKey => {
+        const span = document.createElement("span");
+        span.style.cssText = "background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; padding: 4px 10px; border-radius: 6px; font-size: 11.5px; font-weight: 700;";
+        span.textContent = stageLabels[stKey] || stKey;
+        stageContainer.appendChild(span);
+      });
+    }
+
+    // Salvar Nome do Perfil e propagar para todo o sistema
+    async function salvarNomePerfil() {
+      const input = document.getElementById("inputProfileName");
+      const btn = document.getElementById("btnSalvarNome");
+      const feedback = document.getElementById("nameStatusFeedback");
+      const novoNome = (input.value || "").trim();
+
+      if (!novoNome) {
+        alert("Por favor, digite um nome completo válido.");
+        input.focus();
+        return;
+      }
+
+      btn.disabled = true;
+      btn.style.opacity = "0.7";
+
+      try {
+        const res = await Auth.updateProfileName(novoNome);
+        if (res.success) {
+          document.getElementById("profileHeaderName").textContent = novoNome;
+          const avatar = document.getElementById("profileBigAvatar");
+          const parts = novoNome.split(" ");
+          avatar.textContent = parts.length > 1 ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase() : parts[0].slice(0, 2).toUpperCase();
+
+          if (feedback) {
+            feedback.style.display = "inline";
+            setTimeout(() => {
+              feedback.style.display = "none";
+            }, 3000);
+          }
+        } else {
+          alert(res.message || "Erro ao atualizar nome.");
+        }
+      } catch (err) {
+        console.error("Erro ao salvar nome:", err);
+        alert("Erro de conexão ao salvar nome.");
+      } finally {
+        btn.disabled = false;
+        btn.style.opacity = "1";
+      }
+    }
+
+    function alternarVisibilidadeSenha(inputId, btn) {
+      const input = document.getElementById(inputId);
+      if (!input) return;
+      if (input.type === "password") {
+        input.type = "text";
+        btn.innerHTML = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
+      } else {
+        input.type = "password";
+        btn.innerHTML = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
+      }
+    }
+
+    function avaliarForcaSenha(senha) {
+      const fill = document.getElementById("passStrengthFill");
+      const text = document.getElementById("passStrengthText");
+      if (!fill || !text) return;
+
+      if (!senha) {
+        fill.style.width = "0%";
+        text.textContent = "Digite a nova senha";
+        text.style.color = "#64748b";
+        return;
+      }
+
+      let score = 0;
+      if (senha.length >= 8) score += 35;
+      if (senha.length >= 12) score += 15;
+      if (/[A-Z]/.test(senha)) score += 20;
+      if (/[0-9]/.test(senha)) score += 15;
+      if (/[^A-Za-z0-9]/.test(senha)) score += 15;
+
+      fill.style.width = `${Math.min(100, score)}%`;
+
+      if (score < 40) {
+        fill.style.background = "#ef4444";
+        text.textContent = "Senha Fraca (adicione mais caracteres, números ou símbolos)";
+        text.style.color = "#ef4444";
+      } else if (score < 75) {
+        fill.style.background = "#f59e0b";
+        text.textContent = "Senha Média (boa, pode adicionar símbolos)";
+        text.style.color = "#d97706";
+      } else {
+        fill.style.background = "#10b981";
+        text.textContent = "Senha Forte e Segura!";
+        text.style.color = "#059669";
+      }
+    }
+
+    async function handleSalvarNovaSenha(e) {
+      e.preventDefault();
+      const p1 = document.getElementById("profileNewPass").value;
+      const p2 = document.getElementById("profileConfirmPass").value;
+      const alertBox = document.getElementById("alertPasswordChange");
+      const msgBox = document.getElementById("msgPasswordChange");
+      const iconError = document.getElementById("iconAlertError");
+      const iconSuccess = document.getElementById("iconAlertSuccess");
+      const btn = document.getElementById("btnSalvarSenha");
+
+      alertBox.style.display = "none";
+      alertBox.classList.remove("success", "error");
+      iconError.style.display = "none";
+      iconSuccess.style.display = "none";
+
+      if (p1.length < 8) {
+        alertBox.style.display = "flex";
+        alertBox.classList.add("error");
+        iconError.style.display = "inline-block";
+        msgBox.textContent = "A nova senha deve ter no mínimo 8 caracteres.";
+        return;
+      }
+
+      if (p1 !== p2) {
+        alertBox.style.display = "flex";
+        alertBox.classList.add("error");
+        iconError.style.display = "inline-block";
+        msgBox.textContent = "As duas senhas digitadas não conferem. Verifique e tente novamente.";
+        return;
+      }
+
+      btn.disabled = true;
+      btn.style.opacity = "0.7";
+
+      try {
+        const res = await Auth.updatePassword(p1);
+        alertBox.style.display = "flex";
+        if (res.success) {
+          alertBox.classList.add("success");
+          iconSuccess.style.display = "inline-block";
+          msgBox.textContent = "Senha atualizada com sucesso! Use a nova senha nos seus próximos acessos.";
+          document.getElementById("formChangePassword").reset();
+          avaliarForcaSenha("");
+        } else {
+          alertBox.classList.add("error");
+          iconError.style.display = "inline-block";
+          msgBox.textContent = res.message || "Falha ao alterar senha.";
+        }
+      } catch (err) {
+        alertBox.style.display = "flex";
+        alertBox.classList.add("error");
+        iconError.style.display = "inline-block";
+        msgBox.textContent = "Erro de conexão ao alterar a senha.";
+      } finally {
+        btn.disabled = false;
+        btn.style.opacity = "1";
+      }
+    }
+  </script>
+</body>
+</html>
